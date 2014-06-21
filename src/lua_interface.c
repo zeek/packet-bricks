@@ -112,7 +112,7 @@ pktengine_help_wrap(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
-		"    new( {name=<ioengine_name>, [cpu=<cpu number>]} )\n"
+		"    new( {name=<ioengine_name>, type=<io_type>, [cpu=<cpu number>]} )\n"
 		"    delete( ioengine_name )\n"
 		"    link( {name=<ioengine_name>, ifname=<interface>, batch=<chunk_size>} )\n"
 		"    unlink( {name=<ioengine_name>, ifname=<interface>} )\n"
@@ -120,6 +120,69 @@ pktengine_help_wrap(lua_State *L)
 		"    stop( ioengine_name )\n"
 		"    show_stats( ioengine_name )\n"
 		);
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_new_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* This will load netmap module */
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_delete_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* This will unload netmap module */
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_link_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* This will configure iface */
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_unlink_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* This will remove iface */
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_start_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* This will start netmap engine */
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_stop_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* This will stop netmap engine */
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_dump_stats_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* This will show per link statistics */
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -167,16 +230,13 @@ pkteng_dir_create_meta(lua_State *L)
 static const struct luaL_reg
 pktenglib[] = {
         {"help", pktengine_help_wrap},
-#if 0
         {"new", pktengine_new_wrap},
         {"delete", pktengine_delete_wrap},
-        {"link", pktengine_link_dsrc_wrap},
-	{"unlink", pktengine_unlink_dsrc_wrap},
+        {"link", pktengine_link_wrap},
+	{"unlink", pktengine_unlink_wrap},
 	{"start", pktengine_start_wrap},
         {"stop", pktengine_stop_wrap},
-        {"show", pktengine_show_wrap},
-        {"stats", pktengine_dump_stats_wrap},
-#endif
+        {"show_stats", pktengine_dump_stats_wrap},
         {NULL, NULL}
 };
 /*---------------------------------------------------------------------*/

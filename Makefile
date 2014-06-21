@@ -4,8 +4,12 @@ CC=gcc
 CFLAGS=-O3 -Wall -Werror -DNDEBUG #-DDEBUG
 INCLUDE=-I./include -I/usr/include/lua5.1/
 LIBS=-llua5.1
+LDFLAGS=$(LIBS)
 SRC=./src
-BIN=bin/pacf
+BINDIR=bin
+BIN=$(BINDIR)/pacf
+MKDIR=mkdir
+RM=rm
 #---------------------------------------------------------------------#
 SRCS = src/lua_interpreter.c src/main.c src/lua_interface.c
 
@@ -13,8 +17,9 @@ all: default
 
 default: tags
 	$(CC) $(CFLAGS) $(INCLUDE) -c $(SRCS)
-	$(CC) $(CFLAGS) *.o $(LIBS) -o $(BIN)
-	rm -rf *.o
+	$(MKDIR) -p $(BINDIR)
+	$(CC) *.o $(LDFLAGS) -o $(BIN)
+	$(RM) -rf *.o
 #---------------------------------------------------------------------#
 run: all
 	$(BIN) < scripts/startup.lua
