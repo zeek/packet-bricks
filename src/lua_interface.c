@@ -4,6 +4,8 @@
 #include "pacf_log.h"
 /* for basic configuration */
 #include "config.h"
+/* for pktengine defn's */
+#include "pkt_engine.h"
 /*---------------------------------------------------------------------*/
 extern volatile uint32_t stop_processing;
 #define METATABLE		PLATFORM_NAME" Metatable"
@@ -15,7 +17,9 @@ extern volatile uint32_t stop_processing;
 static int
 platform_help_wrap(lua_State *L)
 {
+	/* this prints the system's help menu */
 	TRACE_LUA_FUNC_START();
+	UNUSED(L);
 	fprintf(stdout, PLATFORM_NAME" Commands:\n"
 		"    help()\n"
 		"    print_status()\n"
@@ -30,7 +34,9 @@ platform_help_wrap(lua_State *L)
 static int
 platform_print_status(lua_State *L)
 {
+	/* this prints the system's current status */
 	TRACE_LUA_FUNC_START();
+	UNUSED(L);
 	fprintf(stdout, PLATFORM_NAME" is offline.\n");
 	fprintf(stdout, "Nothing more here yet."
 		"It will start supporting netmap I/O soon...\n");
@@ -41,7 +47,9 @@ platform_print_status(lua_State *L)
 static int
 shutdown_wrap(lua_State *L)
 {
+	/* this shut downs the system */
 	TRACE_LUA_FUNC_START();
+	UNUSED(L);
         stop_processing = 1;
         clean_exit(EXIT_SUCCESS);
 	TRACE_LUA_FUNC_END();
@@ -91,6 +99,7 @@ platform_set_info(lua_State *L)
 static int
 luaopen_platform(lua_State *L)
 {
+	/* load systems' lua interface */
 	TRACE_LUA_FUNC_START();
 
 	platform_dir_create_meta(L);
@@ -112,6 +121,8 @@ pktengine_help_wrap(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
+		"    load( {path=<path_to_module>} )\n"
+		"    open_channel( {pid=<pid>} )\n"
 		"    new( {name=<ioengine_name>, type=<io_type>, [cpu=<cpu number>]} )\n"
 		"    delete( ioengine_name )\n"
 		"    link( {name=<ioengine_name>, ifname=<interface>, batch=<chunk_size>} )\n"
@@ -120,6 +131,7 @@ pktengine_help_wrap(lua_State *L)
 		"    stop( ioengine_name )\n"
 		"    show_stats( ioengine_name )\n"
 		);
+	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -128,7 +140,40 @@ static int
 pktengine_new_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* This will load netmap module */
+
+	const char *name;
+	const char *type;
+	int cpu = -1;
+
+	/* this will load netmap module */
+	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "name");
+        name = lua_tostring(L, -1);
+        lua_getfield(L, 1, "type");
+	type = lua_tostring(L, -1);
+        lua_getfield(L, 1, "cpu");
+        if (lua_isnumber(L, -1))
+		cpu = lua_tointeger(L, -1);
+        lua_remove(L, -1);
+
+
+        if (name == NULL) {
+		TRACE_LOG("pktengine_new: Engine name not specified!\n");
+                lua_remove(L, -1);
+		TRACE_LUA_FUNC_END();
+                return 0;
+        }
+	if (type == NULL) {
+		TRACE_LOG("pktengine_new: Engine name not specified!\n");
+                lua_remove(L, -1);
+		TRACE_LUA_FUNC_END();
+                return 0;
+	}
+
+        pktengine_new((char *)name, type, cpu);
+        lua_remove(L, -1);
+        lua_remove(L, -1);
+
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -137,7 +182,8 @@ static int
 pktengine_delete_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* This will unload netmap module */
+	/* this will unload netmap module */
+	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -146,7 +192,8 @@ static int
 pktengine_link_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* This will configure iface */
+	/* this will configure iface */
+	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -155,7 +202,8 @@ static int
 pktengine_unlink_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* This will remove iface */
+	/* this will remove iface */
+	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -164,7 +212,8 @@ static int
 pktengine_start_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* This will start netmap engine */
+	/* this will start netmap engine */
+	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -173,16 +222,27 @@ static int
 pktengine_stop_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* This will stop netmap engine */
+	/* this will stop netmap engine */
+	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_load_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	UNUSED(L);
+	TRACE_LUA_FUNC_END();
+	return 0;
 }
 /*---------------------------------------------------------------------*/
 static int
 pktengine_dump_stats_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* This will show per link statistics */
+	/* this will show per link statistics */
+	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -236,6 +296,7 @@ pktenglib[] = {
 	{"unlink", pktengine_unlink_wrap},
 	{"start", pktengine_start_wrap},
         {"stop", pktengine_stop_wrap},
+	{"load", pktengine_load_wrap},
         {"show_stats", pktengine_dump_stats_wrap},
         {NULL, NULL}
 };
@@ -243,6 +304,7 @@ pktenglib[] = {
 static int
 luaopen_pkteng(lua_State *L)
 {
+	/* this loads the pkteng lua interface */
 	TRACE_LUA_FUNC_START();
 
 	pkteng_dir_create_meta(L);
@@ -259,6 +321,7 @@ register_lua_procs(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 
+	/* loads all lua interfaces */
 	luaopen_platform(L);
 	luaopen_pkteng(L);
 

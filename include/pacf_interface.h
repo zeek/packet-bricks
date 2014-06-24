@@ -148,6 +148,6 @@ typedef struct {
 		Protocol *prot;
 		Connection *conn;
 	};
-} Filter __attribute__((aligned(__WORDSIZE)));;
+} Filter __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 #endif /* !__PACF_INTERFACE_H__ */

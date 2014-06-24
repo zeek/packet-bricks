@@ -7,19 +7,24 @@
 #include <stdlib.h>
 /*---------------------------------------------------------------------*/
 /**
+ * Use this macro when the variable is not to be referred to.
+ */
+#define UNUSED(x)			(void)x
+/*---------------------------------------------------------------------*/
+/**
  * DEBUG-enabled loggers.
  * Use:
  * TRACE_FUNC_* : for function entry and exit points
  * TRACE_DEBUG_*: for printing log and warning statements
  */
 #ifdef DEBUG
-#define TRACE_FUNC_START(m...) {					\
-		fprintf(stdout, ">>> [%10s():%4d] " f, __FUNCTION__,	\
-			__LINE__, ##m);					\
+#define TRACE_FUNC_START() {					\
+		fprintf(stdout, ">>> [%10s():%4d] \n", __FUNCTION__,	\
+			__LINE__);					\
 	}
-#define TRACE_FUNC_END(m...) {						\
-		fprintf(stdout, "<<< [%10s():%4d] " f, __FUNCTION__,	\
-			__LINE__, ##m);					\
+#define TRACE_FUNC_END() {						\
+		fprintf(stdout, "<<< [%10s():%4d] \n", __FUNCTION__,	\
+			__LINE__);					\
 	}
 #define TRACE_DEBUG_LOG(f, m...) {					\
 		fprintf(stdout, "[%10s():%4d] _debuginfo_: " f, __FUNCTION__, \
@@ -37,8 +42,11 @@
 #define TRACE_DEBUG_LOG(f, n...)	(void)0
 #endif /* !DEBUG  */
 
-#define TRACE_LUA_FUNC_START(m...)	TRACE_FUNC_START(m...)
-#define TRACE_LUA_FUNC_END(m...)	TRACE_FUNC_END(m...)
+#define TRACE_LUA_FUNC_START()		TRACE_FUNC_START()
+#define TRACE_LUA_FUNC_END()		TRACE_FUNC_END()
+
+#define TRACE_PKTENGINE_FUNC_START()	TRACE_FUNC_START()
+#define TRACE_PKTENGINE_FUNC_END()	TRACE_FUNC_END()
 
 
 /**
@@ -53,8 +61,9 @@
 	}
 
 #define TRACE_ERR(f, m...) {						\
-		fprintf(stderr, "[%10s():%4d]>> ERROR!!: " f, __FUNCTION__,	\
-		       __LINE__, ##m);					\
+		fprintf(stderr, "[%10s():%4d]>> ERROR!!: " f, __FUNCTION__, \
+			__LINE__, ##m);					\
+		TRACE_FUNC_END();					\
 		exit(EXIT_FAILURE);					\
 	}
 
