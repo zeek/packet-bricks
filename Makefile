@@ -13,7 +13,7 @@ MKDIR=mkdir
 RM=rm
 #---------------------------------------------------------------------#
 SRCS = src/lua_interpreter.c src/main.c src/lua_interface.c \
-	src/pkt_engine.c
+	src/pkt_engine.c src/netmap_module.c
 
 all: default
 

@@ -10,7 +10,7 @@
 /**
  * XXX - To be filled
  */
-typedef struct {
+typedef struct PacInfo {
 	uint16_t batch_size; /* read these many packets per read */
 	unsigned char *lua_startup_file; /* path to lua startup file 
 					    given at cmd line */

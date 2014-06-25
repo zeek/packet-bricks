@@ -10,6 +10,8 @@
 #include <string.h>
 /* for getopt() */
 #include <unistd.h>
+/* for init'ing the engine list */
+#include "pkt_engine.h"
 /*---------------------------------------------------------------------*/
 /* global variable to indicate start/stop for lua interpreter */
 volatile uint32_t stop_processing = 0;
@@ -36,6 +38,9 @@ clean_exit(int exit_val)
 
 }
 /*---------------------------------------------------------------------*/
+/**
+ * Prints the help menu 
+ */
 void
 print_help(char *progname)
 {
@@ -45,6 +50,20 @@ print_help(char *progname)
 	
 	TRACE_FUNC_END();
 	clean_exit(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------*/
+/**
+ * Initializes all the modules of the system
+ */
+void
+init_modules()
+{
+	TRACE_FUNC_START();
+
+	TRACE_DEBUG_LOG("Initializing the engines module \n");
+	engine_init();
+
+	TRACE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 /**
@@ -81,6 +100,9 @@ main(int argc, char **argv)
 			break;
 		}
 	}
+
+	/* init_modules */
+	init_modules();
 
 	/* warp to lua interface */
 	lua_kickoff();

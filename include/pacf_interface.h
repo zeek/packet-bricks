@@ -138,7 +138,7 @@ typedef struct {
  * 	   insertion/modification/deletion framework.
  * 	   XXX: More comments later...
  */
-typedef struct {
+typedef struct Filter {
 	uint32_t filter_type_flag: PACF_TOTAL_FILTERS;
 	union {
 		EthAddress *ethaddr;

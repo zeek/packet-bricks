@@ -48,6 +48,8 @@
 #define TRACE_PKTENGINE_FUNC_START()	TRACE_FUNC_START()
 #define TRACE_PKTENGINE_FUNC_END()	TRACE_FUNC_END()
 
+#define TRACE_NETMAP_FUNC_START()	TRACE_FUNC_START()
+#define TRACE_NETMAP_FUNC_END()		TRACE_FUNC_END()
 
 /**
  * Default loggers.
@@ -67,6 +69,6 @@
 		exit(EXIT_FAILURE);					\
 	}
 
-#define TRACE_FLUSH() fflush(stdout)
+#define TRACE_FLUSH()			fflush(stdout)
 /*---------------------------------------------------------------------*/
 #endif /* !__PACF_LOG_H__ */
