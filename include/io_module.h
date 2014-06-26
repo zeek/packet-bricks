@@ -9,16 +9,19 @@
  */
 /*---------------------------------------------------------------------*/
 typedef struct io_module_funcs {
-	void (*link_iface)(const unsigned char *iface, 
+	int  (*init_context)(void **ctxt);
+	int  (*link_iface)(void *ctxt,
+			   const unsigned char *iface, 
 			   const uint16_t batchsize);
 	void (*unlink_iface)(const unsigned char *iface);
 	void (*callback)(void *handle, void *pkts);
 	void (*shutdown)(void *handle);
-	
+
 } io_module_funcs __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 extern io_module_funcs netmap_module;
 #if 0
+extern io_module_funcs dpdk_module;
 extern io_module_funcs pfring_module;
 extern io_module_funcs psio_module;
 extern io_module_funcs linux_module;

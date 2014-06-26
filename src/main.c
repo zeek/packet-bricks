@@ -18,7 +18,7 @@ volatile uint32_t stop_processing = 0;
 /* function to call lua interpreter */
 extern int lua_kickoff(void);
 /* global variable definitions */
-static PacfInfo pc_info = {
+PacfInfo pc_info = {
 	.batch_size 		= DEFAULT_BATCH_SIZE,
 	.lua_startup_file 	= NULL
 };

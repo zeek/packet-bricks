@@ -7,12 +7,14 @@
 #include "queue.h"
 /* for io_module_funcs */
 #include "io_module.h"
+/* for pthreads */
+#include <pthread.h>
 /*---------------------------------------------------------------------*/
 /**
  *  io_type: Right now, we only support IO_NETMAP.
  */
 typedef enum io_type {
-	IO_NETMAP, IO_PFRING, IO_PSIO, IO_LINUX
+	IO_NETMAP, IO_DPDK, IO_PFRING, IO_PSIO, IO_LINUX
 } io_type;
 /* the default is set to IO_NETMAP */
 #define IO_DEFAULT		IO_NETMAP
@@ -35,6 +37,8 @@ typedef struct engine {
 	uint64_t pkt_count;		/* total number of packets seen by this engine */
 
 	struct io_module_funcs iom;	/* io_funcs ptrs */
+	void *private_context;		/* I/O-related context */
+	pthread_t t;
 
 	/* the linked list ptr that will chain together all the engines */
 	TAILQ_ENTRY(engine) entry; 

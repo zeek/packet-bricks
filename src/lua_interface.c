@@ -87,7 +87,7 @@ platform_set_info(lua_State *L)
         lua_pushliteral(L, "Copyright (C) 2014");
         lua_settable(L, -3);
         lua_pushliteral(L, "_DESCRIPTION");
-        lua_pushliteral(L, "PACF command line interface");
+        lua_pushliteral(L, PLATFORM_NAME" command line interface");
         lua_settable(L, -3);
         lua_pushliteral(L, "_VERSION");
         lua_pushliteral(L, PLATFORM_NAME"-"VERSION);

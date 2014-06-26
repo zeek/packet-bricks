@@ -17,6 +17,8 @@ typedef struct PacInfo {
 	/* XXX - more to come */
 	
 } PacfInfo __attribute__((aligned(__WORDSIZE)));
+
+extern PacfInfo pc_info;
 /*---------------------------------------------------------------------*/
 #define DEFAULT_BATCH_SIZE		512
 /*---------------------------------------------------------------------*/
