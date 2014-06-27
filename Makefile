@@ -1,7 +1,7 @@
 ## XXX short-term Makefile. This will be improved substantially..... ##
 #---------------------------------------------------------------------#
 CC=gcc
-CFLAGS=-O3 -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
+CFLAGS=-O3 -pipe -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS=-g -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 INCLUDE=-I./include -I/usr/include/lua5.1/
 NETMAP_INCLUDE=-I./include/netmap
@@ -40,5 +40,5 @@ tags:
 #---------------------------------------------------------------------#
 clean:
 	rm -rf *~ bin/* lib/*.o include/*.h~ src/*.c~ *.o tags \
-	scripts/.lua~
+	scripts/*.lua~
 #---------------------------------------------------------------------#		

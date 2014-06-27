@@ -121,12 +121,13 @@ pktengine_help_wrap(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
-		"    load( {path=<path_to_module>} )\n"
-		"    open_channel( {pid=<pid>} )\n"
+		"    load( {path=<path_to_module>} ) <DISABLED> \n"
+		"    open_channel( {pid=<pid>} ) <DISABLED>\n"
+		"    add_filter(<params still need to be determined>) <DISABLED>\n"
 		"    new( {name=<ioengine_name>, type=<io_type>, [cpu=<cpu number>]} )\n"
-		"    delete( ioengine_name )\n"
-		"    link( {ioengine_name, ifname=<interface>, [batch=<chunk_size>}] )\n"
-		"    unlink( {ioengine_name, ifname=<interface>} )\n"
+		"    delete( ioengine_name ) <DISABLED>\n"
+		"    link( {name=<ioengine_name>, ifname=<interface>, [batch=<chunk_size>}] )\n"
+		"    unlink( {name=<ioengine_name>, ifname=<interface>} ) <DISABLED>\n"
 		"    start( ioengine_name )\n"
 		"    stop( ioengine_name )\n"
 		"    show_stats( ioengine_name )\n"
@@ -188,7 +189,13 @@ pktengine_delete_wrap(lua_State *L)
 	unsigned char *name;
 
 	/* this will unload netmap module */
+#if 1
+	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "name");
+        name = (unsigned char *)lua_tostring(L, -1);
+#else
 	name = (unsigned char *)luaL_checkstring(L, 1);
+#endif
 	if (name == NULL) {
 		TRACE_LOG("Engine with %s does not exist\n", name);
 		TRACE_LUA_FUNC_END();
@@ -198,6 +205,10 @@ pktengine_delete_wrap(lua_State *L)
 	TRACE_DEBUG_LOG("Pkt with engine name %s is deleted\n",
 			name);
 	pktengine_delete(name);
+
+#if 1
+	lua_remove(L, -1);
+#endif
 	
 	TRACE_LUA_FUNC_END();
         return 0;
@@ -216,12 +227,14 @@ pktengine_link_wrap(lua_State *L)
 
 	/* this configures iface */
 	luaL_checktype(L, 1, LUA_TTABLE);
-	name = (unsigned char *)luaL_checkstring(L, 1);
+	lua_getfield(L, 1, "engine");
+	name = (unsigned char *)lua_tostring(L, -1);
 	if (name == NULL) {
 		TRACE_LOG("Engine name is absent\n");
 		TRACE_LUA_FUNC_END();
 		return -1;
 	}
+    
         lua_getfield(L, 1, "ifname");
         ifname = (unsigned char *)lua_tostring(L, -1);
 	if (ifname == NULL) {
@@ -257,7 +270,8 @@ pktengine_unlink_wrap(lua_State *L)
 	
 	/* this configures iface */
 	luaL_checktype(L, 1, LUA_TTABLE);
-	name = (unsigned char *)luaL_checkstring(L, 1);
+	lua_getfield(L, 1, "engine");
+	name = (unsigned char *)lua_tostring(L, -1);
 	if (name == NULL) {
 		TRACE_LOG("Engine needs a name\n");
 		TRACE_LUA_FUNC_END();
@@ -276,6 +290,7 @@ pktengine_unlink_wrap(lua_State *L)
 			name, ifname);	
 	pktengine_unlink_iface(name, ifname);	
 	lua_remove(L, -1);
+	lua_remove(L, -1);
 	
 	TRACE_LUA_FUNC_END();
         return 0;
@@ -288,8 +303,13 @@ pktengine_start_wrap(lua_State *L)
 
 	unsigned char *name;
 	/* this will start netmap engine */
+#if 1
 	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "name");
+        name = (unsigned char *)lua_tostring(L, -1);
+#else
 	name = (unsigned char *)luaL_checkstring(L, 1);
+#endif
 	if (name == NULL) {
 		TRACE_LOG("Engine needs a name\n");
 		TRACE_LUA_FUNC_END();
@@ -297,6 +317,9 @@ pktengine_start_wrap(lua_State *L)
 	}
 	pktengine_start(name);
 
+#if 1
+        lua_remove(L, -1);
+#endif
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -308,8 +331,13 @@ pktengine_stop_wrap(lua_State *L)
 
 	/* this will stop netmap engine */
 	unsigned char *name;
+#if 1
 	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "name");
+        name = (unsigned char *)lua_tostring(L, -1);
+#else
 	name = (unsigned char *)luaL_checkstring(L, 1);
+#endif
 	if (name == NULL) {
 		TRACE_LOG("Engine needs a name\n");
 		TRACE_LUA_FUNC_END();
@@ -317,6 +345,9 @@ pktengine_stop_wrap(lua_State *L)
 	}
 	pktengine_stop(name);       	
 	
+#if 1
+	lua_remove(L, -1);
+#endif
 	TRACE_LUA_FUNC_END();
         return 0;
 }
@@ -340,15 +371,22 @@ pktengine_dump_stats_wrap(lua_State *L)
 
 	/* this will show per link statistics */
      	unsigned char *name;
+#if 1
 	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "name");
+        name = (unsigned char *)lua_tostring(L, -1);
+#else
 	name = (unsigned char *)luaL_checkstring(L, 1);
+#endif
 	if (name == NULL) {
 		TRACE_LOG("Engine needs a name\n");
 		TRACE_LUA_FUNC_END();
 		return -1;
 	}
 	pktengine_dump_stats(name);
-
+#if 1
+	lua_remove(L, -1);
+#endif
 	TRACE_LUA_FUNC_END();
         return 0;
 }

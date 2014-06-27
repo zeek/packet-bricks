@@ -61,7 +61,7 @@ engine_find(const unsigned char *name)
 }
 /*---------------------------------------------------------------------*/
 static inline void *
-packet_loop(void *engptr)
+thread_start(void *engptr)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng = (engine *)engptr;
@@ -75,69 +75,12 @@ packet_loop(void *engptr)
 		}
 	}
 
-#if 0
-	/* Start sniffing */
-	struct targ *targ = (struct targ *) data;
-        struct pollfd pfd = { .fd = targ->fd, .events = POLLIN };
-        struct netmap_if *nifp;
-        struct netmap_ring *rxring;
-        int i;
-        uint64_t received = 0;
+	/* Flip the engine to run == 1 */
+	eng->run = 1;
 
-        if (setaffinity(targ->thread, targ->affinity))
-                goto quit;
+	/* call the I/O specific packet receiver/dispatcher */
+	eng->iom.callback(eng);
 
-        /* unbounded wait for the first packet. */
-        for (;;) {
-                i = poll(&pfd, 1, 1000);
-                if (i > 0 && !(pfd.revents & POLLERR))
-                        break;
-                RD(1, "waiting for initial packets, poll returns %d %d",
-		   i, pfd.revents);
-        }
-
-        /* main loop, exit after 1s silence */
-        clock_gettime(CLOCK_REALTIME_PRECISE, &targ->tic);
-	
-	int dump = targ->g->options & OPT_DUMP;
-
-        nifp = targ->nmd->nifp;
-        while (!targ->cancel) {
-                /* Once we started to receive packets, wait at most 1 seconds                                       
-                   before quitting. */
-                if (poll(&pfd, 1, 1 * 1000) <= 0 && !targ->g->forever) {
-                        clock_gettime(CLOCK_REALTIME_PRECISE, &targ->toc);
-                        targ->toc.tv_sec -= 1; /* Subtract timeout time. */
-                        goto out;
-                }
-		
-                if (pfd.revents & POLLERR) {
-                        D("poll err");
-                        goto quit;
-                }
-		
-                for (i = targ->nmd->first_rx_ring; i <= targ->nmd->last_rx_ring; i++) {
-                        int m;
-			
-                        rxring = NETMAP_RXRING(nifp, i);
-                        if (nm_ring_empty(rxring))
-                                continue;
-			
-                        m = receive_packets(rxring, targ->g->burst, dump);
-                        received += m;
-                }
-                targ->count = received;
-	}
-	clock_gettime(CLOCK_REALTIME_PRECISE, &targ->toc);
-	
- out:
-	targ->completed = 1;
-	targ->count = received;
-	
- quit:
-	/* reset the ``used`` flag. */
-	targ->used = 0;
-#endif	
 	TRACE_PKTENGINE_FUNC_END();
 	return NULL;
 }
@@ -149,7 +92,7 @@ engine_run(engine *eng)
 
 	/* Start your engines now */
 	TRACE_DEBUG_LOG("Engine %s starting...\n", eng->name);
-	if (pthread_create(&eng->t, NULL, packet_loop, (void *)eng) != 0) {
+	if (pthread_create(&eng->t, NULL, thread_start, (void *)eng) != 0) {
 		TRACE_PKTENGINE_FUNC_END();
 		TRACE_ERR("Can't spawn thread for starting the engine!\n");
 	}
@@ -242,6 +185,9 @@ pktengine_new(const unsigned char *name, const unsigned char *type,
 	/* setting the cpu no. on which the engine runs (if reqd.) */
 	eng->cpu = cpu;
 
+	/* finally add the engine entry in elist */
+	TAILQ_INSERT_TAIL(&engine_list, eng, entry);
+
 	UNUSED(type);
 	TRACE_PKTENGINE_FUNC_END();
 }
@@ -253,7 +199,7 @@ pktengine_delete(const unsigned char *name)
 	engine *eng;
 
 	eng = engine_find(name);
-	if (name == NULL) {
+	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n", 
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
@@ -269,7 +215,7 @@ pktengine_delete(const unsigned char *name)
 	}
 
 	/* check if ifaces have been unlinked */
-	/* XXX - TODO */
+	eng->iom.unlink_iface((const unsigned char *)"all", eng);
 
 	/* now delete it */
 	free(eng->name);
@@ -294,7 +240,7 @@ void pktengine_link_iface(const unsigned char *name,
 	int ret;
 	
 	eng = engine_find(name);
-	if (name == NULL) {
+	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
@@ -327,14 +273,14 @@ pktengine_unlink_iface(const unsigned char *name,
 	engine *eng;
 	
 	eng = engine_find(name);
-	if (name == NULL) {
+	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
 		return;
 	}
 
-	eng->iom.unlink_iface(iface);
+	eng->iom.unlink_iface(iface, eng);
 
 	TRACE_PKTENGINE_FUNC_END();
 }
@@ -346,7 +292,7 @@ pktengine_start(const unsigned char *name)
 	engine *eng;
 	
 	eng = engine_find(name);
-	if (name == NULL) {
+	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
@@ -364,18 +310,22 @@ pktengine_stop(const unsigned char *name)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
+	int rc;
 	
 	eng = engine_find(name);
-	if (name == NULL) {
+	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
 		return;
 	}
 
-	/* XXX - stop sniffing (to be set-up) */
-
-	UNUSED(eng);
+	/* stop sniffing */
+	rc = eng->iom.shutdown(eng);
+	if (rc == -1) {
+		TRACE_LOG("Engine was not running\n");
+	}
+	
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
@@ -386,7 +336,7 @@ pktengine_dump_stats(const unsigned char *name)
 	engine *eng;
 
 	eng = engine_find(name);
-	if (name == NULL) {
+	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
@@ -397,7 +347,7 @@ pktengine_dump_stats(const unsigned char *name)
 	fprintf(stdout, "---------- ENGINE (%s) STATS------------\n", name);
 	fprintf(stdout, "Byte count: %llu\n", (long long unsigned int)eng->byte_count);
 	fprintf(stdout, "Packet count: %llu\n", (long long unsigned int)eng->pkt_count);
-	fprintf(stdout, "----------------------------------------\n");
+	fprintf(stdout, "----------------------------------------\n\n");
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

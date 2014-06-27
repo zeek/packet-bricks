@@ -19,7 +19,7 @@ static const char *progname = "lua";
 lua_State *globalL = NULL;
 progvars_t pv = {
  pid_file: "/var/run/"PLATFORM_PROMPT".pid",
- lua_startup: NULL
+ lua_startup: NULL,
 };
 /*---------------------------------------------------------------------*/
 struct Smain

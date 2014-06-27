@@ -12,7 +12,10 @@
 #include <unistd.h>
 /* for init'ing the engine list */
 #include "pkt_engine.h"
+/* for lua variables access */
+#include "lua_interpreter.h"
 /*---------------------------------------------------------------------*/
+extern progvars_t pv;
 /* global variable to indicate start/stop for lua interpreter */
 volatile uint32_t stop_processing = 0;
 /* function to call lua interpreter */
@@ -32,6 +35,9 @@ void
 clean_exit(int exit_val)
 {
 	TRACE_FUNC_START();
+	/* free up the start_lua_file_name (if reqd.)*/
+	if (pc_info.lua_startup_file != NULL)
+		free((unsigned char *)pc_info.lua_startup_file);
 	fprintf(stdout, "Goodbye!\n");
 	TRACE_FUNC_END();
 	exit(exit_val);
@@ -67,6 +73,23 @@ init_modules()
 }
 /*---------------------------------------------------------------------*/
 /**
+ * Loads lua start-up file
+ */
+void
+load_lua_file(const char *lua_file)
+{
+	TRACE_FUNC_START();
+	
+	pv.lua_startup = strdup(lua_file);
+	if (pv.lua_startup == NULL) {
+		TRACE_ERR("Can't strdup for lua_startup_file!\n");
+	}
+
+	pc_info.lua_startup_file = (const unsigned char *)pv.lua_startup;
+	TRACE_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+/**
  * Main entry point
  */
 int
@@ -86,6 +109,7 @@ main(int argc, char **argv)
 			}
 			TRACE_DEBUG_LOG("Taking file %s as startup\n",
 					pc_info.lua_startup_file);
+			load_lua_file(optarg);
 			break;
 		case 'b':
 			pc_info.batch_size = atoi(optarg);

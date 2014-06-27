@@ -12,9 +12,11 @@
  * struct for more details
  */
 typedef struct netmap_module_context {
-	struct nm_desc *nmd;		/* netmap descriptor */
+	struct nm_desc *global_nmd;	/* global netmap descriptor */
+	struct nm_desc *local_nmd;	/* thread-local netmap descriptor */
 	uint16_t batch_size;		/* burst size */
-	int32_t fd;			/* fd for ioctl etc. */
+	int32_t global_fd;		/* global fd for ioctl etc. */
+	int32_t local_fd;		/* thread-local fd*/
 	uint64_t nmd_flags;		/* netmap desc flags */
 	unsigned char *nmr_config;	/* basic config params */
 	int32_t extra_bufs;		/* do we need extra bufs */

@@ -4,6 +4,8 @@
 /* for data types */
 #include <stdint.h>
 /*---------------------------------------------------------------------*/
+#define MAX_IFNAMELEN		64
+/*---------------------------------------------------------------------*/
 /**
  * XXX - To be commented later...
  */
@@ -13,9 +15,9 @@ typedef struct io_module_funcs {
 	int  (*link_iface)(void *ctxt,
 			   const unsigned char *iface, 
 			   const uint16_t batchsize);
-	void (*unlink_iface)(const unsigned char *iface);
-	void (*callback)(void *handle, void *pkts);
-	void (*shutdown)(void *handle);
+	void (*unlink_iface)(const unsigned char *iface, void *engptr);
+	void (*callback)(void *engptr);
+	int (*shutdown)(void *engptr);
 
 } io_module_funcs __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/

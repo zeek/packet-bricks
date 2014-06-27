@@ -12,8 +12,8 @@
  */
 typedef struct PacInfo {
 	uint16_t batch_size; /* read these many packets per read */
-	unsigned char *lua_startup_file; /* path to lua startup file 
-					    given at cmd line */
+	const unsigned char *lua_startup_file; /* path to lua startup file 
+						  given at cmd line */
 	/* XXX - more to come */
 	
 } PacfInfo __attribute__((aligned(__WORDSIZE)));
