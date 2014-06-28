@@ -2,12 +2,11 @@
 #---------------------------------------------------------------------#
 CC=gcc
 CFLAGS=-O3 -pipe -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
-DEBUG_CFLAGS=-g -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
+DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 INCLUDE=-I./include -I/usr/include/lua5.1/
 NETMAP_INCLUDE=-I./include/netmap
 LIBS=-llua5.1 -lpthread
-LDFLAGS=$(LIBS)
-SRC=./src
+LDFLAGS=$(LIBS) -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -fno-builtin-posix_memalign -ljemalloc
 BINDIR=bin
 BIN=$(BINDIR)/pacf
 MKDIR=mkdir
@@ -27,13 +26,13 @@ default: tags
 	$(STRIP) $(BIN)
 
 debug: tags
-	$(CC) $(DEBUG_CFLAGS) -DDEBUG $(INCLUDE) $(NETMAP_INCLUDE) -c $(SRCS)
+	$(CC) $(DEBUG_CFLAGS) $(INCLUDE) $(NETMAP_INCLUDE) -c $(SRCS)
 	$(MKDIR) -p $(BINDIR)
 	$(CC) *.o $(LDFLAGS) -o $(BIN)
 	$(RM) -rf *.o 
 #---------------------------------------------------------------------#
 run: all
-	$(BIN) < scripts/startup.lua
+	$(BIN) -f scripts/startup.lua
 #---------------------------------------------------------------------#
 tags:
 	find -name '*.c' -or -name '*.h' | xargs ctags

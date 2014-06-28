@@ -1,5 +1,11 @@
+THIS FILE NEEDS TO BE UPDATED.
+
 README
 ======
-> Type pacf.help() to get things started...
+> While this file is being updated, the best strategy to use
+this system will be to go through scripts/startup.lua script. It
+is extensively documented for user's convenience.
 
-THIS FILE NEEDS TO BE UPDATED.
+> Please install the required libraries mentioned in INSTALL file.
+As the system is still under active development, the program may
+exhibit unexpected behavior if libraries are not installed.
