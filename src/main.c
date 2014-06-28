@@ -28,8 +28,8 @@ PacfInfo pc_info = {
 /*---------------------------------------------------------------------*/
 /**
  * Program termination point
- * XXX - This function will free up all the previously 
- * 	allocated resources.
+ * This function will free up all the previously 
+ * allocated resources.
  */
 void
 clean_exit(int exit_val)
@@ -38,6 +38,7 @@ clean_exit(int exit_val)
 	/* free up the start_lua_file_name (if reqd.)*/
 	if (pc_info.lua_startup_file != NULL)
 		free((unsigned char *)pc_info.lua_startup_file);
+
 	fprintf(stdout, "Goodbye!\n");
 	TRACE_FUNC_END();
 	exit(exit_val);

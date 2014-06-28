@@ -36,6 +36,9 @@ load_io_module(engine *e) {
 	case IO_LINUX:
 		e->iom = linuxio_module;
 		break;
+	case IO_FILE:
+		e->iom = fileio_module;
+		break;
 #endif
 	default:
 		TRACE_ERR("Control can never reach here!\n");
@@ -161,6 +164,8 @@ pktengine_new(const unsigned char *name, const unsigned char *type,
 		eng->iot = IO_PFRING;
 	else if (!strcmp((char *)type, "linux"))
 		eng->iot = IO_LINUX;
+	else if (!strcmp((char *)type, "file"))
+		eng->iot = IO_FILE;
 #endif
 
 	/* default pkt I/O engine is NETMAP for the moment */
@@ -247,13 +252,11 @@ void pktengine_link_iface(const unsigned char *name,
 		return;
 	}
 	
-	/* XXX - 
-	 * link the interface now...
-	 *
+	/* 
+	 * Link the interface now...
 	 * If the batch size is not given, then use
 	 * the default batch size taken from pc_info
 	 *
-	 * XXX
 	 */
 	ret = eng->iom.link_iface(eng->private_context, iface, 
 				  (batch_size == -1) ? 
@@ -269,7 +272,6 @@ pktengine_unlink_iface(const unsigned char *name,
 		       const unsigned char *iface)
 {
 	TRACE_PKTENGINE_FUNC_START();
-	/* XXX - to be filled soon */
 	engine *eng;
 	
 	eng = engine_find(name);
@@ -299,7 +301,7 @@ pktengine_start(const unsigned char *name)
 		return;
 	}
 
-	/* XXX - start sniffing (to be set-up) */
+	/* start sniffing (to be set-up) */
 	engine_run(eng);
 
 	TRACE_PKTENGINE_FUNC_END();

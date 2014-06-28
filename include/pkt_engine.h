@@ -14,7 +14,7 @@
  *  io_type: Right now, we only support IO_NETMAP.
  */
 typedef enum io_type {
-	IO_NETMAP, IO_DPDK, IO_PFRING, IO_PSIO, IO_LINUX
+	IO_NETMAP, IO_DPDK, IO_PFRING, IO_PSIO, IO_LINUX, IO_FILE
 } io_type;
 /* the default is set to IO_NETMAP */
 #define IO_DEFAULT		IO_NETMAP

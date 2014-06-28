@@ -3,6 +3,9 @@
 /* for pacf logging */
 #include "pacf_log.h"
 /*---------------------------------------------------------------------*/
+/**
+ * Affinitizes current thread to the specified cpu
+ */
 int
 set_affinity(int cpu)
 {

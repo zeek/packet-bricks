@@ -82,6 +82,7 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		/* XXX - support multiple threads */
 		//nmc->global_nmd->req.nr_flags = NR_REG_ONE_NIC;
 		//nmc->global_nmd->req.nr_ringid = 1;
+		nmc->global_nmd->req.nr_ringid |= NETMAP_NO_TX_POLL;
 	}
 
 	/* open handle */
@@ -102,14 +103,13 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 	devqueues = nmc->nmd->req.nr_rx_rings;
 	/* CHECK IF # OF THREADS ARE LESS THAN # OF AVAILABLE QUEUES */
 	/* THIS MAY BE SHIFTED TO PKT_ENGINE.C FILE */
-#else
-	nmc->global_nmd->req.nr_ringid |= NETMAP_NO_TX_POLL;
 #endif
 	
 	/* Wait for mandatory (& cautionary) PHY reset */
 	TRACE_LOG("Wait for %d secs for phy reset\n",
 		  NETMAP_LINK_WAIT_TIME);
 	
+	sleep(NETMAP_LINK_WAIT_TIME);
 	TRACE_NETMAP_FUNC_END();
 	return 0;
 }
@@ -213,13 +213,15 @@ netmap_shutdown(void *engptr)
 {
 	TRACE_NETMAP_FUNC_START();
 	engine *eng = (engine *)engptr;
-	if (eng->run == 1)
+	if (eng->run == 1) {
 		eng->run = 0;
-	else
+	} else {
+		TRACE_NETMAP_FUNC_END();
 		return -1;
-	
+	}
+
+	TRACE_NETMAP_FUNC_END();	
 	return 0;
-	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 io_module_funcs netmap_module = {
