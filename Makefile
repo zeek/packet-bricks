@@ -14,7 +14,8 @@ RM=rm
 STRIP=strip
 #---------------------------------------------------------------------#
 SRCS = src/lua_interpreter.c src/main.c src/lua_interface.c \
-	src/pkt_engine.c src/netmap_module.c src/thread.c
+	src/pkt_engine.c src/netmap_module.c src/thread.c \
+	src/network_interface.c
 
 all: default
 

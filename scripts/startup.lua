@@ -6,6 +6,7 @@
 -- MACROS
 STATS_PRINT_CYCLE_DEFAULT = 10
 SLEEP_TIMEOUT = 1
+PKT_BATCH=1024
 -----------------------------------------------------------------------
 --sleep function __self-explanatory__
 
@@ -21,7 +22,16 @@ end
 
 function init()
 	 pkteng.new({name="e0", type="netmap", cpu=0})
-	 pkteng.link({engine="e0", ifname="eth3", batch=1024})
+	 pkteng.link({engine="e0", ifname="eth3", batch=PKT_BATCH})
+
+	 --pkteng.new({name="e1", type="netmap", cpu=1})
+	 --pkteng.link({engine="e1", ifname="eth3", batch=PKT_BATCH})
+
+	 --pkteng.new({name="e2", type="netmap", cpu=2})
+	 --pkteng.link({engine="e2", ifname="eth3", batch=PKT_BATCH})
+
+	 --pkteng.new({name="e3", type="netmap", cpu=3})
+	 --pkteng.link({engine="e3", ifname="eth3", batch=PKT_BATCH})
 end
 -----------------------------------------------------------------------
 --start function __starts the pkteng and prints overall per sec stats__
@@ -29,10 +39,16 @@ end
 
 function start(c)
 	 pkteng.start({engine="e0"})
+	 --pkteng.start({engine="e1"})
+	 --pkteng.start({engine="e2"})
+	 --pkteng.start({engine="e3"})
 	 local i = 0
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
 	     pkteng.show_stats({engine="e0"})
+	     --pkteng.show_stats({engine="e1"})
+	     --pkteng.show_stats({engine="e2"})
+	     --pkteng.show_stats({engine="e3"})
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end

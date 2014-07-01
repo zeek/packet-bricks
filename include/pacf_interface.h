@@ -78,8 +78,9 @@ typedef Protocol IPProtocol;
 /**
  *  Connection: This will become a part of the filter.
  * 		This contains all 5-tuple fields of the connection.
- *		XXX: More comments later...
- *
+ *		The Connection filter includes source and destination
+ *		IP addresses, source and destination ports and the
+ *		protocol number.
  */
 typedef struct {
 	union {

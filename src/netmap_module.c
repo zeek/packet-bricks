@@ -1,7 +1,7 @@
 /**
  *
- * Heavily derived from netmap's pkt-gen.c file. This submodule
- * is still under heavy construction.
+ * Heavily derived from netmap's pkt-gen.c file. This 
+ * submodule is still under heavy construction.
  * 
  */
 /* for poll() syscall */
@@ -12,83 +12,109 @@
 #include "pacf_log.h"
 /* for netmap structs */
 #include "netmap_module.h"
-/* for engine definition */
-#include "pkt_engine.h"
 /* for netmap initialization */
 #include <sys/param.h>
+/* for network_interface definition */
+#include "network_interface.h"
 /*---------------------------------------------------------------------*/
 int
-netmap_init(void **ctxt_ptr)
+netmap_init(void **ctxt_ptr, void *engptr)
 {
 	TRACE_NETMAP_FUNC_START();
 	netmap_module_context *nmc;
 
 	/* create netmap context */
 	*ctxt_ptr = calloc(1, sizeof(netmap_module_context));
-	nmc = (netmap_module_context *) ctxt_ptr;
+	nmc = (netmap_module_context *) (*ctxt_ptr);
 	if (*ctxt_ptr == NULL) {
 		TRACE_LOG("Can't allocate memory for netmap context\n");
 		TRACE_NETMAP_FUNC_END();
 		return -1;
 	}
 	
-	/* resetting base_nmd */
-	memset(&nmc->base_nmd, 0, sizeof(struct nm_desc));
-
-	/* resetting fd to -1 */
-	nmc->global_fd = nmc->local_fd = -1;
-	{
-		/* XXX - this field may be useless... we'll see */
-		nmc->nmr_config = (unsigned char *)"";
-		/* use some extra rings */
-		nmc->base_nmd.req.nr_arg3 = DEFAULT_EXTRA_RINGS;
-		nmc->nmd_flags |= NM_OPEN_ARG3;
-
-	}
+	nmc->eng = (engine *)engptr;
 	TRACE_NETMAP_FUNC_END();
 	return 0;
 }
 /*---------------------------------------------------------------------*/
 int
 netmap_link_iface(void *ctxt, const unsigned char *iface,
-		  const uint16_t batchsize)
+		  const uint16_t batchsize, int8_t qid)
 {
 	TRACE_NETMAP_FUNC_START();
 
 	char nifname[MAX_IFNAMELEN];
 	netmap_module_context *nmc = (netmap_module_context *)ctxt;
+	netmap_iface_context *nic = NULL;
 
 	/* setting nm-ifname*/
 	sprintf(nifname, "netmap:%s", iface);
-	nmc->global_nmd = nm_open((char *)nifname, NULL, 
-				  nmc->nmd_flags, 
-				  &nmc->base_nmd);
 
-	if (nmc->global_nmd == NULL) {
-		TRACE_LOG("Unable to open %s: %s\n", 
-			  iface, strerror(errno));
-		TRACE_NETMAP_FUNC_END();
-		return -1;
-	}
-	nmc->global_fd = nmc->global_nmd->fd;
-	TRACE_DEBUG_LOG("mapped %dKB at %p\n", 
-			nmc->global_nmd->req.nr_memsize>>10, 
-			nmc->global_nmd->mem);
+	/* check if the interface has been registered with some other engine */
+	netiface *nif = interface_find((char *)iface);
+	if (nif == NULL) {
+		nic = calloc(1, sizeof(netmap_iface_context));
+		if (nic == NULL) {
+			TRACE_ERR("Can't allocate memory for netmap_iface_context (for %s)\n", iface);
+			TRACE_NETMAP_FUNC_END();
+			return -1;
+		}
+		/* resetting base_nmd */
+		memset(&nic->base_nmd, 0, sizeof(struct nm_desc));
+
+		/* resetting fd to -1 */
+		nic->global_fd = nmc->local_fd = -1;
+
+		/* use some extra rings */
+		nic->base_nmd.req.nr_arg3 = DEFAULT_EXTRA_RINGS;
+		nic->nmd_flags |= NM_OPEN_ARG3;
+
+		nic->global_nmd = nm_open((char *)nifname, NULL, 
+					  nic->nmd_flags, 
+					  &nic->base_nmd);
+
+		if (nic->global_nmd == NULL) {
+			TRACE_LOG("Unable to open %s: %s\n", 
+				  iface, strerror(errno));
+			free(nic);
+			TRACE_NETMAP_FUNC_END();
+			return -1;
+		}
+		nic->global_fd = nic->global_nmd->fd;
+		TRACE_DEBUG_LOG("mapped %dKB at %p\n", 
+				nic->global_nmd->req.nr_memsize>>10, 
+				nic->global_nmd->mem);
+
+	
+		/* XXX */
+		if (qid != -1) {
+			nic->global_nmd->req.nr_flags = NR_REG_ONE_NIC;
+			nic->global_nmd->req.nr_ringid = qid;
+		}
+	
+		/* create interface entry */
+		create_interface_entry(iface, (qid == -1) ? NO_QUEUES : HW_QUEUES, IO_NETMAP, nic, nmc->eng);
+	} else { /* otherwise check if that interface can be registered */
+		nic = retrieve_and_register_interface_entry(iface, HW_QUEUES, IO_NETMAP, nmc->eng);
+		if (nic == NULL) {
+			TRACE_LOG("Error in linking ifname: %s to engine %s\n",
+				  iface, nmc->eng->name);
+			TRACE_NETMAP_FUNC_END();
+			return -1;
+		}
+		nic->global_nmd->req.nr_flags = NR_REG_ONE_NIC;
+		nic->global_nmd->req.nr_ringid = qid;
+	} 
+
+	nic->global_nmd->req.nr_ringid |= NETMAP_NO_TX_POLL;
 
 	/* setting batch size */
 	nmc->batch_size = batchsize;
 	
-	{
-		/* XXX - support multiple threads */
-		//nmc->global_nmd->req.nr_flags = NR_REG_ONE_NIC;
-		//nmc->global_nmd->req.nr_ringid = 1;
-		nmc->global_nmd->req.nr_ringid |= NETMAP_NO_TX_POLL;
-	}
-
 	/* open handle */
-	nmc->local_nmd = nm_open((char *)nifname, NULL, nmc->nmd_flags |
+	nmc->local_nmd = nm_open((char *)nifname, NULL, nic->nmd_flags |
 				 NM_OPEN_IFNAME | NM_OPEN_NO_MMAP, 
-				 nmc->global_nmd);
+				 nic->global_nmd);
 	if (nmc->local_nmd == NULL) {
 		TRACE_LOG("Unable to open %s: %s",
 			  iface, strerror(errno));
@@ -111,6 +137,8 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 	
 	sleep(NETMAP_LINK_WAIT_TIME);
 	TRACE_NETMAP_FUNC_END();
+
+	UNUSED(qid);
 	return 0;
 }
 /*---------------------------------------------------------------------*/

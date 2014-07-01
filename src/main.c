@@ -12,6 +12,8 @@
 #include <unistd.h>
 /* for init'ing the engine list */
 #include "pkt_engine.h"
+/* for init'ing the network interface list */
+#include "network_interface.h"
 /* for lua variables access */
 #include "lua_interpreter.h"
 /*---------------------------------------------------------------------*/
@@ -69,6 +71,7 @@ init_modules()
 
 	TRACE_DEBUG_LOG("Initializing the engines module \n");
 	engine_init();
+	interface_init();
 
 	TRACE_FUNC_END();
 }

@@ -29,10 +29,11 @@
  */
 /*---------------------------------------------------------------------*/
 typedef struct io_module_funcs {
-	int  (*init_context)(void **ctxt);
+	int  (*init_context)(void **ctxt, void *engptr);
 	int  (*link_iface)(void *ctxt,
 			   const unsigned char *iface, 
-			   const uint16_t batchsize);
+			   const uint16_t batchsize,
+			   int8_t qid);
 	void (*unlink_iface)(const unsigned char *iface, void *engptr);
 	void (*callback)(void *engptr);
 	int  (*shutdown)(void *engptr);

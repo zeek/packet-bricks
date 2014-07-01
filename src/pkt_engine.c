@@ -63,6 +63,27 @@ engine_find(const unsigned char *name)
 	return NULL;
 }
 /*---------------------------------------------------------------------*/
+static inline void
+engine_remove(const unsigned char *name)
+{
+	TRACE_PKTENGINE_FUNC_START();
+	engine *eng, *tmp_eng;
+	for (eng = TAILQ_FIRST(&engine_list); eng != NULL; eng = tmp_eng) {
+		tmp_eng = TAILQ_NEXT(eng, entry);
+		if (!strcmp((char *)eng->name, (char *)name)) {
+			/* Remove the eng entry from the queue. */
+			TAILQ_REMOVE(&engine_list, eng, entry);
+			TRACE_PKTENGINE_FUNC_END();
+			return;
+		}
+	}
+	
+	/* control only comes here if the entry in the list didn't exist */
+	TRACE_LOG("Engine %s did not exist in the system\n", name);
+	TRACE_PKTENGINE_FUNC_END();
+	return;
+}
+/*---------------------------------------------------------------------*/
 static inline void *
 thread_start(void *engptr)
 {
@@ -175,7 +196,7 @@ pktengine_new(const unsigned char *name, const unsigned char *type,
 	load_io_module(eng);
 
 	/* initialize type-specific private context */
-	if (eng->iom.init_context(&eng->private_context) == -1) {
+	if (eng->iom.init_context(&eng->private_context, eng) == -1) {
 		/* if init fails, free up everything */
 		if (eng->private_context != NULL)
 			free(eng->private_context);
@@ -222,6 +243,9 @@ pktengine_delete(const unsigned char *name)
 	/* check if ifaces have been unlinked */
 	eng->iom.unlink_iface((const unsigned char *)"all", eng);
 
+	/* remove the entry from the engine list */
+	engine_remove(eng->name);
+
 	/* now delete it */
 	free(eng->name);
 	/* free the private context as well */
@@ -252,6 +276,15 @@ void pktengine_link_iface(const unsigned char *name,
 		return;
 	}
 	
+	/* check if the engine is already running */
+	if (eng->run != 0) {
+		TRACE_LOG("Can't link interface %s." 
+			  " Engine %s is already running.\n",
+			  iface, name);
+		TRACE_PKTENGINE_FUNC_END();
+		return;
+	}
+
 	/* 
 	 * Link the interface now...
 	 * If the batch size is not given, then use
@@ -260,7 +293,8 @@ void pktengine_link_iface(const unsigned char *name,
 	 */
 	ret = eng->iom.link_iface(eng->private_context, iface, 
 				  (batch_size == -1) ? 
-				  pc_info.batch_size : batch_size);
+				  pc_info.batch_size : batch_size,
+				  /*eng->cpu*/-1);
 	if (ret == -1) 
 		TRACE_LOG("Could not link!!!\n");
 	
@@ -282,6 +316,16 @@ pktengine_unlink_iface(const unsigned char *name,
 		return;
 	}
 
+	/* check if the engine is already running */
+	if (eng->run != 0) {
+		TRACE_LOG("Can't unlink interface %s." 
+			  " Engine %s is already running.\n",
+			  iface, name);
+		TRACE_PKTENGINE_FUNC_END();
+		return;
+	}
+
+	/* unlink */
 	eng->iom.unlink_iface(iface, eng);
 
 	TRACE_PKTENGINE_FUNC_END();
@@ -296,6 +340,15 @@ pktengine_start(const unsigned char *name)
 	eng = engine_find(name);
 	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
+			  name);
+		TRACE_PKTENGINE_FUNC_END();
+		return;
+	}
+
+	/* check if the engine is already running */
+	if (eng->run != 0) {
+		TRACE_LOG("Can't start the engine." 
+			  " Engine %s is already running.\n",
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
 		return;
@@ -317,6 +370,15 @@ pktengine_stop(const unsigned char *name)
 	eng = engine_find(name);
 	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
+			  name);
+		TRACE_PKTENGINE_FUNC_END();
+		return;
+	}
+
+	/* check if the engine has already stopped */
+	if (eng->run == 0) {
+		TRACE_LOG("Can't stop the engine." 
+			  " Engine %s is already non-functional.\n",
 			  name);
 		TRACE_PKTENGINE_FUNC_END();
 		return;

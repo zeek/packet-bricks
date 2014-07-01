@@ -40,7 +40,10 @@ typedef struct engine {
 	void *private_context;		/* I/O-related context */
 	pthread_t t;
 
-	/* the linked list ptr that will chain together all the engines */
+	/* the linked list ptr that will chain together all the engines (for networkin_interface.c) */
+	TAILQ_ENTRY(engine) if_entry; 
+
+	/* the linked list ptr that will chain together all the engines (for pkt_engine.c) */
 	TAILQ_ENTRY(engine) entry; 
 } engine __attribute__((aligned(__WORDSIZE)));
 
