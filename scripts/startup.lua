@@ -77,8 +77,18 @@ end
 -- 4 - T H R E A D S - S E T U P
 -----------------------------------------------------------------------
 --init4 function __initializes 4 pkteng threads and links it with a__
---		 __netmap-enabled interface. collects 1024 packets at__
---		 __a time. "cpu" and "batch" params are optional__
+--		 __netmap-enabled interface. collects 1024 packets __
+--		 __at a time. "cpu", "batch" & "qid" params are    __
+--		 __ optional.					   __
+--		 __						   __
+--		 ++_____________HOW TO USE H.W QUEUES______________++
+--		 ++Please make sure that the driver is initialized ++
+--		 ++with the right no. of h/w queues. In this setup,++
+--		 ++ cpu_thread=0 is registered with H/W queue 0    ++
+--		 ++ cpu_thread=1 is registered with H/W queue 1	   ++
+--		 ++ cpu_thread=2 is registered with H/W queue 2	   ++
+--		 ++ cpu_thread=3 is registered with H/W queue 3	   ++
+--		 ++________________________________________________++
 
 function init4()
 	 for cnt = 0, 3 do

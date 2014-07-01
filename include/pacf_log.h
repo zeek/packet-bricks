@@ -42,20 +42,45 @@
 #define TRACE_DEBUG_LOG(f, n...)	(void)0
 #endif /* !DEBUG  */
 
+#ifdef DLUA
 #define TRACE_LUA_FUNC_START()		TRACE_FUNC_START()
 #define TRACE_LUA_FUNC_END()		TRACE_FUNC_END()
+#else /* DLUA */
+#define TRACE_LUA_FUNC_START()		(void)0
+#define TRACE_LUA_FUNC_END()		(void)0
+#endif /* !DLUA */
 
+#ifdef DPKTENG
 #define TRACE_PKTENGINE_FUNC_START()	TRACE_FUNC_START()
 #define TRACE_PKTENGINE_FUNC_END()	TRACE_FUNC_END()
+#else /* DPKTENG */
+#define TRACE_PKTENGINE_FUNC_START()	(void)0
+#define TRACE_PKTENGINE_FUNC_END()	(void)0
+#endif /* !DPKTENG */
 
+#ifdef DNMP
 #define TRACE_NETMAP_FUNC_START()	TRACE_FUNC_START()
 #define TRACE_NETMAP_FUNC_END()		TRACE_FUNC_END()
+#else /* DNMP */
+#define TRACE_NETMAP_FUNC_START()	(void)0
+#define TRACE_NETMAP_FUNC_END()		(void)0
+#endif /* !DNMP */
 
+#ifdef DTHREAD
 #define TRACE_THREAD_FUNC_START()	TRACE_FUNC_START()
 #define TRACE_THREAD_FUNC_END()		TRACE_FUNC_END()
+#else /* DTHREAD */
+#define TRACE_THREAD_FUNC_START()	(void)0
+#define TRACE_THREAD_FUNC_END()	        (void)0
+#endif /* !DTHREAD */
 
+#ifdef DIFACE
 #define TRACE_IFACE_FUNC_START()	TRACE_FUNC_START()
 #define TRACE_IFACE_FUNC_END()		TRACE_FUNC_END()
+#else /* DIFACE */
+#define TRACE_IFACE_FUNC_START()	(void)0
+#define TRACE_IFACE_FUNC_END()		(void)0
+#endif /* !DIFACE */
 
 /**
  * Default loggers.

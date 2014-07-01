@@ -94,6 +94,13 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		create_interface_entry(iface, (qid == -1) ? NO_QUEUES : HW_QUEUES, 
 				       IO_NETMAP, nic, nmc->eng);
 	} else { /* otherwise check if that interface can be registered */
+		if (qid == -1) {
+			TRACE_LOG("Qid not given!!! "
+				  "Interface %s is set to read from H/W queues.",
+				  iface);
+			TRACE_NETMAP_FUNC_END();
+			return -1;
+		}
 		nic = retrieve_and_register_interface_entry(iface, HW_QUEUES, 
 							    IO_NETMAP, nmc->eng);
 		if (nic == NULL) {

@@ -3,6 +3,7 @@
 CC=gcc
 CFLAGS=-O3 -pipe -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
+DEBUG_CFLAGS+=-DDLUA -DDPKTENG -DDNMP -DDTHREAD -DDIFACE
 INCLUDE=-I./include -I/usr/include/lua5.1/
 NETMAP_INCLUDE=-I./include/netmap
 LIBS=-llua5.1 -lpthread

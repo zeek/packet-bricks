@@ -171,7 +171,7 @@ pktengine_new_wrap(lua_State *L)
 	}
 
 	TRACE_DEBUG_LOG("Pkt engine name is: %s, type is %s,"
-			" and cpu is: %u\n",
+			" and cpu is: %d\n",
 			name, type, cpu);
         pktengine_new(name, type, cpu);
         lua_remove(L, -1);
