@@ -40,10 +40,16 @@ typedef struct engine {
 	void *private_context;		/* I/O-related context */
 	pthread_t t;
 
-	/* the linked list ptr that will chain together all the engines (for networkin_interface.c) */
+	/*
+	 * the linked list ptr that will chain together
+	 * all the engines (for network_interface.c) 
+	 */
 	TAILQ_ENTRY(engine) if_entry; 
 
-	/* the linked list ptr that will chain together all the engines (for pkt_engine.c) */
+	/*
+	 * the linked list ptr that will chain together 
+	 * all the engines (for pkt_engine.c) 
+	 */
 	TAILQ_ENTRY(engine) entry; 
 } engine __attribute__((aligned(__WORDSIZE)));
 
@@ -71,7 +77,8 @@ pktengine_delete(const unsigned char *name);
 void
 pktengine_link_iface(const unsigned char *name, 
 		     const unsigned char *iface,
-		     const int16_t batch_size);
+		     const int16_t batch_size,
+		     const int8_t queue);
 
 /**
  * Unregister the iface from the pkt engine

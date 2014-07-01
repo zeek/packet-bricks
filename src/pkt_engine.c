@@ -262,7 +262,8 @@ pktengine_delete(const unsigned char *name)
 /*---------------------------------------------------------------------*/
 void pktengine_link_iface(const unsigned char *name, 
 			  const unsigned char *iface,
-			  const int16_t batch_size)
+			  const int16_t batch_size,
+			  const int8_t queue)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
@@ -288,13 +289,14 @@ void pktengine_link_iface(const unsigned char *name,
 	/* 
 	 * Link the interface now...
 	 * If the batch size is not given, then use
-	 * the default batch size taken from pc_info
-	 *
+	 * the default batch size taken from pc_info.
+	 * If the queue is negative, use the interface
+	 * without queues.
 	 */
 	ret = eng->iom.link_iface(eng->private_context, iface, 
 				  (batch_size == -1) ? 
 				  pc_info.batch_size : batch_size,
-				  /*eng->cpu*/-1);
+				  queue);
 	if (ret == -1) 
 		TRACE_LOG("Could not link!!!\n");
 	

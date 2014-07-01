@@ -51,7 +51,7 @@ create_interface_entry(const unsigned char *iface,
 		return NULL;
 	}
 	
-	nif->ifname = strdup((char *)iface);
+	nif->ifname = (unsigned char *)strdup((char *)iface);
 	if(nif->ifname == NULL) {
 		TRACE_ERR("Could not strdup string\n");
 		TRACE_IFACE_FUNC_END();
@@ -88,7 +88,8 @@ retrieve_and_register_interface_entry(const unsigned char *iface,
 	/* 1: check whether this iface has not already been registered by this eng */
 	TAILQ_FOREACH(e_iter, &nif->registered_engines, if_entry) {
 		if (!strcmp((char *)e_iter->name, (char *)eng->name)) {
-			TRACE_LOG("Engine %s already has a link to interface: %s\n",
+			TRACE_LOG("Engine %s already has a link "
+				  "to interface: %s\n",
 				  eng->name, iface);
 			TRACE_IFACE_FUNC_END();
 			return NULL;
@@ -98,7 +99,8 @@ retrieve_and_register_interface_entry(const unsigned char *iface,
 
 	/* 2: check if it supports multiple hardware queues */
 	if (nif->multiqueue_enabled == NO_QUEUES) {
-		TRACE_LOG("interface %s does not support multiple queues\n",
+		TRACE_LOG("interface %s does not support "
+			  "multiple queues\n",
 			  iface);
 		TRACE_IFACE_FUNC_END();
 		return NULL;
@@ -106,7 +108,8 @@ retrieve_and_register_interface_entry(const unsigned char *iface,
 
 	/* check whether I/O type is compatible */
 	if (io != nif->iot) {
-		TRACE_LOG("interface %s does not support the requested I/O type]n",
+		TRACE_LOG("interface %s does not support the "
+			  "requested I/O type\n",
 			  iface);
 	}
 	UNUSED(queues_enabled);
@@ -118,6 +121,58 @@ retrieve_and_register_interface_entry(const unsigned char *iface,
 	TAILQ_INSERT_TAIL(&nif->registered_engines, eng, if_entry);
 	TRACE_IFACE_FUNC_END();
 
-	return nif;
+	return nif->context;
+}
+/*---------------------------------------------------------------------*/
+void
+unregister_interface_entry(const unsigned char *iface, engine *eng)
+{
+	TRACE_IFACE_FUNC_START();
+	netiface *nif;
+	engine *e_iter, *e_itertmp;
+	netiface *n_iter, *n_itertmp;
+
+	/* retrieve the right interface entry */
+	nif = interface_find((char *)iface);
+	if (nif == NULL) {
+		TRACE_LOG("interface %s not found!!!!\n", iface);
+		TRACE_IFACE_FUNC_END();
+		return;
+	}
+
+	/* locate the right registered engine and remove it */
+	TAILQ_FOREACH_SAFE(e_iter, &nif->registered_engines, if_entry, e_itertmp) {
+		if (!strcmp((char *)e_iter->name, (char *)eng->name)) {
+			TAILQ_REMOVE(&nif->registered_engines, e_iter, if_entry);
+			TRACE_DEBUG_LOG("Removing engine %s from interface %s\n",
+					eng->name, nif->ifname);
+		}
+	}
+
+	/* remove the interface object if no engines are registered anymore */
+	if (TAILQ_EMPTY(&nif->registered_engines)) {
+		TAILQ_FOREACH_SAFE(n_iter, &niface_list, entry, n_itertmp) {
+			TAILQ_REMOVE(&niface_list, n_iter, entry);
+			TRACE_DEBUG_LOG("Removing interface %s from the system\n",
+					nif->ifname);
+		}
+		free(nif->ifname);
+		free(nif);
+	}
+
+	TRACE_IFACE_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+void
+unregister_all_interfaces(engine *eng)
+{
+	TRACE_IFACE_FUNC_START();
+	netiface *n_iter, *n_itertmp;
+	
+	TAILQ_FOREACH_SAFE(n_iter, &niface_list, entry, n_itertmp) {
+		unregister_interface_entry(n_iter->ifname, eng);
+	}
+
+	TRACE_IFACE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

@@ -84,18 +84,18 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		TRACE_DEBUG_LOG("mapped %dKB at %p\n", 
 				nic->global_nmd->req.nr_memsize>>10, 
 				nic->global_nmd->mem);
-
 	
-		/* XXX */
 		if (qid != -1) {
 			nic->global_nmd->req.nr_flags = NR_REG_ONE_NIC;
 			nic->global_nmd->req.nr_ringid = qid;
 		}
 	
 		/* create interface entry */
-		create_interface_entry(iface, (qid == -1) ? NO_QUEUES : HW_QUEUES, IO_NETMAP, nic, nmc->eng);
+		create_interface_entry(iface, (qid == -1) ? NO_QUEUES : HW_QUEUES, 
+				       IO_NETMAP, nic, nmc->eng);
 	} else { /* otherwise check if that interface can be registered */
-		nic = retrieve_and_register_interface_entry(iface, HW_QUEUES, IO_NETMAP, nmc->eng);
+		nic = retrieve_and_register_interface_entry(iface, HW_QUEUES, 
+							    IO_NETMAP, nmc->eng);
 		if (nic == NULL) {
 			TRACE_LOG("Error in linking ifname: %s to engine %s\n",
 				  iface, nmc->eng->name);
@@ -124,13 +124,6 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		nmc->local_fd = nmc->local_nmd->fd;
 	}
 	
-#if 0
-	/* XXX Uncomment the following out in next version */
-	devqueues = nmc->nmd->req.nr_rx_rings;
-	/* CHECK IF # OF THREADS ARE LESS THAN # OF AVAILABLE QUEUES */
-	/* THIS MAY BE SHIFTED TO PKT_ENGINE.C FILE */
-#endif
-	
 	/* Wait for mandatory (& cautionary) PHY reset */
 	TRACE_LOG("Wait for %d secs for phy reset\n",
 		  NETMAP_LINK_WAIT_TIME);
@@ -152,8 +145,12 @@ netmap_unlink_iface(const unsigned char *iface, void *engptr)
 	if (nmc->local_nmd != NULL)
 		nm_close(nmc->local_nmd);
 	nmc->local_nmd = NULL;
+	
+	if (!strcmp("all", (char *)iface))
+		unregister_all_interfaces(eng);
+	else
+		unregister_interface_entry(iface, eng);
 
-	UNUSED(iface);
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

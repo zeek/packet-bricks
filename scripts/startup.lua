@@ -1,13 +1,18 @@
 -- /usr/bin/lua
----------------------- STARTUP SCRIPT --------------------------------
--- Only a few commands are currently functional. Please check back for
--- updates later.
+---------------------- STARTUP SCRIPT ---------------------------------
 
--- MACROS
-STATS_PRINT_CYCLE_DEFAULT = 10
+
+
+
+
+-----------------------------------------------------------------------
+-- MACROS-&-UTILITY-FUNCS
+-----------------------------------------------------------------------
+STATS_PRINT_CYCLE_DEFAULT = 100
 SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
------------------------------------------------------------------------
+
+
 --sleep function __self-explanatory__
 
 local clock = os.clock
@@ -16,57 +21,122 @@ function sleep(n)  -- seconds
 	 while clock() - t0 <= n do end
 end
 -----------------------------------------------------------------------
---init function __initializes pkteng thread and links it with a netmap__
---		__enabled interface. collects 1024 packets at a time.__
---		__"cpu" and "batch" params are optional__
+
+
+
+
+
+-----------------------------------------------------------------------
+-- S I N G L E - T H R E A D E D - S E T U P
+-----------------------------------------------------------------------
+--init function  __initializes pkteng thread and links it with a__
+--		 __netmap-enabled interface. collects 1024 packets at__
+--		 __a time. "cpu" and "batch" params are optional__
 
 function init()
-	 pkteng.new({name="e0", type="netmap", cpu=0})
+	 pkteng.new({name="e0", type="netmap"})
 	 pkteng.link({engine="e0", ifname="eth3", batch=PKT_BATCH})
-
-	 --pkteng.new({name="e1", type="netmap", cpu=1})
-	 --pkteng.link({engine="e1", ifname="eth3", batch=PKT_BATCH})
-
-	 --pkteng.new({name="e2", type="netmap", cpu=2})
-	 --pkteng.link({engine="e2", ifname="eth3", batch=PKT_BATCH})
-
-	 --pkteng.new({name="e3", type="netmap", cpu=3})
-	 --pkteng.link({engine="e3", ifname="eth3", batch=PKT_BATCH})
 end
 -----------------------------------------------------------------------
---start function __starts the pkteng and prints overall per sec stats__
---		  __for STATS_PRINT_CYCLE_DEFAULT secs__
+--start function  __starts pkteng and prints overall per sec__
+--		  __stats for STATS_PRINT_CYCLE_DEFAULT secs__
 
-function start(c)
+function start()
 	 pkteng.start({engine="e0"})
-	 --pkteng.start({engine="e1"})
-	 --pkteng.start({engine="e2"})
-	 --pkteng.start({engine="e3"})
+
 	 local i = 0
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
 	     pkteng.show_stats({engine="e0"})
-	     --pkteng.show_stats({engine="e1"})
-	     --pkteng.show_stats({engine="e2"})
-	     --pkteng.show_stats({engine="e3"})
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end
 -----------------------------------------------------------------------
---stop function __stops the pkteng before printing the final stats. it__
---		__then unlinks the interface from the engine and finally__
---		__frees the engine context from the system__
+--stop function  __stops the pkteng before printing the final stats.__
+--		 __it then unlinks the interface from the engine and__
+--		 __finally frees the engine context from the system__
 function stop()
 	 pkteng.show_stats({engine="e0"})
+
 	 pkteng.stop({engine="e0"})
 	 sleep(SLEEP_TIMEOUT)
+
 	 pkteng.unlink({engine="e0", ifname="eth3"})
 	 sleep(SLEEP_TIMEOUT)
+
 	 pkteng.delete({engine="e0"})
 	 -- pacf.shutdown()
 end
 -----------------------------------------------------------------------
 
+
+
+
+
+-----------------------------------------------------------------------
+-- 4 - T H R E A D S - S E T U P
+-----------------------------------------------------------------------
+--init4 function __initializes 4 pkteng threads and links it with a__
+--		 __netmap-enabled interface. collects 1024 packets at__
+--		 __a time. "cpu" and "batch" params are optional__
+
+function init4()
+	 for cnt = 0, 3 do
+	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
+	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})
+	 end
+end
+-----------------------------------------------------------------------
+--start4 function __starts all 4 pktengs and prints overall per sec__
+--		  __stats for STATS_PRINT_CYCLE_DEFAULT secs__
+
+function start4()
+	 for cnt = 0, 3 do
+	 	 pkteng.start({engine="e" .. cnt})
+	 end
+
+	 local i = 0
+	 repeat
+	     sleep(SLEEP_TIMEOUT)
+	     for cnt = 0, 3 do
+	     	 pkteng.show_stats({engine="e" .. cnt})
+	     end
+	     i = i + 1
+	 until i > STATS_PRINT_CYCLE_DEFAULT
+end
+-----------------------------------------------------------------------
+--stop4 function __stops the pktengs before printing the final stats.__
+--		 __it then unlinks the interface from the engine and__
+--		 __finally frees the engine context from the system__
+function stop4()
+	 for cnt = 0, 3 do
+	 	 pkteng.show_stats({engine="e" .. cnt})
+		 pkteng.stop({engine="e" .. cnt})
+	 end
+
+	 sleep(SLEEP_TIMEOUT)
+
+	 for cnt = 0, 3 do
+	 	 pkteng.unlink({engine="e" .. cnt, ifname="eth3"})
+	 end
+
+	 sleep(SLEEP_TIMEOUT)
+
+	 for cnt = 0, 3 do
+	 	 pkteng.delete({engine="e" .. cnt})
+	 end
+
+	 -- pacf.shutdown()
+end
+-----------------------------------------------------------------------
+
+
+
+
+
+-----------------------------------------------------------------------
+-- S T A R T _ OF _  S C R I P T
+-----------------------------------------------------------------------
 -- __"main" function (partially commented for user's convenience)__
 --
 -------- __This command prints out the main help menu__
@@ -83,3 +153,4 @@ pkteng.help()
 -- stop()
 -------- __The following commands quits the session__
 -- pacf.shutdown()
+-----------------------------------------------------------------------

@@ -14,7 +14,7 @@
  */
 /*---------------------------------------------------------------------*/
 typedef struct netiface {
-	char *ifname;			/* the name of the interface */
+	unsigned char *ifname;		/* the name of the interface */
 	uint8_t multiqueue_enabled;	/* check if it will receive packets via hardware queues */
 	io_type iot;			/* I/O type */
 	void *context;			/* some I/O libs (e.g. netmap) need private contexts */
@@ -48,10 +48,29 @@ create_interface_entry(const unsigned char *iface,
 		       void *ctxt,
 		       engine *eng);
 
+/**
+ *
+ * Register engine with an already tagged interface
+ *
+ */
 void *
 retrieve_and_register_interface_entry(const unsigned char *iface, 
 				      unsigned char queues_enabled, 
 				      io_type io,
 				      engine *eng);
+
+/**
+ * Unregister engine from the interface. If the interface object
+ * has only one registered engine, then free the interface as well.
+ */
+void
+unregister_interface_entry(const unsigned char *iface,
+			   engine *eng);
+
+/**
+ * Unregister engine from all the interfaces.
+ */
+void
+unregister_all_interfaces(engine *eng);
 /*---------------------------------------------------------------------*/
 #endif /* !__NETWORK_INTERFACE_H__ */

@@ -213,10 +213,10 @@ pktengine_link_wrap(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	unsigned char *name;
 	unsigned char *ifname;
-	int batch_size;
+	int batch_size, qid;
 
 	/* set initial batch size to -1 */
-	batch_size = -1;
+	batch_size = qid = -1;
 
 	/* this configures iface */
 	luaL_checktype(L, 1, LUA_TTABLE);
@@ -241,10 +241,15 @@ pktengine_link_wrap(lua_State *L)
 		batch_size = lua_tointeger(L, -1);
         lua_remove(L, -1);
 
+        lua_getfield(L, 1, "qid");
+        if (lua_isnumber(L, -1))
+		qid = lua_tointeger(L, -1);
+        lua_remove(L, -1);
+
 	TRACE_DEBUG_LOG("Pkt engine name is: %s, interface name is: %s, "
-			"and batch_size is: %d\n",
-			name, ifname, batch_size);
-	pktengine_link_iface(name, ifname, batch_size);
+			"and batch_size is: %d and qid: %d\n",
+			name, ifname, batch_size, qid);
+	pktengine_link_iface(name, ifname, batch_size, qid);
 	
 	lua_remove(L, -1);
 	lua_remove(L, -1);
@@ -281,7 +286,7 @@ pktengine_unlink_wrap(lua_State *L)
 	TRACE_DEBUG_LOG("Pkt engine name is: %s " 
 			"and interface name is: %s\n",
 			name, ifname);	
-	pktengine_unlink_iface(name, ifname);	
+	pktengine_unlink_iface(name, ifname);
 	lua_remove(L, -1);
 	lua_remove(L, -1);
 	
