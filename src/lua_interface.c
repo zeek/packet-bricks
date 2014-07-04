@@ -23,6 +23,7 @@ platform_help_wrap(lua_State *L)
 	fprintf(stdout, PLATFORM_NAME" Commands:\n"
 		"    help()\n"
 		"    print_status()\n"
+		"    show_stats()\n"
 		"    shutdown()\n"
 		"  Available subsystems within "PLATFORM_NAME" have their own help() methods:\n"
 		"    pkteng <under_construction> \n"
@@ -36,11 +37,27 @@ platform_print_status(lua_State *L)
 {
 	/* this prints the system's current status */
 	TRACE_LUA_FUNC_START();
-	UNUSED(L);
-	fprintf(stdout, PLATFORM_NAME" is offline.\n");
-	fprintf(stdout, "Nothing more here yet."
-		"It will start supporting netmap I/O soon...\n");
+	uint8_t rc = 0;
+
+	rc = is_pktengine_online((unsigned char *)"any");
+	if (rc == 0)
+		fprintf(stdout, PLATFORM_NAME" is offline.\n");
+	else 
+		fprintf(stdout, PLATFORM_NAME" is online.\n");
+
 	TRACE_LUA_FUNC_END();
+	UNUSED(L);
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+platform_show_stats(lua_State *L)
+{
+	/* this prints the system's current status */
+	TRACE_LUA_FUNC_START();
+	pktengines_list_stats();
+	TRACE_LUA_FUNC_END();
+	UNUSED(L);
         return 0;
 }
 /*---------------------------------------------------------------------*/
@@ -60,6 +77,7 @@ static const struct luaL_reg
 platformlib[] = {
         {"help", platform_help_wrap},
         {"print_status", platform_print_status},
+	{"show_stats", platform_show_stats},
         {"shutdown", shutdown_wrap},
         {NULL, NULL},
 };

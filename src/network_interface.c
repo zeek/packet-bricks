@@ -94,6 +94,13 @@ retrieve_and_register_interface_entry(const unsigned char *iface,
 			TRACE_IFACE_FUNC_END();
 			return NULL;
 		}
+		if (e_iter->run == 1) {
+			TRACE_LOG("Please stop engine %s before linking "
+				  "engine %s to interface %s\n",
+				  e_iter->name, eng->name, iface);
+			TRACE_IFACE_FUNC_END();
+			return NULL;
+		}
 	}
 	
 
@@ -157,6 +164,7 @@ unregister_interface_entry(const unsigned char *iface, engine *eng)
 					nif->ifname);
 		}
 		free(nif->ifname);
+		free(nif->context);
 		free(nif);
 	}
 

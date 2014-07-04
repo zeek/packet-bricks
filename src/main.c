@@ -70,7 +70,7 @@ init_modules()
 	TRACE_FUNC_START();
 
 	TRACE_DEBUG_LOG("Initializing the engines module \n");
-	engine_init();
+	pktengine_init();
 	interface_init();
 
 	TRACE_FUNC_END();

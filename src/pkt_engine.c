@@ -85,7 +85,7 @@ engine_remove(const unsigned char *name)
 }
 /*---------------------------------------------------------------------*/
 static inline void *
-thread_start(void *engptr)
+engine_spawn_thread(void *engptr)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng = (engine *)engptr;
@@ -116,7 +116,7 @@ engine_run(engine *eng)
 
 	/* Start your engines now */
 	TRACE_DEBUG_LOG("Engine %s starting...\n", eng->name);
-	if (pthread_create(&eng->t, NULL, thread_start, (void *)eng) != 0) {
+	if (pthread_create(&eng->t, NULL, engine_spawn_thread, (void *)eng) != 0) {
 		TRACE_PKTENGINE_FUNC_END();
 		TRACE_ERR("Can't spawn thread for starting the engine!\n");
 	}
@@ -126,7 +126,7 @@ engine_run(engine *eng)
 }
 /*---------------------------------------------------------------------*/
 inline void
-engine_init()
+pktengine_init()
 {
 	TRACE_PKTENGINE_FUNC_START();
 
@@ -415,5 +415,76 @@ pktengine_dump_stats(const unsigned char *name)
 	fprintf(stdout, "Packet count: %llu\n", (long long unsigned int)eng->pkt_count);
 	fprintf(stdout, "----------------------------------------\n\n");
 	TRACE_PKTENGINE_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+void
+pktengines_list_stats()
+{
+	TRACE_PKTENGINE_FUNC_START();
+	engine *eng;
+	uint64_t total_pkts, total_bytes;
+
+	total_pkts = total_bytes = 0;
+	fprintf(stdout, "--------------- ENGINE STATISTICS ------------------\n");
+	fprintf(stdout, "Engine \t\t Packet Cnt \t\t    Byte Cnt\n");
+	TAILQ_FOREACH(eng, &engine_list, entry) {
+		fprintf(stdout, "%s \t\t %10llu \t\t %11llu\n",
+			eng->name, 
+			(long long unsigned int)eng->pkt_count, 
+			(long long unsigned int)eng->byte_count);
+		total_pkts += eng->pkt_count;
+		total_bytes += eng->byte_count;
+	}
+	fprintf(stdout, "====================================================\n");
+	fprintf(stdout, "Total \t\t %10llu \t\t %11llu\n",
+		(long long unsigned int)total_pkts,
+		(long long unsigned int)total_bytes);
+	fprintf(stdout, "----------------------------------------------------\n");
+
+	TRACE_PKTENGINE_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+/**
+ * Extremely untidy version.. Can this function be improved??.. meaning
+ * more concise and less branched statements????
+ */
+uint8_t
+is_pktengine_online(const unsigned char *eng_name)
+{
+	TRACE_PKTENGINE_FUNC_START();
+	engine *eng;
+	uint8_t any = 0;
+	uint8_t all = 1;
+
+	if (TAILQ_EMPTY(&engine_list))
+		return 0;
+	
+	TAILQ_FOREACH(eng, &engine_list, entry) {
+		if (eng->run == 0) {
+			if (!strcmp((char *)eng->name, (char *)eng_name)) {
+				TRACE_PKTENGINE_FUNC_END();
+				return 0;
+			}
+			all = 0;
+		} else { /* eng->run == 1 */
+			if (!strcmp((char *)eng->name, (char *)eng_name)) {
+				TRACE_PKTENGINE_FUNC_END();
+				return 1;
+			}
+			any = 1;
+		}
+	}
+
+	if (!strcmp((char *)eng_name, "all"))
+		return all;
+	if (!strcmp((char *)eng_name, "any"))
+		return any;
+
+	/* 
+	 * control will only come here if the engine 
+	 * with $eng_name does not exist in the system
+	 */
+	TRACE_PKTENGINE_FUNC_END();
+	return 0;
 }
 /*---------------------------------------------------------------------*/

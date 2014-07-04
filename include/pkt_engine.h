@@ -106,11 +106,23 @@ pktengine_stop(const unsigned char *name);
  */
 void
 pktengine_dump_stats(const unsigned char *name);
+
+/**
+ * Print all engines' traffic stats
+ */
+void
+pktengines_list_stats();
 				  
 /**
  * Initializes the engine module
  */
 void
-engine_init();
+pktengine_init();
+				  
+/**
+ * Checks whether a given engine is online
+ */
+uint8_t
+is_pktengine_online(const unsigned char *eng_name);
 /*---------------------------------------------------------------------*/
 #endif /* !__PKT_ENGINE_H__ */

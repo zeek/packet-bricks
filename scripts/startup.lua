@@ -8,7 +8,7 @@
 -----------------------------------------------------------------------
 -- MACROS-&-UTILITY-FUNCS
 -----------------------------------------------------------------------
-STATS_PRINT_CYCLE_DEFAULT = 100
+STATS_PRINT_CYCLE_DEFAULT = 20
 SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
 
@@ -108,9 +108,7 @@ function start4()
 	 local i = 0
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
-	     for cnt = 0, 3 do
-	     	 pkteng.show_stats({engine="e" .. cnt})
-	     end
+	     pacf.show_stats()
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end
@@ -119,8 +117,8 @@ end
 --		 __it then unlinks the interface from the engine and__
 --		 __finally frees the engine context from the system__
 function stop4()
+	 pacf.show_stats()
 	 for cnt = 0, 3 do
-	 	 pkteng.show_stats({engine="e" .. cnt})
 		 pkteng.stop({engine="e" .. cnt})
 	 end
 
