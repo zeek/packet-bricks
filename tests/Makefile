@@ -1,23 +1,15 @@
-## XXX short-term Makefile. This will be improved substantially..... ##
-#---------------------------------------------------------------------#
 CC=gcc
 CFLAGS=-O3 -pipe -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
-DEBUG_CFLAGS+=-DDLUA -DDPKTENG -DDNMP -DDTHREAD -DDIFACE
-INCLUDE=-I./include -I/usr/include/lua5.1/
+INCLUDE=-I./include
 NETMAP_INCLUDE=-I./include/netmap
-LIBS=-llua5.1 -lpthread
-LDFLAGS=$(LIBS) -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
+LDFLAGS=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
 	-fno-builtin-free -fno-builtin-posix_memalign -ljemalloc
 BINDIR=bin
-BIN=$(BINDIR)/pacf
+BIN=$(BINDIR)/vale-test
 MKDIR=mkdir
-RM=rm
-STRIP=strip
 #---------------------------------------------------------------------#
-SRCS = src/lua_interpreter.c src/main.c src/lua_interface.c \
-	src/pkt_engine.c src/netmap_module.c src/thread.c \
-	src/network_interface.c
+SRCS = vale-test.c
 
 all: default
 
@@ -26,7 +18,7 @@ default: tags
 	$(MKDIR) -p $(BINDIR)
 	$(CC) *.o $(LDFLAGS) -o $(BIN)
 	$(RM) -rf *.o
-	$(STRIP) $(BIN)
+#	$(STRIP) $(BIN)
 
 debug: tags
 	$(CC) $(DEBUG_CFLAGS) $(INCLUDE) $(NETMAP_INCLUDE) -c $(SRCS)
@@ -34,13 +26,9 @@ debug: tags
 	$(CC) *.o $(LDFLAGS) -o $(BIN)
 	$(RM) -rf *.o 
 #---------------------------------------------------------------------#
-run: all
-	$(BIN) -f scripts/startup.lua
-#---------------------------------------------------------------------#
 tags:
 	find -name '*.c' -or -name '*.h' | xargs ctags
 #---------------------------------------------------------------------#
 clean:
-	rm -rf *~ bin/* lib/*.o include/*.h~ src/*.c~ *.o tags \
-	scripts/*.lua~
+	rm -rf *~ bin/*  *.h~ *.c~ *.o tags
 #---------------------------------------------------------------------#		

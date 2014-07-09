@@ -66,7 +66,7 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		nic->global_fd = nmc->local_fd = -1;
 
 		/* use some extra rings */
-		nic->base_nmd.req.nr_arg3 = DEFAULT_EXTRA_RINGS;
+		nic->base_nmd.req.nr_arg3 = NM_EXTRA_BUFS;
 		nic->nmd_flags |= NM_OPEN_ARG3;
 
 		nic->global_nmd = nm_open((char *)nifname, NULL, 
@@ -131,6 +131,9 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		nmc->local_fd = nmc->local_nmd->fd;
 	}
 	
+	/*---------------------------------------------------------------*/
+
+	/*---------------------------------------------------------------*/
 	/* Wait for mandatory (& cautionary) PHY reset */
 	TRACE_LOG("Wait for %d secs for phy reset\n",
 		  NETMAP_LINK_WAIT_TIME);
@@ -138,7 +141,6 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 	sleep(NETMAP_LINK_WAIT_TIME);
 	TRACE_NETMAP_FUNC_END();
 
-	UNUSED(qid);
 	return 0;
 }
 /*---------------------------------------------------------------------*/
