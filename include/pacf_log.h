@@ -82,6 +82,14 @@
 #define TRACE_IFACE_FUNC_END()		(void)0
 #endif /* !DIFACE */
 
+#ifdef DBKEND
+#define TRACE_BACKEND_FUNC_START()	TRACE_FUNC_START()
+#define TRACE_BACKEND_FUNC_END()	TRACE_FUNC_END()
+#else /* DBKEND */
+#define TRACE_BACKEND_FUNC_START()	(void)0
+#define TRACE_BACKEND_FUNC_END()	(void)0
+#endif /* !DBKEND */
+
 /**
  * Default loggers.
  * Use:

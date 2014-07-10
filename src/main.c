@@ -16,7 +16,10 @@
 #include "network_interface.h"
 /* for lua variables access */
 #include "lua_interpreter.h"
+/* for signal handling */
+#include <signal.h>
 /*---------------------------------------------------------------------*/
+/* program variable for lua */
 extern progvars_t pv;
 /* global variable to indicate start/stop for lua interpreter */
 volatile uint32_t stop_processing = 0;
@@ -33,7 +36,7 @@ PacfInfo pc_info = {
  * This function will free up all the previously 
  * allocated resources.
  */
-void
+inline void
 clean_exit(int exit_val)
 {
 	TRACE_FUNC_START();
@@ -50,7 +53,7 @@ clean_exit(int exit_val)
 /**
  * Prints the help menu 
  */
-void
+static inline void
 print_help(char *progname)
 {
 	TRACE_FUNC_START();
@@ -64,7 +67,7 @@ print_help(char *progname)
 /**
  * Initializes all the modules of the system
  */
-void
+static inline void
 init_modules()
 {
 	TRACE_FUNC_START();
@@ -79,7 +82,7 @@ init_modules()
 /**
  * Loads lua start-up file
  */
-void
+static void
 load_lua_file(const char *lua_file)
 {
 	TRACE_FUNC_START();
@@ -90,6 +93,45 @@ load_lua_file(const char *lua_file)
 	}
 
 	pc_info.lua_startup_file = (const unsigned char *)pv.lua_startup;
+	TRACE_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+/**
+ * XXX - A rudimentary method to display file contents. This may be revised...
+ */
+static inline void
+status_print(int sig)
+{
+	TRACE_FUNC_START();
+	FILE *f;
+
+	f = fopen("/tmp/pacf.status", "w+");
+	if (f == NULL) {
+		TRACE_ERR("Failed to create status file!\n");
+		TRACE_FUNC_END();
+	}
+	
+	/* only print status if engines are online */
+	if (is_pktengine_online((unsigned char *)"any")) {
+		pktengines_list_stats(f);
+	} else {
+		/* Do nothing! */
+	}
+
+	fflush(f);
+	fclose(f);
+	alarm(FILE_PRINT_TIMER);
+	
+	TRACE_FUNC_END();
+	UNUSED(sig);
+}
+/*---------------------------------------------------------------------*/
+static inline void
+print_status_file()
+{
+	TRACE_FUNC_START();
+	signal(SIGALRM, status_print);
+	alarm(FILE_PRINT_TIMER);
 	TRACE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
@@ -131,6 +173,9 @@ main(int argc, char **argv)
 
 	/* init_modules */
 	init_modules();
+
+	/* initialize file printing mini-module */
+	print_status_file();
 
 	/* warp to lua interface */
 	lua_kickoff();

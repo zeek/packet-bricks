@@ -131,9 +131,6 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		nmc->local_fd = nmc->local_nmd->fd;
 	}
 	
-	/*---------------------------------------------------------------*/
-
-	/*---------------------------------------------------------------*/
 	/* Wait for mandatory (& cautionary) PHY reset */
 	TRACE_LOG("Wait for %d secs for phy reset\n",
 		  NETMAP_LINK_WAIT_TIME);
@@ -141,7 +138,7 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 	sleep(NETMAP_LINK_WAIT_TIME);
 	TRACE_NETMAP_FUNC_END();
 
-	return 0;
+	return nmc->local_fd;
 }
 /*---------------------------------------------------------------------*/
 void
@@ -192,54 +189,35 @@ handle_packets(struct netmap_ring *ring, engine *eng)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-void
+int32_t
 netmap_callback(void *engptr)
 {
 	TRACE_NETMAP_FUNC_START();
+	int i;
 	engine *eng = (engine *)engptr;
 	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
-	struct pollfd pfd = {.fd = nmc->local_fd, .events = POLLIN};
 	struct netmap_if *nifp;
 	struct netmap_ring *rxring;
-	int32_t i;
 
 	if (nmc->local_nmd == NULL) {
 		TRACE_LOG("netmap context was not properly initialized\n");
-		return;
+		TRACE_NETMAP_FUNC_END();
+		return -1;
 	}
 
 	nifp = nmc->local_nmd->nifp;
-	while (eng->run) {
-		i = poll(&pfd, 1, 1000);
-		if (i > 0 && !(pfd.revents & POLLERR))
-			break;
-		TRACE_DEBUG_LOG("waiting for initial packets, "
-				"poll returns %d %d\n",
-				i, pfd.revents);
-	}
 
-	while (eng->run) {
-		if (poll(&pfd, 1, 1 * 1000) < 0) {
-			TRACE_LOG("Something weird happened\n");
-			break;
-		}
-		if (pfd.revents & POLLERR) {
-			TRACE_LOG("poll error!: %s\n", strerror(errno));
-			break;
-		}
-		for (i = nmc->local_nmd->first_rx_ring; 
-		     i <= nmc->local_nmd->last_rx_ring; 
-		     i++) {
-			rxring = NETMAP_RXRING(nifp, i);
-			if (nm_ring_empty(rxring))
-				continue;
-			
-			handle_packets(rxring, eng);
-		}
-	}
-
-	TRACE_LOG("Engine %s is stopping...\n", eng->name);
+	for (i = nmc->local_nmd->first_rx_ring; 
+	     i <= nmc->local_nmd->last_rx_ring; 
+	     i++) {
+		rxring = NETMAP_RXRING(nifp, i);
+		if (nm_ring_empty(rxring))
+			continue;
+		
+		handle_packets(rxring, eng);
+	}	
 	TRACE_NETMAP_FUNC_END();
+	return 0;
 }
 /*---------------------------------------------------------------------*/
 int32_t

@@ -9,6 +9,8 @@
 #include "io_module.h"
 /* for pthreads */
 #include <pthread.h>
+/* for file I/O */
+#include <stdio.h>
 /*---------------------------------------------------------------------*/
 /**
  *  io_type: Right now, we only support IO_NETMAP.
@@ -35,6 +37,10 @@ typedef struct engine {
 	int8_t cpu;			/* the engine thread will be affinitized to this cpu */
 	uint64_t byte_count;		/* total number of bytes seen by this engine */
 	uint64_t pkt_count;		/* total number of packets seen by this engine */
+	uint64_t pkt_dropped;		/* total number of packets dropped by this engine */
+	uint64_t pkt_intercepted;	/* total number of packets intercepted by this engine */
+	int32_t local_fd;		/* file desc of the net I/O */
+	int32_t listen_fd;		/* listening socket fd */
 
 	struct io_module_funcs iom;	/* io_funcs ptrs */
 	void *private_context;		/* I/O-related context */
@@ -108,10 +114,10 @@ void
 pktengine_dump_stats(const unsigned char *name);
 
 /**
- * Print all engines' traffic stats
+ * Print all engines' traffic stats to the given file object
  */
 void
-pktengines_list_stats();
+pktengines_list_stats(FILE *f);
 				  
 /**
  * Initializes the engine module

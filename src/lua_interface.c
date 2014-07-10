@@ -55,7 +55,7 @@ platform_show_stats(lua_State *L)
 {
 	/* this prints the system's current status */
 	TRACE_LUA_FUNC_START();
-	pktengines_list_stats();
+	pktengines_list_stats(stdout);
 	TRACE_LUA_FUNC_END();
 	UNUSED(L);
         return 0;

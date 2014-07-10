@@ -22,8 +22,7 @@
  *		   unlink_iface(): Used to remove interface from the engine.
  *				  Call it only when the engine is not running
  *
- *		   callback(): Function to start the actually reception routine
- *
+ *		   callback(): Function that reads the packets
  *		   shutdwon(): Used to destroy the private pkt I/O-specifc 
  *			       context
  */
@@ -35,7 +34,7 @@ typedef struct io_module_funcs {
 			   const uint16_t batchsize,
 			   int8_t qid);
 	void (*unlink_iface)(const unsigned char *iface, void *engptr);
-	void (*callback)(void *engptr);
+	int32_t (*callback)(void *engptr);
 	int  (*shutdown)(void *engptr);
 
 } io_module_funcs __attribute__((aligned(__WORDSIZE)));

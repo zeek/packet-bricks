@@ -4,6 +4,8 @@
 /* for uint?_* types */
 #include <sys/types.h>
 #include <stdint.h>
+/* for IFNAMSIZ */
+#include <net/if.h>
 /*---------------------------------------------------------------------*/
 /**
  * Decision & Action targets:
@@ -150,5 +152,27 @@ typedef struct Filter {
 		Connection *conn;
 	};
 } Filter __attribute__((aligned(__WORDSIZE)));
+/*---------------------------------------------------------------------*/
+/**
+ * Request block: this struct is passed to the system by the userland
+ * application when it makes a certain request
+ */
+typedef struct req_block {
+	/* currently INTERCEPT is the only target that is enabled */
+	Target cmd;
+	/* currently disabled*/
+	Filter f;
+} req_block __attribute__((aligned(__WORDSIZE)));
+
+/**
+ * Response block: this struct is passed to the userland
+ * application when it makes a response back.
+ */
+typedef struct resp_block {
+	/* currently INTERCEPT is the only target that is enabled */
+	unsigned char ifname[IFNAMSIZ];
+	/* flags to indicate whether the request was successful */
+	uint8_t flags;
+} resp_block __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 #endif /* !__PACF_INTERFACE_H__ */

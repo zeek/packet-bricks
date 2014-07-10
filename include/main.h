@@ -23,5 +23,6 @@ typedef struct PacInfo {
 extern PacfInfo pc_info;
 /*---------------------------------------------------------------------*/
 #define DEFAULT_BATCH_SIZE		512
+#define FILE_PRINT_TIMER		5 /* in secs */
 /*---------------------------------------------------------------------*/
 #endif /* !__MAIN_H__ */
