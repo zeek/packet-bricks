@@ -21,7 +21,7 @@
 /* epoll timeout = 500ms */
 #define EPOLL_TIMEOUT			500
 /* passive sock port */
-#define LISTEN_PORT			1234
+#define PKTENGINE_LISTEN_PORT		1234
 /* listen queue length */
 #define LISTEN_BACKLOG			10
 /*---------------------------------------------------------------------*/

@@ -4,47 +4,54 @@
 /* for uint?_* types */
 #include <sys/types.h>
 #include <stdint.h>
-/* for IFNAMSIZ */
-#include <net/if.h>
 /*---------------------------------------------------------------------*/
 /**
  * Decision & Action targets:
- * 	- FORWARD: 	  for policying bridging/routing
- * 	- UPDATE_FORWARD: for updating a packet field and 
+ * 	- REDIRECT: 	  for policying bridging/routing
+ * 	- MODIFY:	  for updating a packet field and 
  * 			  then forwarding
  *	- DROP: 	  for dropping packet
- *	- INTERCEPT: 	  for stealing the packet from the 
+ *	- SAMPLE: 	  for stealing the packet from the 
  * 		     	  interface to a monitoring daemon
  *	- COPY: 	  for passing copy of the packet to the 
  * 			  monitoring daemon
- * 	- PKT_THRESHOLD:  hook-up function for a monitor
+ *	- LIMIT: 	  for rate-limiting packets... 
+ * 	- PKT_NOTFIY:	  hook-up function for a monitor
  * 			  once a certain packet count threshold
  * 			  is reached
- *	- BYTE_THRESHOLD: hook-up function for a monitor
+ *	- BYTE_NOTIFY:	  hook-up function for a monitor
  * 			  once a certain byte count threshold
  * 			  is reached
  */
 typedef enum {
-	FORWARD = 1,
-	UPDATE_FORWARD,
+	REDIRECT = 1,
+	MODIFY,
 	DROP,
-	INTERCEPT,
+	SAMPLE,
 	COPY,
-	PKT_THRESHOLD,
-	BYTE_THRESHOLD
+	LIMIT,
+	PKT_NOTIFY,
+	BYTE_NOTIFY
 } Target;
 /*---------------------------------------------------------------------*/
 /**
  * Rule-related data structures start here...
- * TODO: The following structs are still being revised...
+ * XXX: The following structs are still being revised...
  */
 
 /*
  * Arguments passed to the rule
  */
-typedef struct {
-	void *args;
-} RuleArg;
+typedef void RuleArg;
+
+/*
+ * Arguments passed to the target
+ */
+#define MAX_PROCNAME_LEN		4
+typedef struct TargetArgs {
+	pid_t pid;
+	unsigned char proc_name[MAX_PROCNAME_LEN];
+} TargetArgs;
 /*---------------------------------------------------------------------*/
 typedef struct {
 	uint8_t addr8[6];
@@ -155,24 +162,40 @@ typedef struct Filter {
 /*---------------------------------------------------------------------*/
 /**
  * Request block: this struct is passed to the system by the userland
- * application when it makes a certain request
+ * application when it makes a certain request.
+ * XXX - UNDER CONSTRUCTION
  */
 typedef struct req_block {
-	/* currently INTERCEPT is the only target that is enabled */
-	Target cmd;
+	/* length of the request */
+	uint32_t len;
+	/* 
+	 * currently _SAMPLE_ is the only 
+	 * target that is enabled 
+	 */
+	Target t;
+	TargetArgs targs;
+
 	/* currently disabled*/
 	Filter f;
+
+	unsigned char req_payload[0];
 } req_block __attribute__((aligned(__WORDSIZE)));
 
 /**
  * Response block: this struct is passed to the userland
  * application when it makes a response back.
+ * XXX - UNDER CONSTRUCTION
  */
 typedef struct resp_block {
-	/* currently INTERCEPT is the only target that is enabled */
-	unsigned char ifname[IFNAMSIZ];
-	/* flags to indicate whether the request was successful */
-	uint8_t flags;
+	/* length of the response */
+	uint32_t len;
+	/*
+	 * flags to indicate whether 
+	 * the request was successful 
+	 */
+	uint8_t flag;
+
+	unsigned char resp_payload[0];
 } resp_block __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 #endif /* !__PACF_INTERFACE_H__ */

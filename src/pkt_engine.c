@@ -9,7 +9,7 @@
 /* for accessing pc_info variable */
 #include "main.h"
 /* for accessing affinity-related macros */
-#include "thread.h"
+#include "util.h"
 /* for backend */
 #include "backend.h"
 /*---------------------------------------------------------------------*/
@@ -104,9 +104,7 @@ engine_spawn_thread(void *engptr)
 	/* Flip the engine to run == 1 */
 	eng->run = 1;
 
-	/* XXX: DEPRECATED call the I/O specific packet receiver/dispatcher */
-	//eng->iom.start(eng);
-
+	/* this actually 'starts' the engine */
 	initiate_backend(eng);
 
 	TRACE_PKTENGINE_FUNC_END();
@@ -296,11 +294,11 @@ void pktengine_link_iface(const unsigned char *name,
 	 * If the queue is negative, use the interface
 	 * without queues.
 	 */
-	eng->local_fd = eng->iom.link_iface(eng->private_context, iface, 
+	eng->dev_fd = eng->iom.link_iface(eng->private_context, iface, 
 					    (batch_size == -1) ? 
 					    pc_info.batch_size : batch_size,
 					    queue);
-	if (eng->local_fd == -1) 
+	if (eng->dev_fd == -1) 
 		TRACE_LOG("Could not link!!!\n");
 	
 	TRACE_PKTENGINE_FUNC_END();
@@ -425,29 +423,31 @@ pktengines_list_stats(FILE *f)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
-	uint64_t total_pkts, total_bytes;
+	uint64_t total_pkts, total_bytes, total_intercepted;
 
-	total_pkts = total_bytes = 0;
-	fprintf(f, "-------------------------------------------------------------- ENGINE STATISTICS -----------------------------------------------------------\n");
-	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt \t\t Listen Sock \t\t Dropped \t\t INTERCEPTED\n");
+	total_pkts = total_bytes = total_intercepted = 0;
+	fprintf(f, "----------------------------------------- ENGINE STATISTICS");
+	fprintf(f, " --------------------------------------------\n");
+	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt \t\t Intercepted \t\t Listen-port\n");
 	TAILQ_FOREACH(eng, &engine_list, entry) {
-		fprintf(f, "%s \t\t %10llu \t\t %11llu \t\t %d\t\t\t %llu \t\t\t %llu\n",
+		fprintf(f, "%s \t\t %10llu \t\t %11llu \t\t %11llu \t\t\t%d\n",
 			eng->name, 
 			(long long unsigned int)eng->pkt_count, 
 			(long long unsigned int)eng->byte_count,
-			eng->listen_fd,
-			(long long unsigned int)eng->pkt_dropped,
-			(long long unsigned int)eng->pkt_intercepted);
+			(long long unsigned int)eng->pkt_intercepted,
+			eng->listen_port);
 		total_pkts += eng->pkt_count;
 		total_bytes += eng->byte_count;
+		total_intercepted += eng->pkt_intercepted;
 	}
-	fprintf(f, "======================================================================");
-	fprintf(f, "======================================================================\n");
-	fprintf(f, "Total \t\t %10llu \t\t %11llu\n",
+	fprintf(f, "====================================================");
+	fprintf(f, "====================================================\n");
+	fprintf(f, "Total \t\t %10llu \t\t %11llu \t\t %11llu\n",
 		(long long unsigned int)total_pkts,
-		(long long unsigned int)total_bytes);
-	fprintf(f, "----------------------------------------------------------------------");
-	fprintf(f, "----------------------------------------------------------------------\n");
+		(long long unsigned int)total_bytes,
+		(long long unsigned int)total_intercepted);
+	fprintf(f, "----------------------------------------------------");
+	fprintf(f, "----------------------------------------------------\n\n\n");
 	
 	TRACE_PKTENGINE_FUNC_END();
 }

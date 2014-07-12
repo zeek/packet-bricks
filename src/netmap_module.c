@@ -1,7 +1,7 @@
 /**
  *
- * Heavily derived from netmap's pkt-gen.c file. This 
- * submodule is still under heavy construction.
+ * Heavily derived from netmap's pkt-gen.c & ipfw package. 
+ * This submodule is still under heavy construction.
  * 
  */
 /* for poll() syscall */
@@ -16,8 +16,14 @@
 #include <sys/param.h>
 /* for network_interface definition */
 #include "network_interface.h"
+/* for mbuf definition - for intelligent batching */
+#include "mbuf.h"
+/* for IFNAMSIZ */
+#include <net/if.h>
+/* for master custom hash function */
+#include "util.h"
 /*---------------------------------------------------------------------*/
-int
+int32_t
 netmap_init(void **ctxt_ptr, void *engptr)
 {
 	TRACE_NETMAP_FUNC_START();
@@ -37,7 +43,7 @@ netmap_init(void **ctxt_ptr, void *engptr)
 	return 0;
 }
 /*---------------------------------------------------------------------*/
-int
+int32_t
 netmap_link_iface(void *ctxt, const unsigned char *iface,
 		  const uint16_t batchsize, int8_t qid)
 {
@@ -160,12 +166,17 @@ netmap_unlink_iface(const unsigned char *iface, void *engptr)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+/**
+ * XXX - An extremely inefficient way to drop the packets.
+ * Will get back to this function again..
+ */
 static void
-handle_packets(struct netmap_ring *ring, engine *eng)
+drop_packets(struct netmap_ring *ring, engine *eng)
 {
 	TRACE_NETMAP_FUNC_START();
 	uint32_t cur, rx, n;
-	netmap_module_context *ctxt = (netmap_module_context *) eng->private_context;
+	netmap_module_context *ctxt = 
+		(netmap_module_context *) eng->private_context;
 	char *p;
 	struct netmap_slot *slot;
 
@@ -189,8 +200,80 @@ handle_packets(struct netmap_ring *ring, engine *eng)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+static int32_t
+sample_packets(engine *eng, CommNode *cn)
+{
+	TRACE_NETMAP_FUNC_START();
+        u_int dr; 			/* destination ring */
+        u_int i = 0;
+        const u_int n = cn->cur_txq;	/* how many queued packets */
+        struct txq_entry *x = cn->q;
+        int retry = TX_RETRIES;		/* max retries */
+        struct nm_desc *dst = cn->vale_nmd;
+
+	/* if queued pkts are zero.... skip! */
+        if (n == 0) {
+                TRACE_DEBUG_LOG("Nothing to forward to the interface valeA:s\n");
+		TRACE_NETMAP_FUNC_END();
+                return 0;
+        }
+	
+ try_again:
+        /* scan all output rings; dr is the destination ring index */
+        for (dr = dst->first_tx_ring; i < n && dr <= dst->last_tx_ring; dr++) {
+                struct netmap_ring *ring = NETMAP_TXRING(dst->nifp, dr);
+
+                __builtin_prefetch(ring);
+		/* oops! try next ring */
+                if (nm_ring_empty(ring))
+                        continue;
+                /*
+                 * We have different ways to transfer from src->dst
+                 *
+                 * src  dst     Now             Eventually (not done)
+                 *
+                 * PHYS PHYS    buf swap
+                 * PHYS VIRT    NS_INDIRECT
+                 * VIRT PHYS    copy            NS_INDIRECT
+                 * VIRT VIRT    NS_INDIRECT
+                 * MBUF PHYS    copy            NS_INDIRECT
+                 * MBUF VIRT    NS_INDIRECT
+                 *
+                 * The "eventually" depends on implementing NS_INDIRECT
+                 * on physical device drivers.
+                 * Note we do not yet differentiate PHYS/VIRT.
+                 */
+                for  (; i < n && !nm_ring_empty(ring); i++) {
+			/* we have empty tx slots, swap the pkts now! */
+                        struct netmap_slot *dst, *src;
+			struct netmap_ring *sr = x[i].ring;
+                        dst = &ring->slot[ring->cur];
+			src = &sr->slot[x[i].slot_idx];
+			dst->len = src->len;
+			dst->ptr = (uintptr_t)NETMAP_BUF(sr, src->buf_idx);
+			dst->flags = NS_INDIRECT;
+			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
+			/* updating engine statistics */
+			eng->pkt_intercepted++;
+			eng->byte_count += dst->len;
+			eng->pkt_count++;
+                }
+        }
+        if (i < n) {
+                if (retry-- > 0) {
+                        ioctl(cn->vale_nmd->fd, NIOCTXSYNC);
+                        goto try_again;
+                }
+                TRACE_DEBUG_LOG("%d buffers leftover", n - i);
+        }
+        cn->cur_txq = 0;
+	
+	TRACE_NETMAP_FUNC_END();
+        return 0;
+}
+/*------------------------------------------------------------------------*/
 int32_t
-netmap_callback(void *engptr)
+netmap_callback(void *engptr, Rule *r)
 {
 	TRACE_NETMAP_FUNC_START();
 	int i;
@@ -198,6 +281,8 @@ netmap_callback(void *engptr)
 	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
 	struct netmap_if *nifp;
 	struct netmap_ring *rxring;
+	//CommNode *cn = (CommNode *)r->destInfo[r->count -1];
+	CommNode *cn;
 
 	if (nmc->local_nmd == NULL) {
 		TRACE_LOG("netmap context was not properly initialized\n");
@@ -207,15 +292,81 @@ netmap_callback(void *engptr)
 
 	nifp = nmc->local_nmd->nifp;
 
-	for (i = nmc->local_nmd->first_rx_ring; 
-	     i <= nmc->local_nmd->last_rx_ring; 
-	     i++) {
-		rxring = NETMAP_RXRING(nifp, i);
-		if (nm_ring_empty(rxring))
-			continue;
+	switch (r->tgt) {
+	case DROP:
+		for (i = nmc->local_nmd->first_rx_ring; 
+		     i <= nmc->local_nmd->last_rx_ring; 
+		     i++) {
+			rxring = NETMAP_RXRING(nifp, i);
+			if (nm_ring_empty(rxring))
+				continue;
+			
+			drop_packets(rxring, eng);
+		}
+		break;
+	case SAMPLE:
+		for (i = nmc->local_nmd->first_rx_ring;
+		     i <= nmc->local_nmd->last_rx_ring;
+		     i++) {
+			rxring = NETMAP_RXRING(nifp, i);
+			
+			__builtin_prefetch(rxring);
+			if (nm_ring_empty(rxring))
+				continue;
+			__builtin_prefetch(&rxring->slot[rxring->cur]);
+			while (!nm_ring_empty(rxring)) {
+				u_int dst, src, idx;
+				struct netmap_slot *slot;
+				void *buf;
+
+				src = rxring->cur;
+				slot = &rxring->slot[src];
+				__builtin_prefetch(slot+1);
+				idx = slot->buf_idx;
+				buf = (u_char *)NETMAP_BUF(rxring, idx);
+				if (idx < 2) {
+					TRACE_LOG("%s bogus RX index at offset %d",
+						  nifp->ni_name, src);
+					sleep(NETMAP_LINK_WAIT_TIME);
+				}
+				__builtin_prefetch(buf);
+				
+				cn = (CommNode *)r->destInfo[master_custom_hash_function(buf, slot->len) % r->count];
+				dst = cn->cur_txq;
+				if (dst >= TXQ_MAX) {
+					sample_packets(eng, cn);
+					continue;
+				}
+				
+				rxring->head = rxring->cur = nm_ring_next(rxring, src);
+				
+				cn->q[dst].ring = rxring;
+				cn->q[dst].slot_idx = src;
+				cn->cur_txq++;
+				
+			}
+		}
+		if (cn->cur_txq > 0)
+			sample_packets(eng, cn);
+		break;
+	case REDIRECT:
+		break;
+	case MODIFY:
+		break;
+	case COPY:
+		break;
+	case LIMIT:
+		break;
+	case PKT_NOTIFY:
+		break;
+	case BYTE_NOTIFY:
+		break;
+	default:
+		/* control will never come here */
+		TRACE_ERR("Something awful must have happened here\n");
+		break;
+	}
 		
-		handle_packets(rxring, eng);
-	}	
 	TRACE_NETMAP_FUNC_END();
 	return 0;
 }
@@ -236,11 +387,50 @@ netmap_shutdown(void *engptr)
 	return 0;
 }
 /*---------------------------------------------------------------------*/
+int32_t
+netmap_create_channel(void *engptr, Rule *r, TargetArgs *targ) 
+{
+	TRACE_NETMAP_FUNC_START();
+	char ifname[IFNAMSIZ];
+	int32_t fd = -1;
+	engine *eng = (engine *)engptr;
+	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
+	CommNode *cn;
+
+	/* setting the name */
+	sprintf(ifname, "vale%s%d:s", targ->proc_name, targ->pid);
+
+	/* create a comm. interface */	
+	r->destInfo[r->count-1] = calloc(1, sizeof(CommNode));
+	if (r->destInfo[r->count-1] == NULL) {
+		TRACE_ERR("Can't allocate mem for destInfo[%d] for engine %s\n",
+			  r->count - 1, eng->name);
+		TRACE_NETMAP_FUNC_END();
+		return -1;
+	}
+	
+	cn = (CommNode *)r->destInfo[r->count - 1];
+	uint64_t flags = NM_OPEN_NO_MMAP;
+	cn->vale_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
+	if (cn->vale_nmd == NULL) {
+		TRACE_ERR("Can't open %p\n", cn->vale_nmd);
+		TRACE_NETMAP_FUNC_END();
+	}
+	fd = cn->vale_nmd->fd;
+
+	TRACE_LOG("Created %s interface\n", ifname);
+
+	TRACE_NETMAP_FUNC_END();
+
+	return fd;
+}
+/*---------------------------------------------------------------------*/
 io_module_funcs netmap_module = {
 	.init_context	= netmap_init,
 	.link_iface	= netmap_link_iface,
 	.unlink_iface	= netmap_unlink_iface,
 	.callback	= netmap_callback,
+	.create_channel = netmap_create_channel,
 	.shutdown	= netmap_shutdown
 };
 /*---------------------------------------------------------------------*/

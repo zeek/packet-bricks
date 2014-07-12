@@ -66,12 +66,12 @@
 #define TRACE_NETMAP_FUNC_END()		(void)0
 #endif /* !DNMP */
 
-#ifdef DTHREAD
-#define TRACE_THREAD_FUNC_START()	TRACE_FUNC_START()
-#define TRACE_THREAD_FUNC_END()		TRACE_FUNC_END()
+#ifdef DUTIL
+#define TRACE_UTIL_FUNC_START()		TRACE_FUNC_START()
+#define TRACE_UTIL_FUNC_END()		TRACE_FUNC_END()
 #else /* DTHREAD */
-#define TRACE_THREAD_FUNC_START()	(void)0
-#define TRACE_THREAD_FUNC_END()	        (void)0
+#define TRACE_UTIL_FUNC_START()		(void)0
+#define TRACE_UTIL_FUNC_END()	        (void)0
 #endif /* !DTHREAD */
 
 #ifdef DIFACE

@@ -18,6 +18,10 @@
 #include "lua_interpreter.h"
 /* for signal handling */
 #include <signal.h>
+/* for limits */
+#include <bits/stdio_lim.h>
+/* for config names */
+#include "config.h"
 /*---------------------------------------------------------------------*/
 /* program variable for lua */
 extern progvars_t pv;
@@ -104,8 +108,10 @@ status_print(int sig)
 {
 	TRACE_FUNC_START();
 	FILE *f;
+	char status_fname[FILENAME_MAX];
 
-	f = fopen("/tmp/pacf.status", "w+");
+	sprintf(status_fname, "/tmp/%s.status", PLATFORM_PROMPT);
+	f = fopen(status_fname, "w+");
 	if (f == NULL) {
 		TRACE_ERR("Failed to create status file!\n");
 		TRACE_FUNC_END();

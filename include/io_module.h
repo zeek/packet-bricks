@@ -3,6 +3,10 @@
 /*---------------------------------------------------------------------*/
 /* for data types */
 #include <stdint.h>
+/* for target and rule def'ns */
+#include "pacf_interface.h"
+/* for rule def'n */
+#include "rule.h"
 /*---------------------------------------------------------------------*/
 #define MAX_IFNAMELEN		64
 /*---------------------------------------------------------------------*/
@@ -22,23 +26,31 @@
  *		   unlink_iface(): Used to remove interface from the engine.
  *				  Call it only when the engine is not running
  *
- *		   callback(): Function that reads the packets
- *		   shutdwon(): Used to destroy the private pkt I/O-specifc 
+ *		   callback(): Function that reads the packets and runs 
+ *				appropriate handler
+ *
+ *		   create_channel(): Function that establishes comm interface
+ *				     with userland processes
+ *
+ *		   shutdown(): Used to destroy the private pkt I/O-specifc 
  *			       context
  */
 /*---------------------------------------------------------------------*/
 typedef struct io_module_funcs {
-	int  (*init_context)(void **ctxt, void *engptr);
-	int  (*link_iface)(void *ctxt,
-			   const unsigned char *iface, 
-			   const uint16_t batchsize,
-			   int8_t qid);
-	void (*unlink_iface)(const unsigned char *iface, void *engptr);
-	int32_t (*callback)(void *engptr);
-	int  (*shutdown)(void *engptr);
-
+	int32_t (*init_context)(void **ctxt, void *engptr);
+	int32_t (*link_iface)(void *ctxt,
+			      const unsigned char *iface, 
+			      const uint16_t batchsize,
+			      int8_t qid);
+	void	(*unlink_iface)(const unsigned char *iface, void *engptr);
+	int32_t (*callback)(void *engptr, Rule *r);
+	int32_t (*create_channel)(void *engptr, Rule *r, TargetArgs *ta);
+	int32_t (*shutdown)(void *engptr);
+	
 } io_module_funcs __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
+/* XXX - delete me! */
+int32_t create_vale_interface(void *engptr);
 /* only netmap module is enabled at the moment */
 extern io_module_funcs netmap_module;
 #if 0

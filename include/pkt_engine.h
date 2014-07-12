@@ -11,6 +11,8 @@
 #include <pthread.h>
 /* for file I/O */
 #include <stdio.h>
+/* for rule definition list */
+#include "rule.h"
 /*---------------------------------------------------------------------*/
 /**
  *  io_type: Right now, we only support IO_NETMAP.
@@ -39,12 +41,14 @@ typedef struct engine {
 	uint64_t pkt_count;		/* total number of packets seen by this engine */
 	uint64_t pkt_dropped;		/* total number of packets dropped by this engine */
 	uint64_t pkt_intercepted;	/* total number of packets intercepted by this engine */
-	int32_t local_fd;		/* file desc of the net I/O */
+	int32_t dev_fd;			/* file desc of the net I/O */
 	int32_t listen_fd;		/* listening socket fd */
+	uint16_t listen_port;		/* listening port */
 
 	struct io_module_funcs iom;	/* io_funcs ptrs */
 	void *private_context;		/* I/O-related context */
 	pthread_t t;
+	rule_list r_list;		/* the list of rules registered with this engine */
 
 	/*
 	 * the linked list ptr that will chain together

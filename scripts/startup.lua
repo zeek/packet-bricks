@@ -47,7 +47,8 @@ function start()
 	 local i = 0
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
-	     pkteng.show_stats({engine="e0"})
+	     --pkteng.show_stats({engine="e0"})
+	     pacf.show_stats()
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end
@@ -56,7 +57,8 @@ end
 --		 __it then unlinks the interface from the engine and__
 --		 __finally frees the engine context from the system__
 function stop()
-	 pkteng.show_stats({engine="e0"})
+	 --pkteng.show_stats({engine="e0"})
+	 pacf.show_stats()
 
 	 pkteng.stop({engine="e0"})
 	 sleep(SLEEP_TIMEOUT)
@@ -65,7 +67,7 @@ function stop()
 	 sleep(SLEEP_TIMEOUT)
 
 	 pkteng.delete({engine="e0"})
-	 -- pacf.shutdown()
+	 pacf.shutdown()
 end
 -----------------------------------------------------------------------
 
@@ -154,9 +156,9 @@ pacf.print_status()
 -------- __This prints out the __pkt_engine__ help menu__
 pkteng.help()
 -------- __Initialize the system__
--- init()
+init()
 -------- __Start the engine__
--- start()
+start()
 -------- __Stop the engine__
 -- stop()
 -------- __The following commands quits the session__

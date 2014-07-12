@@ -9,6 +9,20 @@
 #define  NETMAP_WITH_LIBS		1
 #include "net/netmap_user.h"
 /*---------------------------------------------------------------------*/
+/* Macros related to TXQ entry */
+#define TXQ_MAX				32
+/*---------------------------------------------------------------------*/
+struct txq_entry {
+        void *ring;
+        uint16_t slot_idx;      /* used if ring */
+};
+
+typedef struct CommNode {
+	struct nm_desc *vale_nmd;		/* Node-local vale descriptor */
+	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
+	int32_t cur_txq;			/* current index of the tx entry */
+} CommNode;
+
 /**
  * Private per-engine netmap module context. Please see the comments 
  * inside the struct for more details
@@ -32,6 +46,7 @@ typedef struct netmap_iface_context {
 	uint64_t nmd_flags;			/* netmap desc flags */
 } netmap_iface_context __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
+#define TX_RETRIES			5
 /* for more buffering */
 #define NM_EXTRA_BUFS			8
 /* for interface initialization */
