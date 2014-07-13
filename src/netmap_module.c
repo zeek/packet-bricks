@@ -281,8 +281,8 @@ netmap_callback(void *engptr, Rule *r)
 	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
 	struct netmap_if *nifp;
 	struct netmap_ring *rxring;
-	//CommNode *cn = (CommNode *)r->destInfo[r->count -1];
-	CommNode *cn;
+	CommNode *cn = NULL;
+	Target tgt;
 
 	if (nmc->local_nmd == NULL) {
 		TRACE_LOG("netmap context was not properly initialized\n");
@@ -290,9 +290,10 @@ netmap_callback(void *engptr, Rule *r)
 		return -1;
 	}
 
+	tgt = (r->tgt == SAMPLE && r->count == 0) ? DROP : r->tgt;
 	nifp = nmc->local_nmd->nifp;
 
-	switch (r->tgt) {
+	switch (tgt) {
 	case DROP:
 		for (i = nmc->local_nmd->first_rx_ring; 
 		     i <= nmc->local_nmd->last_rx_ring; 
@@ -387,8 +388,27 @@ netmap_shutdown(void *engptr)
 	return 0;
 }
 /*---------------------------------------------------------------------*/
+#if 0
+void
+netmap_delete_channel(void *engptr, Rule *r, int32_t csock) 
+{
+	TRACE_NETMAP_FUNC_START();
+	engine *eng = (engine *eng)engptr;
+	CommNode *cn = NULL;
+	int i;
+	
+	for (i = 0; i < r->count; i++) {
+		cn = (CommNode *)r->destInfo[i];
+		if (cn->csock == csock)
+	}
+	UNUSED(r);
+	UNUSED(csock);
+	TRACE_NETMAP_FUNC_END();
+}
+#endif
+/*---------------------------------------------------------------------*/
 int32_t
-netmap_create_channel(void *engptr, Rule *r, TargetArgs *targ) 
+netmap_create_channel(void *engptr, Rule *r, TargetArgs *targ, int32_t csock) 
 {
 	TRACE_NETMAP_FUNC_START();
 	char ifname[IFNAMSIZ];
@@ -416,6 +436,7 @@ netmap_create_channel(void *engptr, Rule *r, TargetArgs *targ)
 		TRACE_ERR("Can't open %p\n", cn->vale_nmd);
 		TRACE_NETMAP_FUNC_END();
 	}
+	cn->csock = csock;
 	fd = cn->vale_nmd->fd;
 
 	TRACE_LOG("Created %s interface\n", ifname);
@@ -431,6 +452,9 @@ io_module_funcs netmap_module = {
 	.unlink_iface	= netmap_unlink_iface,
 	.callback	= netmap_callback,
 	.create_channel = netmap_create_channel,
+#if 0
+	.delete_channel = netmap_delete_channel,
+#endif
 	.shutdown	= netmap_shutdown
 };
 /*---------------------------------------------------------------------*/

@@ -1,7 +1,7 @@
 ## XXX short-term Makefile. This will be improved substantially..... ##
 #---------------------------------------------------------------------#
 CC=gcc
-CFLAGS=-O0 -pipe -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
+CFLAGS=-O3 -pipe -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS+=-DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND
 INCLUDE=-I./include -I/usr/include/lua5.1/

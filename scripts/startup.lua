@@ -8,7 +8,7 @@
 -----------------------------------------------------------------------
 -- MACROS-&-UTILITY-FUNCS
 -----------------------------------------------------------------------
-STATS_PRINT_CYCLE_DEFAULT = 20
+STATS_PRINT_CYCLE_DEFAULT = 2
 SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
 

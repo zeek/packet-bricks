@@ -21,6 +21,7 @@ typedef struct CommNode {
 	struct nm_desc *vale_nmd;		/* Node-local vale descriptor */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
+	int32_t csock;				/* client sock */
 } CommNode;
 
 /**

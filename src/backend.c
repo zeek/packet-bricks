@@ -16,6 +16,8 @@
 #include <netinet/in.h>
 /* for requests/responses */
 #include "pacf_interface.h"
+/* for errno */
+#include <errno.h>
 /*---------------------------------------------------------------------*/
 /*
  * Code self-explanatory...
@@ -130,9 +132,75 @@ static void
 process_request_backend(engine *eng, int epoll_fd)
 {
 	TRACE_BACKEND_FUNC_START();
-	UNUSED(eng);
-	UNUSED(epoll_fd);
+	int client_sock, c, total_read;
+	struct sockaddr_in client;
+	int read_size;
+	char client_message[2000];
+	struct epoll_event ev;
+	req_block *rb;
+	total_read = read_size = 0;
+
+	/* accept connection from an incoming client */
+	client_sock = accept(eng->listen_fd, (struct sockaddr *)&client, (socklen_t *)&c);
+	if (client_sock < 0) {
+		TRACE_LOG("accept failed: %s\n", strerror(errno));
+		TRACE_BACKEND_FUNC_END();
+		return;
+	}
+     
+	/* Receive a message from client */
+	while ((read_size = recv(client_sock, 
+				 &client_message[total_read], 
+				 sizeof(req_block) - total_read, 0)) > 0) {
+		total_read += read_size;
+		if ((unsigned)total_read >= sizeof(req_block)) break;
+	}
+
+	TRACE_DEBUG_LOG("Total bytes read from listening socket: %d\n", 
+			total_read);
+	
+	/* parse new rule */
+	rb = (req_block *)client_message;
+	TRACE_DEBUG_LOG("Got a new rule\n");
+	TRACE_DEBUG_LOG("Target: %d\n", rb->t);
+	TRACE_DEBUG_LOG("TargetArgs.pid: %d\n", rb->targs.pid);
+	TRACE_DEBUG_LOG("TargetArgs.proc_name: %s\n", rb->targs.proc_name);
+	TRACE_FLUSH();
+
+	Rule *r = add_new_rule(eng, NULL, rb->t);
+
+	/* create communication back channel */
+	ev.data.fd = eng->iom.create_channel(eng, r, &rb->targs, client_sock);
+	ev.events = EPOLLIN | EPOLLOUT;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
+			  eng->name, epoll_fd);
+		TRACE_BACKEND_FUNC_END();
+		return;
+	}
+
+	/* add client sock to the polling layer */
+	ev.data.fd = client_sock;
+	ev.events = EPOLLIN | EPOLLOUT;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
+			  eng->name, epoll_fd);
+		TRACE_BACKEND_FUNC_END();
+		return;
+	}
+	
+	/* continue listening */
+	ev.data.fd = eng->listen_fd;
+	ev.events = EPOLLIN | EPOLLOUT;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
+		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
+			  eng->name, epoll_fd);
+		TRACE_BACKEND_FUNC_END();
+		return;
+	}
+	
 	TRACE_BACKEND_FUNC_END();
+	return;
 }
 /*---------------------------------------------------------------------*/
 /**
@@ -163,7 +231,7 @@ initiate_backend(engine *eng)
 	init_rules_table(eng);
 
 	/* register listening socket */
-	ev.events = EPOLLIN;
+	ev.events = EPOLLIN | EPOLLOUT;
 	ev.data.fd = eng->listen_fd;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, eng->listen_fd, &ev) == -1) {
 		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
@@ -185,7 +253,8 @@ initiate_backend(engine *eng)
 		TRACE_BACKEND_FUNC_END();
 		return;
 	}
-	
+
+#if 0
 	/* add control filter */
 	TargetArgs targ1 = {
 		.pid = 0,
@@ -194,9 +263,15 @@ initiate_backend(engine *eng)
 	Rule *r = add_new_rule(eng, NULL, SAMPLE);
 
 	/* temporarily create interface */
-	eng->iom.create_channel(eng, r, &targ1);
+	ev.data.fd = eng->iom.create_channel(eng, r, &targ1);
+	ev.events = EPOLLIN | EPOLLOUT;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
+			  eng->name, epoll_fd);
+		TRACE_BACKEND_FUNC_END();
+		return;
+	}
 
-#if 0
 	/* add control filter */
 	TargetArgs targ2 = {
 		.pid = 0,
@@ -219,8 +294,15 @@ initiate_backend(engine *eng)
 			if (events[n].data.fd == eng->dev_fd)
 				eng->iom.callback(eng, TAILQ_FIRST(&eng->r_list));
 			/* process app reqs */
-			if (events[n].data.fd == eng->listen_fd)
+			else if (events[n].data.fd == eng->listen_fd)
 				process_request_backend(eng, epoll_fd);
+#if 0
+			/* process comm. nodes */
+			else 
+				eng->iom.delete_channel(eng, 
+							TAILQ_FIRST(&eng->r_list), 
+							events[n].data.fd);
+#endif
 		}
 		
 	}
