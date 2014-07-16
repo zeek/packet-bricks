@@ -32,6 +32,10 @@
  *		   create_channel(): Function that establishes comm interface
  *				     with userland processes
  *
+ *		   delete_all_channels(): Function that tears down all channels
+ *					 associated with a particular rule
+ *
+ *
  *		   shutdown(): Used to destroy the private pkt I/O-specifc 
  *			       context
  */
@@ -44,16 +48,12 @@ typedef struct io_module_funcs {
 			      int8_t qid);
 	void	(*unlink_iface)(const unsigned char *iface, void *engptr);
 	int32_t (*callback)(void *engptr, Rule *r);
-	int32_t (*create_channel)(void *engptr, Rule *r, TargetArgs *ta, int32_t);
-#if 0
-	void	(*delete_channel)(void *engptr, Rule *r, int32_t);
-#endif
+	int32_t (*create_channel)(void *engptr, Rule *r, char *cname, int32_t);
+	void	(*delete_all_channels)(void *engptr, Rule *r);
 	int32_t (*shutdown)(void *engptr);
 	
 } io_module_funcs __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
-/* XXX - delete me! */
-int32_t create_vale_interface(void *engptr);
 /* only netmap module is enabled at the moment */
 extern io_module_funcs netmap_module;
 #if 0

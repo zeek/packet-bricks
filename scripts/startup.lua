@@ -36,6 +36,9 @@ end
 function init()
 	 pkteng.new({name="e0", type="netmap"})
 	 pkteng.link({engine="e0", ifname="eth3", batch=PKT_BATCH})
+	 pkteng.open_channel({engine="e0", channel="valeA:s"})
+	 --pkteng.open_channel({engine="e0", channel="valeB:s"})
+	 --pkteng.open_channel({engine="e0", channel="valeC:s"})
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__

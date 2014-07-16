@@ -44,9 +44,6 @@ typedef enum {
  */
 typedef void RuleArg;
 
-/*
- * Arguments passed to the target
- */
 #define MAX_PROCNAME_LEN		4
 typedef struct TargetArgs {
 	pid_t pid;

@@ -139,7 +139,7 @@ pktengine_help_wrap(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
-		"    open_channel( {pid=<pid>} ) <DISABLED>\n"
+		"    open_channel( {engine=<ioengine_name>, channel=<channel_name>} )\n"
 		"    add_filter(<params still need to be determined>) <DISABLED>\n"
 		"    new( {name=<ioengine_name>, type=<io_type>, [cpu=<cpu number>]} )\n"
 		"    delete( {engine=<ioengine_name>} )\n"
@@ -359,6 +359,42 @@ pktengine_stop_wrap(lua_State *L)
 }
 /*---------------------------------------------------------------------*/
 static int
+pktengine_open_channel_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+
+	/* this will stop netmap engine */
+	unsigned char *ename;
+	unsigned char *cname;
+	int rc;
+
+	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "engine");
+        ename = (unsigned char *)lua_tostring(L, -1);
+	if (ename == NULL) {
+		TRACE_LOG("This command needs an engine name\n");
+		TRACE_LUA_FUNC_END();
+		return -1;
+	}
+	lua_getfield(L, 1, "channel");
+        cname = (unsigned char *)lua_tostring(L, -1);
+	if (cname == NULL) {
+		TRACE_LOG("The command needs a channel name\n");
+		TRACE_LUA_FUNC_END();
+		return -1;
+	}
+	rc = pktengine_open_channel(ename, cname);
+	if (rc == -1) {
+		TRACE_LOG("Failed to open channel %s\n", cname);
+	}
+	lua_remove(L, -1);
+	lua_remove(L, -1);
+
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
 pktengine_dump_stats_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
@@ -431,6 +467,7 @@ pktenglib[] = {
 	{"start", pktengine_start_wrap},
         {"stop", pktengine_stop_wrap},
         {"show_stats", pktengine_dump_stats_wrap},
+	{"open_channel", pktengine_open_channel_wrap},
         {NULL, NULL}
 };
 /*---------------------------------------------------------------------*/

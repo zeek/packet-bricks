@@ -64,66 +64,8 @@ create_listening_socket(engine *eng)
 	TRACE_BACKEND_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-static inline void
-init_rules_table(engine *eng)
-{
-	TRACE_BACKEND_FUNC_START();
-	TAILQ_INIT(&eng->r_list);
-	TRACE_BACKEND_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static Rule *
-rule_find(engine *eng, Target tgt)
-{
-	TRACE_BACKEND_FUNC_START();
-	Rule *r;
-	TAILQ_FOREACH(r, &eng->r_list, entry) {
-		if (r->tgt == tgt) {
-			TRACE_BACKEND_FUNC_END();
-			return r;
-		}
-	}
-	TRACE_BACKEND_FUNC_END();
-	return NULL;
-}
-/*---------------------------------------------------------------------*/
-static Rule *
-add_new_rule(engine *eng, Filter *filt, Target tgt)
-{
-	TRACE_BACKEND_FUNC_START();
-	Rule *r;
-
-	r = rule_find(eng, tgt);
-	if (r == NULL) {
-		r = calloc(1, sizeof(Rule));
-		if (r == NULL) {
-			TRACE_LOG("Can't allocate mem to add a new rule for engine %s!\n",
-				  eng->name);
-			TRACE_BACKEND_FUNC_END();
-			return NULL;
-		}
-		r->tgt = tgt;
-	}
-
-	r->count++;
-	r->destInfo = realloc(r->destInfo, sizeof(void *) * r->count);
-	if (r->destInfo == NULL) {
-		TRACE_LOG("Can't re-allocate to add a new rule for engine %s!\n",
-			  eng->name);
-		if (r->count == 1) free(r);
-		TRACE_BACKEND_FUNC_END();
-		return NULL;
-	}
-	
-	if (r->count == 1)
-		TAILQ_INSERT_TAIL(&eng->r_list, r, entry);
-	UNUSED(filt);
-
-	TRACE_BACKEND_FUNC_END();
-	return r;
-}
-/*---------------------------------------------------------------------*/
 /**
+ * XXX - This function needs to be revised..
  * Services incoming request from userland applications and takes
  * necessary actions. The actions can be: (i) passing packets to userland
  * apps etc.
@@ -138,6 +80,7 @@ process_request_backend(engine *eng, int epoll_fd)
 	char client_message[2000];
 	struct epoll_event ev;
 	req_block *rb;
+	char channelname[20];
 	total_read = read_size = 0;
 
 	/* accept connection from an incoming client */
@@ -167,10 +110,13 @@ process_request_backend(engine *eng, int epoll_fd)
 	TRACE_DEBUG_LOG("TargetArgs.proc_name: %s\n", rb->targs.proc_name);
 	TRACE_FLUSH();
 
+	snprintf(channelname, 20, "vale%s%d:s", 
+		 rb->targs.proc_name, rb->targs.pid);
+
 	Rule *r = add_new_rule(eng, NULL, rb->t);
 
 	/* create communication back channel */
-	ev.data.fd = eng->iom.create_channel(eng, r, &rb->targs, client_sock);
+	ev.data.fd = eng->iom.create_channel(eng, r, channelname, client_sock);
 	ev.events = EPOLLIN | EPOLLOUT;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
 		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
@@ -227,9 +173,6 @@ initiate_backend(engine *eng)
 	/* create listening socket */
 	create_listening_socket(eng);
 
-	/* initialize per-engine rules database */
-	init_rules_table(eng);
-
 	/* register listening socket */
 	ev.events = EPOLLIN | EPOLLOUT;
 	ev.data.fd = eng->listen_fd;
@@ -241,7 +184,7 @@ initiate_backend(engine *eng)
 	}
 	
 	TRACE_LOG("Engine %s is listening on port %d\n", 
-		  eng->name, eng->listen_fd);
+		  eng->name, eng->listen_port);
 
 	/* register iom socket */
 	ev.events = EPOLLIN;
@@ -254,32 +197,6 @@ initiate_backend(engine *eng)
 		return;
 	}
 
-#if 0
-	/* add control filter */
-	TargetArgs targ1 = {
-		.pid = 0,
-		.proc_name = "A"
-	};
-	Rule *r = add_new_rule(eng, NULL, SAMPLE);
-
-	/* temporarily create interface */
-	ev.data.fd = eng->iom.create_channel(eng, r, &targ1);
-	ev.events = EPOLLIN | EPOLLOUT;
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
-		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
-			  eng->name, epoll_fd);
-		TRACE_BACKEND_FUNC_END();
-		return;
-	}
-
-	/* add control filter */
-	TargetArgs targ2 = {
-		.pid = 0,
-		.proc_name = "B"
-	};
-	r = add_new_rule(eng, NULL, SAMPLE);
-	eng->iom.create_channel(eng, r, &targ2);
-#endif
 
 	/* keep on running till engine stops */
 	while (eng->run == 1) {
@@ -291,20 +208,22 @@ initiate_backend(engine *eng)
 		}
 		for (n = 0; n < nfds; n++) {
 			/* process dev work */
-			if (events[n].data.fd == eng->dev_fd)
+			if (events[n].data.fd == eng->dev_fd) {
 				eng->iom.callback(eng, TAILQ_FIRST(&eng->r_list));
+				/* continue epolling */
+				ev.data.fd = eng->dev_fd;
+				ev.events = EPOLLIN;
+				if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
+					TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
+						  eng->name, epoll_fd);
+					TRACE_BACKEND_FUNC_END();
+					return;
+				}				
+			} 
 			/* process app reqs */
 			else if (events[n].data.fd == eng->listen_fd)
 				process_request_backend(eng, epoll_fd);
-#if 0
-			/* process comm. nodes */
-			else 
-				eng->iom.delete_channel(eng, 
-							TAILQ_FIRST(&eng->r_list), 
-							events[n].data.fd);
-#endif
 		}
-		
 	}
 
 	TRACE_BACKEND_FUNC_END();

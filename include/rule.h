@@ -20,4 +20,24 @@ typedef struct Rule {
 
 typedef TAILQ_HEAD(rule_list, Rule) rule_list;
 /*---------------------------------------------------------------------*/
+/**
+ * Initializes the per-engine rule database
+ */
+void
+init_rules_table(void *engptr);
+
+/**
+ * Inserts a new rule in the rule db
+ */				    
+Rule *
+add_new_rule(void *engptr, Filter *filt, Target tgt);
+
+/**
+ * Deletes all rules in the rule db for the engine
+ * This function is usually called when packet engine is being
+ * destroyed...
+ */				    
+void
+delete_all_rules(void *engptr);
+/*---------------------------------------------------------------------*/
 #endif /* !__RULE_H__*/

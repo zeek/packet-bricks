@@ -20,8 +20,8 @@
 #include "mbuf.h"
 /* for IFNAMSIZ */
 #include <net/if.h>
-/* for master custom hash function */
-#include "util.h"
+/* for hash function */
+#include "pkt_hash.h"
 /*---------------------------------------------------------------------*/
 int32_t
 netmap_init(void **ctxt_ptr, void *engptr)
@@ -290,7 +290,7 @@ netmap_callback(void *engptr, Rule *r)
 		return -1;
 	}
 
-	tgt = (r->tgt == SAMPLE && r->count == 0) ? DROP : r->tgt;
+	tgt = (r == NULL || (r->tgt == SAMPLE && r->count == 0)) ? DROP : r->tgt;
 	nifp = nmc->local_nmd->nifp;
 
 	switch (tgt) {
@@ -332,7 +332,7 @@ netmap_callback(void *engptr, Rule *r)
 				}
 				__builtin_prefetch(buf);
 				
-				cn = (CommNode *)r->destInfo[master_custom_hash_function(buf, slot->len) % r->count];
+				cn = (CommNode *)r->destInfo[pkt_hdr_hash(buf) % r->count];
 				dst = cn->cur_txq;
 				if (dst >= TXQ_MAX) {
 					sample_packets(eng, cn);
@@ -388,27 +388,26 @@ netmap_shutdown(void *engptr)
 	return 0;
 }
 /*---------------------------------------------------------------------*/
-#if 0
 void
-netmap_delete_channel(void *engptr, Rule *r, int32_t csock) 
+netmap_delete_all_channels(void *engptr, Rule *r) 
 {
 	TRACE_NETMAP_FUNC_START();
-	engine *eng = (engine *eng)engptr;
 	CommNode *cn = NULL;
-	int i;
+	uint32_t i;
 	
 	for (i = 0; i < r->count; i++) {
 		cn = (CommNode *)r->destInfo[i];
-		if (cn->csock == csock)
+		nm_close(cn->vale_nmd);
+		free(cn);
 	}
-	UNUSED(r);
-	UNUSED(csock);
+
 	TRACE_NETMAP_FUNC_END();
+	/* not used for the moment */
+	UNUSED(engptr);
 }
-#endif
 /*---------------------------------------------------------------------*/
 int32_t
-netmap_create_channel(void *engptr, Rule *r, TargetArgs *targ, int32_t csock) 
+netmap_create_channel(void *engptr, Rule *r, char *targ, int32_t csock) 
 {
 	TRACE_NETMAP_FUNC_START();
 	char ifname[IFNAMSIZ];
@@ -418,7 +417,7 @@ netmap_create_channel(void *engptr, Rule *r, TargetArgs *targ, int32_t csock)
 	CommNode *cn;
 
 	/* setting the name */
-	sprintf(ifname, "vale%s%d:s", targ->proc_name, targ->pid);
+	snprintf(ifname, IFNAMSIZ, "%s", targ);
 
 	/* create a comm. interface */	
 	r->destInfo[r->count-1] = calloc(1, sizeof(CommNode));
@@ -433,28 +432,28 @@ netmap_create_channel(void *engptr, Rule *r, TargetArgs *targ, int32_t csock)
 	uint64_t flags = NM_OPEN_NO_MMAP;
 	cn->vale_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
 	if (cn->vale_nmd == NULL) {
-		TRACE_ERR("Can't open %p\n", cn->vale_nmd);
+		TRACE_ERR("Can't open %p(%s)\n", cn->vale_nmd, ifname);
 		TRACE_NETMAP_FUNC_END();
 	}
-	cn->csock = csock;
+
 	fd = cn->vale_nmd->fd;
 
 	TRACE_LOG("Created %s interface\n", ifname);
 
 	TRACE_NETMAP_FUNC_END();
 
+	UNUSED(targ);
+	UNUSED(csock);
 	return fd;
 }
 /*---------------------------------------------------------------------*/
 io_module_funcs netmap_module = {
-	.init_context	= netmap_init,
-	.link_iface	= netmap_link_iface,
-	.unlink_iface	= netmap_unlink_iface,
-	.callback	= netmap_callback,
-	.create_channel = netmap_create_channel,
-#if 0
-	.delete_channel = netmap_delete_channel,
-#endif
-	.shutdown	= netmap_shutdown
+	.init_context	= 	netmap_init,
+	.link_iface	= 	netmap_link_iface,
+	.unlink_iface	= 	netmap_unlink_iface,
+	.callback	= 	netmap_callback,
+	.create_channel =	netmap_create_channel,
+	.delete_all_channels =	netmap_delete_all_channels,
+	.shutdown	= 	netmap_shutdown
 };
 /*---------------------------------------------------------------------*/

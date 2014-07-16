@@ -12,6 +12,10 @@
 #include "util.h"
 /* for backend */
 #include "backend.h"
+/* for rule insertions */
+#include "rule.h"
+/* for epoll */
+#include <sys/epoll.h>
 /*---------------------------------------------------------------------*/
 static elist engine_list;
 /*---------------------------------------------------------------------*/
@@ -213,6 +217,9 @@ pktengine_new(const unsigned char *name, const unsigned char *type,
 	/* setting the cpu no. on which the engine runs (if reqd.) */
 	eng->cpu = cpu;
 
+	/* initialize the rules table */
+	init_rules_table(eng);
+
 	/* finally add the engine entry in elist */
 	TAILQ_INSERT_TAIL(&engine_list, eng, entry);
 
@@ -241,6 +248,9 @@ pktengine_delete(const unsigned char *name)
 		TRACE_PKTENGINE_FUNC_END();
 		return;
 	}
+
+	/* delete all sampling rules for now */
+	delete_all_rules(eng);
 
 	/* check if ifaces have been unlinked */
 	eng->iom.unlink_iface((const unsigned char *)"all", eng);
@@ -394,6 +404,32 @@ pktengine_stop(const unsigned char *name)
 	}
 	
 	TRACE_PKTENGINE_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+int32_t
+pktengine_open_channel(const unsigned char *eng_name, 
+		      const unsigned char *channel_name)
+{
+	TRACE_PKTENGINE_FUNC_START();
+	engine *eng;
+	Rule *r;
+		
+	eng = engine_find(eng_name);
+	if (eng == NULL) {
+		TRACE_LOG("Can't find engine with name: %s\n",
+			  eng_name);
+		TRACE_PKTENGINE_FUNC_END();
+		return -1;
+	}
+	
+	/* for now only split-sampling is enabled */
+	r = add_new_rule(eng, NULL, SAMPLE);
+	
+	/* create communication back channel */
+	eng->iom.create_channel(eng, r, (char *)channel_name, 0);
+
+	TRACE_PKTENGINE_FUNC_END();
+	return 0;
 }
 /*---------------------------------------------------------------------*/
 void

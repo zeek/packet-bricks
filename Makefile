@@ -3,7 +3,7 @@
 CC=gcc
 CFLAGS=-O3 -pipe -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
-DEBUG_CFLAGS+=-DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND
+DEBUG_CFLAGS+=-DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND -DDPKTHASH -DDRULE
 INCLUDE=-I./include -I/usr/include/lua5.1/
 NETMAP_INCLUDE=-I./include/netmap
 LIBS=-llua5.1 -lpthread
@@ -17,7 +17,8 @@ STRIP=strip
 #---------------------------------------------------------------------#
 SRCS = src/lua_interpreter.c src/main.c src/lua_interface.c \
 	src/pkt_engine.c src/netmap_module.c src/util.c \
-	src/network_interface.c src/backend.c
+	src/network_interface.c src/backend.c src/pkt_hash.c \
+	src/rule.c
 
 all: default
 

@@ -134,5 +134,13 @@ pktengine_init();
  */
 uint8_t
 is_pktengine_online(const unsigned char *eng_name);
+				  
+/**
+ * Creates a channel through which userland applications
+ * communicate with the system
+ */
+int32_t
+pktengine_open_channel(const unsigned char *eng_name, 
+		      const unsigned char *channel_name);
 /*---------------------------------------------------------------------*/
 #endif /* !__PKT_ENGINE_H__ */

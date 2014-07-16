@@ -90,6 +90,22 @@
 #define TRACE_BACKEND_FUNC_END()	(void)0
 #endif /* !DBKEND */
 
+#ifdef DPKTHASH
+#define TRACE_PKTHASH_FUNC_START()	TRACE_FUNC_START()
+#define TRACE_PKTHASH_FUNC_END()	TRACE_FUNC_END()
+#else /* DPKTHASH */
+#define TRACE_PKTHASH_FUNC_START()	(void)0
+#define TRACE_PKTHASH_FUNC_END()	(void)0
+#endif /* !DPKTHASH */
+
+#ifdef DRULE
+#define TRACE_RULE_FUNC_START()		TRACE_FUNC_START()
+#define TRACE_RULE_FUNC_END()		TRACE_FUNC_END()
+#else /* DRULE */
+#define TRACE_RULE_FUNC_START()		(void)0
+#define TRACE_RULE_FUNC_END()		(void)0
+#endif /* !DRULE */
+
 /**
  * Default loggers.
  * Use:
