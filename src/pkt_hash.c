@@ -16,7 +16,7 @@
 #include <linux/in.h>
 /*---------------------------------------------------------------------*/
 /**
- * The cache table used to pick a nice seed for the hash table. It is
+ * The cache table is used to pick a nice seed for the hash value. It is
  * built only once when sym_hash_fn is called for the very first time
  */
 static void
@@ -108,9 +108,16 @@ static uint32_t
 decode_ip_n_hash(struct iphdr *iph)
 {
 	TRACE_PKTHASH_FUNC_START();
+	uint32_t rc = 0;
+	
+#ifdef TRIVIAL_HASH_FUNCTION
+	rc = sym_hash_fn(NTOHL(iph->saddr),
+			 NTOHL(iph->daddr),
+			 NTOHS(0xFFFD),
+			 NTOHS(0xFFFE));
+#else
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
-	uint32_t rc = 0;
 	
 	switch (iph->protocol) {
 	case IPPROTO_TCP:
@@ -142,7 +149,7 @@ decode_ip_n_hash(struct iphdr *iph)
 				 NTOHS(0xFFFE));
 		break;
 	}
-	
+#endif	/* !TRIVIAL_HASH_FUNCTION */
 	TRACE_PKTHASH_FUNC_END();
 	return rc;
 }
@@ -155,8 +162,6 @@ decode_ipv6_n_hash(struct ipv6hdr *ipv6h)
 {
 	TRACE_PKTHASH_FUNC_START();
 	uint32_t saddr, daddr;
-	struct tcphdr *tcph = NULL;
-	struct udphdr *udph = NULL;
 	uint32_t rc = 0;
 
 	/* Get only the first 4 octets */
@@ -168,6 +173,15 @@ decode_ipv6_n_hash(struct ipv6hdr *ipv6h)
 		(ipv6h->daddr.in6_u.u6_addr8[1] << 8) |
 		(ipv6h->daddr.in6_u.u6_addr8[2] << 16) |
 		(ipv6h->daddr.in6_u.u6_addr8[3] << 24);
+
+#ifdef TRIVIAL_HASH_FUNCTION
+	rc = sym_hash_fn(NTOHL(saddr),
+		NTOHL(daddr),
+		NTOHS(0xFFFD),
+		NTOHS(0xFFFE));
+#else
+	struct tcphdr *tcph = NULL;
+	struct udphdr *udph = NULL;
 	
 	switch(NTOHS(ipv6h->nexthdr)) {
 	case IPPROTO_TCP:
@@ -207,7 +221,7 @@ decode_ipv6_n_hash(struct ipv6hdr *ipv6h)
 				 NTOHS(0xFFFD),
 				 NTOHS(0xFFFE));
 	}
-	
+#endif /* !TRIVIAL_HASH_FUNCTION */	
 	TRACE_PKTHASH_FUNC_END();
 	return rc;
 }

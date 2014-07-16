@@ -10,6 +10,9 @@
 /* for type def'n */
 #include <stdint.h>
 /*---------------------------------------------------------------------*/
+/* Enable this macro if you want a trivial version of the hash */
+/* It only parses till the IP header */
+//define TRIVIAL_HASH_FUNCTION
 #ifdef __GNUC__
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
