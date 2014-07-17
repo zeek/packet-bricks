@@ -90,7 +90,10 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		TRACE_DEBUG_LOG("mapped %dKB at %p\n", 
 				nic->global_nmd->req.nr_memsize>>10, 
 				nic->global_nmd->mem);
-	
+		TRACE_DEBUG_LOG("zerocopy %s", 
+				(nic->global_nmd->mem == nic->base_nmd.mem) ? 
+				"enabled\n" : "disabled\n");
+		
 		if (qid != -1) {
 			nic->global_nmd->req.nr_flags = NR_REG_ONE_NIC;
 			nic->global_nmd->req.nr_ringid = qid;
@@ -135,6 +138,9 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		return -1;
 	} else {
 		nmc->local_fd = nmc->local_nmd->fd;
+		TRACE_DEBUG_LOG("zerocopy %s", 
+				(nic->global_nmd->mem == nmc->local_nmd->mem) ? 
+				"enabled\n" : "disabled\n");
 	}
 	
 	/* Wait for mandatory (& cautionary) PHY reset */
@@ -209,11 +215,12 @@ sample_packets(engine *eng, CommNode *cn)
         const u_int n = cn->cur_txq;	/* how many queued packets */
         struct txq_entry *x = cn->q;
         int retry = TX_RETRIES;		/* max retries */
-        struct nm_desc *dst = cn->vale_nmd;
+        struct nm_desc *dst = cn->pipe_nmd;
 
 	/* if queued pkts are zero.... skip! */
         if (n == 0) {
-                TRACE_DEBUG_LOG("Nothing to forward to the interface valeA:s\n");
+                TRACE_DEBUG_LOG("Nothing to forward to pipe nmd: %p\n",
+				cn->pipe_nmd);
 		TRACE_NETMAP_FUNC_END();
                 return 0;
         }
@@ -261,7 +268,7 @@ sample_packets(engine *eng, CommNode *cn)
         }
         if (i < n) {
                 if (retry-- > 0) {
-                        ioctl(cn->vale_nmd->fd, NIOCTXSYNC);
+                        ioctl(cn->pipe_nmd->fd, NIOCTXSYNC);
                         goto try_again;
                 }
                 TRACE_DEBUG_LOG("%d buffers leftover", n - i);
@@ -397,7 +404,7 @@ netmap_delete_all_channels(void *engptr, Rule *r)
 	
 	for (i = 0; i < r->count; i++) {
 		cn = (CommNode *)r->destInfo[i];
-		nm_close(cn->vale_nmd);
+		nm_close(cn->pipe_nmd);
 		free(cn);
 	}
 
@@ -429,14 +436,17 @@ netmap_create_channel(void *engptr, Rule *r, char *targ, int32_t csock)
 	}
 	
 	cn = (CommNode *)r->destInfo[r->count - 1];
-	uint64_t flags = NM_OPEN_NO_MMAP;
-	cn->vale_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
-	if (cn->vale_nmd == NULL) {
-		TRACE_ERR("Can't open %p(%s)\n", cn->vale_nmd, ifname);
+	uint64_t flags = NM_OPEN_NO_MMAP | NM_OPEN_ARG3;
+	cn->pipe_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
+	if (cn->pipe_nmd == NULL) {
+		TRACE_ERR("Can't open %p(%s)\n", cn->pipe_nmd, ifname);
 		TRACE_NETMAP_FUNC_END();
 	}
 
-	fd = cn->vale_nmd->fd;
+	TRACE_DEBUG_LOG("zerocopy %s", 
+			(nmc->local_nmd->mem == cn->pipe_nmd->mem) ? 
+			"enabled\n" : "disabled\n");
+	fd = cn->pipe_nmd->fd;
 
 	TRACE_LOG("Created %s interface\n", ifname);
 

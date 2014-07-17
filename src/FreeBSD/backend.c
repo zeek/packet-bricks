@@ -111,7 +111,9 @@ process_request_backend(engine *eng, struct kevent chlist[])
 	TRACE_DEBUG_LOG("TargetArgs.proc_name: %s\n", rb->targs.proc_name);
 	TRACE_FLUSH();
 
-	snprintf(channelname, 20, "vale%s%d:s", 
+	//snprintf(channelname, 20, "vale%s%d:s", 
+	//	 rb->targs.proc_name, rb->targs.pid);
+	snprintf(channelname, 20, "%s%d", 
 		 rb->targs.proc_name, rb->targs.pid);
 
 	Rule *r = add_new_rule(eng, NULL, rb->t);

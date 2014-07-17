@@ -32,11 +32,19 @@ end
 --init function  __initializes pkteng thread and links it with a__
 --		 __netmap-enabled interface. collects 1024 packets at__
 --		 __a time. "cpu" and "batch" params are optional__
+--		 __Next creates 4 netmap pipe channels to forward__
+--		 __packets to userland applications__
 
 function init()
 	 pkteng.new({name="e0", type="netmap"})
 	 pkteng.link({engine="e0", ifname="eth3", batch=PKT_BATCH})
-	 pkteng.open_channel({engine="e0", channel="valeA:s"})
+
+	 for cnt = 0, 3 do
+	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt})
+	 end
+
+	 -- VALE EXTENSIONS COMMENTED OUT --
+	 --pkteng.open_channel({engine="e0", channel="valeA:s"})
 	 --pkteng.open_channel({engine="e0", channel="valeB:s"})
 	 --pkteng.open_channel({engine="e0", channel="valeC:s"})
 end
