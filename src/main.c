@@ -18,8 +18,6 @@
 #include "lua_interpreter.h"
 /* for signal handling */
 #include <signal.h>
-/* for limits */
-#include <bits/stdio_lim.h>
 /* for config names */
 #include "config.h"
 /*---------------------------------------------------------------------*/

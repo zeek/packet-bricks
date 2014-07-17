@@ -14,8 +14,6 @@
 #include "backend.h"
 /* for rule insertions */
 #include "rule.h"
-/* for epoll */
-#include <sys/epoll.h>
 /*---------------------------------------------------------------------*/
 static elist engine_list;
 /*---------------------------------------------------------------------*/
@@ -98,7 +96,7 @@ engine_spawn_thread(void *engptr)
 
 	if (eng->cpu != -1) {
 		/* Affinitizing thread to engine->cpu */
-		if (set_affinity(eng->cpu) != 0) {
+	  if (set_affinity(eng->cpu, &eng->t) != 0) {
 			TRACE_LOG("Failed to affintiize engine "
 				  "%s thread: %p to core %d\n",
 				  eng->name, &eng->t, eng->cpu);
@@ -131,7 +129,7 @@ engine_run(engine *eng)
 	return;
 }
 /*---------------------------------------------------------------------*/
-inline void
+void
 pktengine_init()
 {
 	TRACE_PKTENGINE_FUNC_START();

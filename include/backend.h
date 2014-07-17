@@ -17,7 +17,10 @@
  * MACROS
  */
 /* Sets the limit on how many processes each engine can handle */
-#define EPOLL_MAX_EVENTS		100
+/* __linux__ */
+#define EPOLL_MAX_EVENTS		FD_SETSIZE
+/* __FreeBSD__ */
+#define KQUEUE_MAX_EVENTS		EPOLL_MAX_EVENTS
 /* epoll timeout = 500ms */
 #define EPOLL_TIMEOUT			500
 /* passive sock port */
