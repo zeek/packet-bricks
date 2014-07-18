@@ -1,0 +1,23 @@
+#---------------------------------------------------------------------#
+SRCS := lua_interpreter.c main.c lua_interface.c \
+	pkt_engine.c netmap_module.c \
+	network_interface.c rule.c
+
+_OBJ := lua_interpreter.o main.o lua_interface.o pkt_engine.o \
+	netmap_module.o network_interface.o rule.o
+OBJ := $(patsubst %,$(OBJDIR)/%,$(_OBJ))
+
+$(OBJDIR)/%.o: %.c
+	$(MSG) "   CC $<"
+	$(HIDE) $(CC) -c -o $@ $< $(CFLAGS) $(INCLUDE) $(NETMAP_INCLUDE)
+
+all: $(OBJ)
+	cd $(OSARCH) && $(MAKE)
+
+.PHONY: clean
+
+clean:
+	cd $(OSARCH) && $(MAKE) clean
+	$(RM) -rf *~
+	$(RM) -rf $(OBJDIR)
+#---------------------------------------------------------------------#

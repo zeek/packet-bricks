@@ -11,6 +11,21 @@
 STATS_PRINT_CYCLE_DEFAULT = 2
 SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
+NETMAP_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
+NETMAP_PIPES=100
+
+--see if the directory exists
+
+local function directory_exists(sPath)
+      if type(sPath) ~= "string" then return false end
+
+      local response = os.execute( "cd " .. sPath )
+      if response == 0 then
+      	 return true
+      end
+      return false
+end
+
 
 
 --sleep function __self-explanatory__
@@ -20,6 +35,29 @@ function sleep(n)  -- seconds
 	 local t0 = clock()
 	 while clock() - t0 <= n do end
 end
+
+
+
+-- A neat function that reads shell output given a shell command `c'
+function shell(c)
+	 local o, h
+	 h = assert(io.popen(c,"r"))
+	 o = h:read("*all")
+	 h:close()
+	 return o
+end
+
+
+
+-- check if you are root
+-- XXX This needs to be improved
+local function check_superuser()
+      if string.find((tostring(shell('whoami'))), 'root') == nil then 
+      	 return false
+      end
+      return true
+end
+
 -----------------------------------------------------------------------
 
 
@@ -36,8 +74,23 @@ end
 --		 __packets to userland applications__
 
 function init()
+	 -- check if netmap module is loaded
+	 if directory_exists(NETMAP_PARAMS_PATH) == false then
+	    print 'Netmap module does not exist'
+	    os.exit(-1)
+	 end
+
+	 -- check if you are root
+	 if check_superuser() == false then
+	    print 'You have to be superuser to run this function'
+	    os.exit(-1)
+	 end
+
 	 pkteng.new({name="e0", type="netmap"})
 	 pkteng.link({engine="e0", ifname="eth3", batch=PKT_BATCH})
+
+	 -- enable underlying netmap pipe framework
+	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_PARAMS_PATH .. "default_pipes")
 
 	 for cnt = 0, 3 do
 	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt})
@@ -104,6 +157,18 @@ end
 --		 ++________________________________________________++
 
 function init4()
+	 -- check if netmap module is loaded
+	 if directory_exists(NETMAP_PARAMS_PATH) == false then
+	    print 'Netmap module does not exist'
+	    os.exit(-1)
+	 end
+
+	 -- check if you are root
+	 if check_superuser() == false then
+	    print 'You have to be superuser to run this function'
+	    os.exit(-1)
+	 end
+
 	 for cnt = 0, 3 do
 	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
 	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})

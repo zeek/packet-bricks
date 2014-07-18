@@ -1,60 +1,68 @@
-## XXX short-term Makefile. This will be improved substantially..... ##
 #---------------------------------------------------------------------#
-# Borrowed from Luigi's netmap-ipfw package
+BINDIR := $(shell pwd)/bin
+BIN := $(BINDIR)/pacf
 OSARCH := $(shell uname)
 OSARCH := $(findstring $(OSARCH),FreeBSD Linux Darwin)
-
-CC=cc
-CFLAGS=-O3 -pipe -Wall -Wunused-function -Wextra -Werror -D_GNU_SOURCE -D__USE_GNU 
-DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
-DEBUG_CFLAGS+=-DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND -DDPKTHASH -DDRULE
-ifeq ($(OSARCH),FreeBSD)
-	INCLUDE=-I./include -I/usr/local/include/lua51/ -Isys/sys/
-	LIBS=-L/usr/local/lib/ -llua-5.1 -lpthread
-	LDFLAGS=$(LIBS)
+DEBUG_CFLAGS := -g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
+DEBUG_CFLAGS += -DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND -DDPKTHASH -DDRULE
+#---------------------------------------------------------------------#
+ifeq ($V,) # no echo
+    export MSG=@echo
+    export HIDE=@
 else
-	INCLUDE=-I./include -I/usr/include/lua5.1/
-	LIBS=-llua5.1 -lpthread
-	LDFLAGS=$(LIBS) -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
-	    -fno-builtin-free -fno-builtin-posix_memalign -ljemalloc
+    export MSG=@\#
+    export HIDE=
 endif
-NETMAP_INCLUDE=-I./include/netmap
-BINDIR=bin
-BIN=$(BINDIR)/pacf
-MKDIR=mkdir
-RM=rm
-STRIP=strip
-SRCS = src/lua_interpreter.c src/main.c src/lua_interface.c \
-	src/pkt_engine.c src/netmap_module.c \
-	src/network_interface.c src/rule.c
+
+export OSARCH
+export OBJDIR := $(shell pwd)/.objs
+export CFLAGS := -O3 -pipe -Wall -Wunused-function -Wextra -Werror -D_GNU_SOURCE -D__USE_GNU 
+export NETMAP_INCLUDE := -I$(shell pwd)/include/netmap
+
 ifeq ($(OSARCH),FreeBSD)
-	SRCS += src/FreeBSD/pkt_hash.c src/FreeBSD/util.c src/FreeBSD/backend.c
+	export INCLUDE := -I$(shell pwd)/include -I/usr/local/include/lua51/ -Isys/sys/
+	export LIBS := -L/usr/local/lib/ -llua-5.1 -lpthread
+	export LDFLAGS := $(LIBS)
 else
-	SRCS += src/Linux/pkt_hash.c src/Linux/util.c src/Linux/backend.c
+	export INCLUDE := -I$(shell pwd)/include -I/usr/include/lua5.1/
+	export LIBS := -llua5.1 -lpthread
+	export LDFLAGS := $(LIBS) -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
+	-fno-builtin-free -fno-builtin-posix_memalign -ljemalloc
 endif
 #---------------------------------------------------------------------#
-all: default
+all: pacf
 
-default: tags
-	$(CC) $(CFLAGS) $(INCLUDE) $(NETMAP_INCLUDE) -c $(SRCS)
-	$(MKDIR) -p $(BINDIR)
-	$(CC) *.o $(LDFLAGS) -o $(BIN)
-	$(RM) -rf *.o
-	$(STRIP) $(BIN)
+objs:
+	mkdir -p $(OBJDIR)
+	cd src && $(MAKE)
 
-debug: tags
-	$(CC) $(DEBUG_CFLAGS) $(INCLUDE) $(NETMAP_INCLUDE) -c $(SRCS)
-	$(MKDIR) -p $(BINDIR)
-	$(CC) *.o $(LDFLAGS) -o $(BIN)
-	$(RM) -rf *.o 
-#---------------------------------------------------------------------#
-run: all
+objs-dbg:
+	$(eval export CFLAGS := $(DEBUG_CFLAGS))
+	mkdir -p $(OBJDIR)
+	cd src && $(MAKE)
+
+pacf: objs
+	mkdir -p $(BINDIR)
+	$(MSG) "   LD $@"
+	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)
+	strip $(BIN)
+
+run: pacf
 	$(BIN) -f scripts/startup.lua
 #---------------------------------------------------------------------#
+debug: pacf-debug
+
+pacf-debug: objs-dbg
+	mkdir -p $(BINDIR)
+	$(MSG) "   LD $@-debug"
+	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)
+#---------------------------------------------------------------------#
+clean:
+	cd src && $(MAKE) clean
+	$(RM) -rf $(BINDIR) include/*~ tags scripts/*~
+
+.PHONY: clean
+
 tags:
 	find -name '*.c' -or -name '*.h' | xargs ctags
 #---------------------------------------------------------------------#
-clean:
-	rm -rf *~ bin/* lib/*.o include/*.h~ src/*.c~ *.o tags \
-	scripts/*.lua~ src/Linux/*~ src/FreeBSD/*~
-#---------------------------------------------------------------------#		
