@@ -1,11 +1,172 @@
-THIS FILE NEEDS TO BE UPDATED.
-
 README
 ======
-> While this file is being updated, the best strategy to use
-this system will be to go through scripts/startup.lua script. It
-is extensively documented for user's convenience.
 
-> Please install the required libraries mentioned in INSTALL file.
+Host PACF is a Linux/FreeBSD daemon that is capable of receiving and
+distributing ingress traffic to userland applications. It splits
+up traffic evenly across all registered applications. This
+distribution is flow-aware (i.e. packets of one connection will always
+end up in the same application). At the moment, host-pacf uses netmap 
+packet I/O framework for receiving packets. It employs netmap pipes to 
+forward packets to end host applications. 
+
+The following guide is a walkthrough of the scripts/startup.lua file
+which is also a fair representation of what this system is capable
+of.
+	 _______
+	|       |
+	| APP 1 |\    eth3:{0
+	|_______| \_______________
+			         |
+	 _______	         |
+	|       |     eth3:{1    |
+	| APP 2 |_______________ |
+	|_______|	       | |	
+			       | |		   1/10 Gbps link
+			      {HOST-PACF}eth3 <--- ||||||||||||||
+	 _______	       | |	
+	|       |     eth3:{2  | |
+	| APP 3 |______________| |
+	|_______|		 |
+		      		 |
+	 _______   ______________|
+	|       | /   eth3:{3  	 
+	| APP 4 |/
+	|_______|
+
+
+User can start the program by running the following command:
+# bin/pacf
+
+The system opens a LUA-based shell. Type the following command to
+print the help menu:
+_________________________________________________________________
+	pacf> pacf.help()
+	PACF Commands:
+    	    help()
+    	    print_status()
+    	    show_stats()
+            shutdown()
+          Available subsystems within PACF have their own help() methods:
+          pkteng <under_construction>
+_________________________________________________________________
+
+
+You can either hit Ctrl+D or enter the following command to exit
+the program:
+
+_________________________________________________________________
+	pacf> pacf.shutdown()
+	Goodbye!
+_________________________________________________________________
+
+
+In host-pacf, the most important component is the pkteng module.
+It manages the reception and distribution of ingress traffic coming
+thru an interface. After running host-pacf again, use the following 
+command to create a pkteng instance:
+
+_________________________________________________________________
+	pacf> pkteng.new({name="e0", type="netmap"})
+_________________________________________________________________
+
+The _name_ field is internally used by host-pacf as pkteng's ID. You
+can delete the pkteng instance by running the following command:
+
+_________________________________________________________________
+	pacf> pkteng.delete({engine="e0"})
+_________________________________________________________________
+
+The pkteng instance can be instantiated with 1 more (optional) 
+parameter:
+
+_________________________________________________________________
+	pacf> pkteng.new({name="e0", type="netmap", cpu=1})
+_________________________________________________________________
+
+The _cpu_ parameter affinitizes the module to CPU 1 onces the engine
+thread starts reading packets. You can bind a pkteng with an interface
+by running the following command:
+
+_________________________________________________________________
+	pacf> pkteng.link({engine="e0", ifname="eth3"})
+_________________________________________________________________
+
+This binds pkteng "e0" with interface eth3. One can unbind the 
+interface with the following command:
+
+_________________________________________________________________
+	pacf> pkteng.unlink({engine="e0", ifname="eth3"})
+_________________________________________________________________
+
+The pkteng link command also comes with an additional (optional)
+parameter:
+
+_________________________________________________________________
+	pacf> pkteng.link({engine="e0", ifname="eth3", batch=1024})
+_________________________________________________________________
+
+The _batch_ option will instruct the engine to read packets from the
+interface 1024 packets at a time.
+
+The user can start the engine with the following command:
+
+_________________________________________________________________
+	pacf> pkteng.start({engine="e0"})
+_________________________________________________________________
+
+The engine will start sniffing for packets from the interface 
+promiscuously. You can use the following command to get the latest
+packets related statistics from the engine:
+
+_________________________________________________________________
+	pacf> pkteng.show_stats({engine="e0"})
+_________________________________________________________________
+
+Please note that you cannot unlink an interface from the pkteng
+while the engine is running. To stop the engine, please run the 
+following command:
+
+_________________________________________________________________
+	pacf> pkteng.stop({engine="e0"})
+_________________________________________________________________
+
+To start forwarding packets from host-pacf to an application, the
+user needs to run the following command before starting the engine:
+
+_________________________________________________________________
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{0"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{1"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{2"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{3"})
+_________________________________________________________________
+
+This creates four netmap-specific channels named "netmap:eth3{x" where
+0 <= x < 4. The traffic is evenly split between all four channels based
+on the five tuple header (sip, dip, sport, dport, prot) information of 
+incoming packets. Now userland applications can use the host-pacf to 
+get their fair share of ingress traffic via host-pacf. Sample applications 
+e.g. tcpdump (using netmap-libpcap) can use the following command to start 
+reading traffic:
+
+# tcpdump -i netmap:eth3}0 &
+# tcpdump -i netmap:eth3}1 &
+# tcpdump -i netmap:eth3}2 &
+# tcpdump -i netmap:eth3}3 &
+
+
+For user's convenience, the host-pacf package comes with a reference
+LUA script file. You can use the following command to load the script
+file in host-pacf at startup:
+
+# bin/pacf -f scripts/startup.lua
+
+The user is recommended to go skim through the script file. It is
+heavily documented and also contains the code for how to run a 4-threaded
+version of the pkteng.
+
+=======================================================================
+NOTE: Please install the required libraries mentioned in INSTALL file.
 As the system is still under active development, the program may
 exhibit unexpected behavior if libraries are not installed.
+
+Please report bugs to: ajamshed@icsi.berkeley.edu

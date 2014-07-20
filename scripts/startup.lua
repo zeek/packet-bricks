@@ -12,7 +12,7 @@ STATS_PRINT_CYCLE_DEFAULT = 2
 SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
 NETMAP_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
-NETMAP_PIPES=100
+NETMAP_PIPES=32
 
 --see if the directory exists
 
@@ -94,6 +94,7 @@ function init()
 
 	 for cnt = 0, 3 do
 	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt})
+	     --pkteng.open_channel({engine="e0", channel="netmap:bro{" .. cnt})
 	 end
 
 	 -- VALE EXTENSIONS COMMENTED OUT --
@@ -169,9 +170,13 @@ function init4()
 	    os.exit(-1)
 	 end
 
+	 -- enable underlying netmap pipe framework
+	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_PARAMS_PATH .. "default_pipes")
+
 	 for cnt = 0, 3 do
 	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
 	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})
+		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt})
 	 end
 end
 -----------------------------------------------------------------------
@@ -212,7 +217,7 @@ function stop4()
 	 	 pkteng.delete({engine="e" .. cnt})
 	 end
 
-	 -- pacf.shutdown()
+	 pacf.shutdown()
 end
 -----------------------------------------------------------------------
 
@@ -223,18 +228,18 @@ end
 -----------------------------------------------------------------------
 -- S T A R T _ OF _  S C R I P T
 -----------------------------------------------------------------------
--- __"main" function (partially commented for user's convenience)__
+-- __"main" function (Commented for user's convenience)__
 --
 -------- __This command prints out the main help menu__
-pacf.help()
+-- pacf.help()
 -------- __This command shows the current status of PACF__
-pacf.print_status()
+-- pacf.print_status()
 -------- __This prints out the __pkt_engine__ help menu__
-pkteng.help()
+-- pkteng.help()
 -------- __Initialize the system__
-init()
+-- init()
 -------- __Start the engine__
-start()
+-- start()
 -------- __Stop the engine__
 -- stop()
 -------- __The following commands quits the session__

@@ -354,7 +354,7 @@ netmap_callback(void *engptr, Rule *r)
 				
 			}
 		}
-		if (cn->cur_txq > 0)
+		if (cn != NULL && cn->cur_txq > 0)
 			sample_packets(eng, cn);
 		break;
 	case REDIRECT:
