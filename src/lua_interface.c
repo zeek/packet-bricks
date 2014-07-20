@@ -366,6 +366,7 @@ pktengine_open_channel_wrap(lua_State *L)
 	/* this will stop netmap engine */
 	unsigned char *ename;
 	unsigned char *cname;
+	unsigned char *action;
 	int rc;
 
 	luaL_checktype(L, 1, LUA_TTABLE);
@@ -383,10 +384,18 @@ pktengine_open_channel_wrap(lua_State *L)
 		TRACE_LUA_FUNC_END();
 		return -1;
 	}
-	rc = pktengine_open_channel(ename, cname);
+	lua_getfield(L, 1, "action");
+        action = (unsigned char *)lua_tostring(L, -1);
+	if (action == NULL) {
+		TRACE_LOG("The command needs an action\n");
+		TRACE_LUA_FUNC_END();
+		return -1;
+	}
+	rc = pktengine_open_channel(ename, cname, action);
 	if (rc == -1) {
 		TRACE_LOG("Failed to open channel %s\n", cname);
 	}
+	lua_remove(L, -1);
 	lua_remove(L, -1);
 	lua_remove(L, -1);
 

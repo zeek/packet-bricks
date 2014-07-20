@@ -224,8 +224,8 @@ sample_packets(engine *eng, CommNode *cn)
 		TRACE_NETMAP_FUNC_END();
                 return 0;
         }
-	
- try_again:
+
+ try_sample_again:	
         /* scan all output rings; dr is the destination ring index */
         for (dr = dst->first_tx_ring; i < n && dr <= dst->last_tx_ring; dr++) {
                 struct netmap_ring *ring = NETMAP_TXRING(dst->nifp, dr);
@@ -234,22 +234,7 @@ sample_packets(engine *eng, CommNode *cn)
 		/* oops! try next ring */
                 if (nm_ring_empty(ring))
                         continue;
-                /*
-                 * We have different ways to transfer from src->dst
-                 *
-                 * src  dst     Now             Eventually (not done)
-                 *
-                 * PHYS PHYS    buf swap
-                 * PHYS VIRT    NS_INDIRECT
-                 * VIRT PHYS    copy            NS_INDIRECT
-                 * VIRT VIRT    NS_INDIRECT
-                 * MBUF PHYS    copy            NS_INDIRECT
-                 * MBUF VIRT    NS_INDIRECT
-                 *
-                 * The "eventually" depends on implementing NS_INDIRECT
-                 * on physical device drivers.
-                 * Note we do not yet differentiate PHYS/VIRT.
-                 */
+
                 for  (; i < n && !nm_ring_empty(ring); i++) {
 			/* we have empty tx slots, swap the pkts now! */
                         struct netmap_slot *dst, *src;
@@ -257,8 +242,14 @@ sample_packets(engine *eng, CommNode *cn)
                         dst = &ring->slot[ring->cur];
 			src = &sr->slot[x[i].slot_idx];
 			dst->len = src->len;
-			dst->ptr = (uintptr_t)NETMAP_BUF(sr, src->buf_idx);
-			dst->flags = NS_INDIRECT;
+
+			/* Swap now! */
+			u_int tmp;
+			dst->flags = src->flags = NS_BUF_CHANGED;
+			tmp = dst->buf_idx;
+			dst->buf_idx = src->buf_idx;
+			src->buf_idx = tmp;
+
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
 			/* updating engine statistics */
 			eng->pkt_intercepted++;
@@ -269,11 +260,73 @@ sample_packets(engine *eng, CommNode *cn)
         if (i < n) {
                 if (retry-- > 0) {
                         ioctl(cn->pipe_nmd->fd, NIOCTXSYNC);
-                        goto try_again;
+                        goto try_sample_again;
                 }
                 TRACE_DEBUG_LOG("%d buffers leftover", n - i);
         }
         cn->cur_txq = 0;
+	
+	TRACE_NETMAP_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int32_t
+copy_packets(engine *eng, CommNode *cn, unsigned char tally_pkts)
+{
+	TRACE_NETMAP_FUNC_START();
+        u_int dr; 			/* destination ring */
+        int i = 0;
+	const int n = cn->cur_txq;	/* how many queued pkts */
+        int retry = TX_RETRIES;		/* max retries */
+        struct nm_desc *dst = cn->pipe_nmd;
+        struct txq_entry *x = cn->q;
+	
+	/* if queued pkts are zero.... skip! */
+        if (n == 0) {
+                TRACE_DEBUG_LOG("Nothing to forward to pipe nmd: %p\n",
+				cn->pipe_nmd);
+		TRACE_NETMAP_FUNC_END();
+                return 0;
+        }
+ try_copy_again:
+	/* scan all output rings; dr is the destination ring index */
+	for (dr = dst->first_tx_ring; i < n && dr <= dst->last_tx_ring; dr++) {
+		struct netmap_ring *ring = NETMAP_TXRING(dst->nifp, dr);
+		
+		__builtin_prefetch(ring);
+		/* oops! try next ring */
+		if (nm_ring_empty(ring))
+			continue;
+		
+		for  (; i < n && !nm_ring_empty(ring); i++) {
+			/* we have empty tx slots, copy the pkts now! */
+			char *srcbuf, *dstbuf;
+			struct netmap_slot *dst, *src;
+			struct netmap_ring *sr = x[i].ring;
+			dst = &ring->slot[ring->cur];
+			src = &sr->slot[x[i].slot_idx];
+			
+			dst->len = src->len;
+			srcbuf = NETMAP_BUF(sr, src->buf_idx);
+			dstbuf = NETMAP_BUF(ring, dst->buf_idx);
+			nm_pkt_copy(dstbuf, srcbuf, dst->len); 
+			
+			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
+			if (tally_pkts == 1) {
+				/* updating engine statistics */
+				eng->byte_count += dst->len;
+				eng->pkt_count++;
+			}
+		}
+	}
+	if (i < n) {
+		if (retry-- > 0) {
+			ioctl(cn->pipe_nmd->fd, NIOCTXSYNC);
+			goto try_copy_again;
+		}
+		TRACE_DEBUG_LOG("%d buffers leftover", n - i);
+	}
+	cn->cur_txq = 0;
 	
 	TRACE_NETMAP_FUNC_END();
         return 0;
@@ -290,6 +343,7 @@ netmap_callback(void *engptr, Rule *r)
 	struct netmap_ring *rxring;
 	CommNode *cn = NULL;
 	Target tgt;
+	uint32_t j = 0;
 
 	if (nmc->local_nmd == NULL) {
 		TRACE_LOG("netmap context was not properly initialized\n");
@@ -338,7 +392,6 @@ netmap_callback(void *engptr, Rule *r)
 					sleep(NETMAP_LINK_WAIT_TIME);
 				}
 				__builtin_prefetch(buf);
-				
 				cn = (CommNode *)r->destInfo[pkt_hdr_hash(buf) % r->count];
 				dst = cn->cur_txq;
 				if (dst >= TXQ_MAX) {
@@ -362,6 +415,59 @@ netmap_callback(void *engptr, Rule *r)
 	case MODIFY:
 		break;
 	case COPY:
+		for (i = nmc->local_nmd->first_rx_ring;
+		     i <= nmc->local_nmd->last_rx_ring;
+		     i++) {
+			rxring = NETMAP_RXRING(nifp, i);
+			
+			__builtin_prefetch(rxring);
+			if (nm_ring_empty(rxring))
+				continue;
+			__builtin_prefetch(&rxring->slot[rxring->cur]);
+			while (!nm_ring_empty(rxring)) {
+				u_int dst, src, idx;
+				struct netmap_slot *slot;
+				void *buf;
+				
+				src = rxring->cur;
+				slot = &rxring->slot[src];
+				__builtin_prefetch(slot+1);
+				idx = slot->buf_idx;
+				buf = (u_char *)NETMAP_BUF(rxring, idx);
+				if (idx < 2) {
+					TRACE_LOG("%s bogus RX index at offset %d",
+						  nifp->ni_name, src);
+					sleep(NETMAP_LINK_WAIT_TIME);
+				}
+				__builtin_prefetch(buf);
+				/* pick any cn as reference */
+				cn = (CommNode *)r->destInfo[0];
+				dst = cn->cur_txq;
+				if (dst >= TXQ_MAX) {
+					for (j = 0; j < r->count; j++) {
+						cn = (CommNode *)r->destInfo[j];
+						copy_packets(eng, cn, (j == 0));
+					}
+					continue;
+				}
+				
+				rxring->head = rxring->cur = nm_ring_next(rxring, src);
+				
+				for (j = 0; j < r->count; j++) {
+					cn = (CommNode *)r->destInfo[j];
+					cn->q[dst].ring = rxring;
+					cn->q[dst].slot_idx = src;
+					cn->cur_txq++;
+				}
+				
+			}
+		}
+		if (cn != NULL && cn->cur_txq > 0) {
+			for (j = 0; j < r->count; j++) {
+				cn = (CommNode *)r->destInfo[j];
+				copy_packets(eng, cn, (j == 0));
+			}
+		}
 		break;
 	case LIMIT:
 		break;

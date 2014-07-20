@@ -406,11 +406,12 @@ pktengine_stop(const unsigned char *name)
 /*---------------------------------------------------------------------*/
 int32_t
 pktengine_open_channel(const unsigned char *eng_name, 
-		      const unsigned char *channel_name)
+		       const unsigned char *channel_name,
+		       const unsigned char *action)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
-	Rule *r;
+	Rule *r = NULL;
 		
 	eng = engine_find(eng_name);
 	if (eng == NULL) {
@@ -421,7 +422,16 @@ pktengine_open_channel(const unsigned char *eng_name,
 	}
 	
 	/* for now only split-sampling is enabled */
-	r = add_new_rule(eng, NULL, SAMPLE);
+	if (!strcmp((char *)action, "SAMPLE"))
+		r = add_new_rule(eng, NULL, SAMPLE);
+	else if (!strcmp((char *)action, "COPY"))
+		r = add_new_rule(eng, NULL, COPY);
+	else {
+		TRACE_LOG("Unrecognized action inserted: <%s>\n",
+			  (char *)action);
+		TRACE_PKTENGINE_FUNC_END();
+		return -1;
+	}
 	
 	/* create communication back channel */
 	eng->iom.create_channel(eng, r, (char *)channel_name, 0);

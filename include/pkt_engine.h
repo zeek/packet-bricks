@@ -141,6 +141,7 @@ is_pktengine_online(const unsigned char *eng_name);
  */
 int32_t
 pktengine_open_channel(const unsigned char *eng_name, 
-		      const unsigned char *channel_name);
+		       const unsigned char *channel_name,
+		       const unsigned char *action_name);
 /*---------------------------------------------------------------------*/
 #endif /* !__PKT_ENGINE_H__ */

@@ -1,17 +1,17 @@
 README
 ======
 
-Host PACF is a Linux/FreeBSD daemon that is capable of receiving and
-distributing ingress traffic to userland applications. It splits
-up traffic evenly across all registered applications. This
+Host PACF is a Linux/FreeBSD daemon* (SEE FOOTNOTE) that is capable of 
+receiving and distributing ingress traffic to userland applications. It 
+splits up traffic evenly across all registered applications. This
 distribution is flow-aware (i.e. packets of one connection will always
 end up in the same application). At the moment, host-pacf uses netmap 
 packet I/O framework for receiving packets. It employs netmap pipes to 
 forward packets to end host applications. 
 
-The following guide is a walkthrough of the scripts/startup.lua file
-which is also a fair representation of what this system is capable
-of.
+The following guide provides a walkthrough of the scripts/startup.lua file
+which also explains what this system is capable of.
+
 	 _______
 	|       |
 	| APP 1 |\    eth3:{0
@@ -101,9 +101,9 @@ _________________________________________________________________
 The pkteng link command also comes with an additional (optional)
 parameter:
 
-_________________________________________________________________
+___________________________________________________________________
 	pacf> pkteng.link({engine="e0", ifname="eth3", batch=1024})
-_________________________________________________________________
+___________________________________________________________________
 
 The _batch_ option will instruct the engine to read packets from the
 interface 1024 packets at a time.
@@ -133,25 +133,31 @@ _________________________________________________________________
 To start forwarding packets from host-pacf to an application, the
 user needs to run the following command before starting the engine:
 
-_________________________________________________________________
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{0"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{1"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{2"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{3"})
-_________________________________________________________________
+__________________________________________________________________________________________
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{0", action="SAMPLE"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{1", action="SAMPLE"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{2", action="SAMPLE"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{3", action="SAMPLE"})
+__________________________________________________________________________________________
 
 This creates four netmap-specific channels named "netmap:eth3{x" where
 0 <= x < 4. The traffic is evenly split between all four channels based
 on the five tuple header (sip, dip, sport, dport, prot) information of 
-incoming packets. Now userland applications can use the host-pacf to 
-get their fair share of ingress traffic via host-pacf. Sample applications 
-e.g. tcpdump (using netmap-libpcap) can use the following command to start 
+incoming packets. Userland applications can now use host-pacf to 
+get their fair share of ingress traffic. Sample applications e.g. tcpdump 
+(using netmap-libpcap) can use the following command to start 
 reading traffic:
 
 # tcpdump -i netmap:eth3}0 &
 # tcpdump -i netmap:eth3}1 &
 # tcpdump -i netmap:eth3}2 &
 # tcpdump -i netmap:eth3}3 &
+
+Host-PACF currently supports SAMPLE (load balancer) and COPY (forward
+copy of each packet to every registered application) Rule Types. In the
+current version, all channels MUST share the same "action" keywords (i.e.
+all registered channels should either have "SAMPLE" or "COPY" actions.
+This limitation will be removed in future versions.
 
 
 For user's convenience, the host-pacf package comes with a reference
@@ -160,11 +166,17 @@ file in host-pacf at startup:
 
 # bin/pacf -f scripts/startup.lua
 
-The user is recommended to go skim through the script file. It is
+The user is recommended to skim through the script file. It is
 heavily documented and also contains the code for how to run a 4-threaded
 version of the pkteng.
 
 =======================================================================
+*FOOTNOTE*: The host-pacf module cannot currently run as a daemon. This
+means that if, at any moment, the user decides to quite the Host-PACF
+LUA shell, all pktengs will be destroyed. Future versions will support
+daemonizing.
+
+
 NOTE: Please install the required libraries mentioned in INSTALL file.
 As the system is still under active development, the program may
 exhibit unexpected behavior if libraries are not installed.

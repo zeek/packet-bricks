@@ -93,8 +93,9 @@ function init()
 	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_PARAMS_PATH .. "default_pipes")
 
 	 for cnt = 0, 3 do
-	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt})
-	     --pkteng.open_channel({engine="e0", channel="netmap:bro{" .. cnt})
+	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="SAMPLE"})
+	     --pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="COPY"})
+	     ----pkteng.open_channel({engine="e0", channel="netmap:bro{" .. cnt})
 	 end
 
 	 -- VALE EXTENSIONS COMMENTED OUT --
@@ -176,7 +177,8 @@ function init4()
 	 for cnt = 0, 3 do
 	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
 	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})
-		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt})
+		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="SAMPLE"})
+		 --pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="COPY"})
 	 end
 end
 -----------------------------------------------------------------------
