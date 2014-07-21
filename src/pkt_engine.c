@@ -421,15 +421,11 @@ pktengine_open_channel(const unsigned char *eng_name,
 		return -1;
 	}
 	
-	/* for now only split-sampling is enabled */
+	/* add the rule for channel */
 	if (!strcmp((char *)action, "SAMPLE"))
 		r = add_new_rule(eng, NULL, SAMPLE);
 	else if (!strcmp((char *)action, "COPY"))
 		r = add_new_rule(eng, NULL, COPY);
-	else if (!strcmp((char *)action, "DROP"))
-		r = add_new_rule(eng, NULL, DROP);
-	else if (!strcmp((char *)action, "REDIRECT"))
-		r = add_new_rule(eng, NULL, REDIRECT);
 	else {
 		TRACE_LOG("Unrecognized action inserted: <%s>\n",
 			  (char *)action);
@@ -439,6 +435,54 @@ pktengine_open_channel(const unsigned char *eng_name,
 	
 	/* create communication back channel */
 	eng->iom.create_channel(eng, r, (char *)channel_name);
+	
+	TRACE_PKTENGINE_FUNC_END();
+	return 0;
+}
+/*---------------------------------------------------------------------*/
+int32_t
+pktengine_drop_pkts(const unsigned char *eng_name)
+{
+	TRACE_PKTENGINE_FUNC_START();
+	engine *eng;
+	Rule *r = NULL;
+	
+	eng = engine_find(eng_name);
+	if (eng == NULL) {
+		TRACE_LOG("Can't find engine with name: %s\n",
+			  eng_name);
+		TRACE_PKTENGINE_FUNC_END();
+		return -1;
+	}
+	
+	r = add_new_rule(eng, NULL, DROP);
+
+	eng->iom.set_action(eng, r, NULL);
+
+	TRACE_PKTENGINE_FUNC_END();
+	return 0;
+}
+/*---------------------------------------------------------------------*/
+int32_t
+pktengine_redirect_pkts(const unsigned char *eng_name, 
+			const unsigned char *oifname)
+{
+	TRACE_PKTENGINE_FUNC_START();
+	engine *eng;
+	Rule *r = NULL;
+	
+	eng = engine_find(eng_name);
+	if (eng == NULL) {
+		TRACE_LOG("Can't find engine with name: %s\n",
+			  eng_name);
+		TRACE_PKTENGINE_FUNC_END();
+		return -1;
+	}
+	
+	r = add_new_rule(eng, NULL, REDIRECT);
+
+	/* open up outgoing interface */
+	eng->iom.set_action(eng, r, (char *)oifname);
 
 	TRACE_PKTENGINE_FUNC_END();
 	return 0;

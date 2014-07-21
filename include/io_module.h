@@ -32,6 +32,8 @@
  *		   create_channel(): Function that establishes comm interface
  *				     with userland processes
  *
+ *		   set_action(): Function that sets actions (e.g. DROP, REDIRECT)
+ *
  *		   delete_all_channels(): Function that tears down all channels
  *					 associated with a particular rule
  *
@@ -49,6 +51,7 @@ typedef struct io_module_funcs {
 	void	(*unlink_iface)(const unsigned char *iface, void *engptr);
 	int32_t (*callback)(void *engptr, Rule *r);
 	int32_t (*create_channel)(void *engptr, Rule *r, char *cname);
+	int32_t (*set_action)(void *engptr, Rule *r, char *rule_args);
 	void	(*delete_all_channels)(void *engptr, Rule *r);
 	int32_t (*shutdown)(void *engptr);
 	

@@ -143,5 +143,18 @@ int32_t
 pktengine_open_channel(const unsigned char *eng_name, 
 		       const unsigned char *channel_name,
 		       const unsigned char *action_name);
+
+/**
+ *  Drop the pkts coming to this engine
+ */
+int32_t
+pktengine_drop_pkts(const unsigned char *eng_name);
+
+/**
+ *  Redirect the pkts coming to this engine to an outgoing interface
+ */
+int32_t
+pktengine_redirect_pkts(const unsigned char *eng_name,
+			const unsigned char *ifname);
 /*---------------------------------------------------------------------*/
 #endif /* !__PKT_ENGINE_H__ */

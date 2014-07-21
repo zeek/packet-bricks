@@ -139,7 +139,9 @@ pktengine_help_wrap(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
-		"    open_channel( {engine=<ioengine_name>, channel=<channel_name>} )\n"
+		"    open_channel( {engine=<ioengine_name>, channel=<channel_name>, action=<action_name>} )\n"
+	     	"    drop_pkts({engine=<ioengine_name>})\n"
+	     	"    redirect_pkts({engine=<ioengine_name>, ifname=<interface>})\n"
 		"    add_filter(<params still need to be determined>) <DISABLED>\n"
 		"    new( {name=<ioengine_name>, type=<io_type>, [cpu=<cpu number>]} )\n"
 		"    delete( {engine=<ioengine_name>} )\n"
@@ -404,6 +406,71 @@ pktengine_open_channel_wrap(lua_State *L)
 }
 /*---------------------------------------------------------------------*/
 static int
+pktengine_drop_pkts_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+
+	/* this will stop netmap engine */
+	unsigned char *ename;
+	int rc;
+
+	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "engine");
+        ename = (unsigned char *)lua_tostring(L, -1);
+	if (ename == NULL) {
+		TRACE_LOG("This command needs an engine name\n");
+		TRACE_LUA_FUNC_END();
+		return -1;
+	}
+
+	rc = pktengine_drop_pkts(ename);
+	if (rc == -1) {
+		TRACE_LOG("Failed to set drop target for engine %s\n", ename);
+	}
+	lua_remove(L, -1);
+
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
+pktengine_redirect_pkts_wrap(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+
+	/* this will stop netmap engine */
+	unsigned char *ename, *ifname;
+	int rc;
+
+	luaL_checktype(L, 1, LUA_TTABLE);
+        lua_getfield(L, 1, "engine");
+        ename = (unsigned char *)lua_tostring(L, -1);
+	if (ename == NULL) {
+		TRACE_LOG("This command needs an engine name\n");
+		TRACE_LUA_FUNC_END();
+		return -1;
+	}
+
+	lua_getfield(L, 1, "channel");
+        ifname = (unsigned char *)lua_tostring(L, -1);
+	if (ifname == NULL) {
+		TRACE_LOG("This command needs an outgoing interface name\n");
+		TRACE_LUA_FUNC_END();
+		return -1;
+	}
+
+	rc = pktengine_redirect_pkts(ename, ifname);
+	if (rc == -1) {
+		TRACE_LOG("Failed to set redirect target for engine %s\n", ename);
+	}
+	lua_remove(L, -1);
+	lua_remove(L, -1);
+
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static int
 pktengine_dump_stats_wrap(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
@@ -477,6 +544,8 @@ pktenglib[] = {
         {"stop", pktengine_stop_wrap},
         {"show_stats", pktengine_dump_stats_wrap},
 	{"open_channel", pktengine_open_channel_wrap},
+	{"redirect_pkts", pktengine_redirect_pkts_wrap},
+	{"drop_pkts", pktengine_drop_pkts_wrap},
         {NULL, NULL}
 };
 /*---------------------------------------------------------------------*/
