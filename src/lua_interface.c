@@ -451,7 +451,7 @@ pktengine_redirect_pkts_wrap(lua_State *L)
 		return -1;
 	}
 
-	lua_getfield(L, 1, "channel");
+	lua_getfield(L, 1, "ifname");
         ifname = (unsigned char *)lua_tostring(L, -1);
 	if (ifname == NULL) {
 		TRACE_LOG("This command needs an outgoing interface name\n");

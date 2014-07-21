@@ -421,6 +421,14 @@ pktengine_open_channel(const unsigned char *eng_name,
 		return -1;
 	}
 	
+	if (eng->run == 1) {
+		TRACE_LOG("Can't open channel for %s as "
+			  "engine %s is already running\n",
+			  action, eng_name);
+		TRACE_PKTENGINE_FUNC_END();
+		return -1;
+	}
+	
 	/* add the rule for channel */
 	if (!strcmp((char *)action, "SAMPLE"))
 		r = add_new_rule(eng, NULL, SAMPLE);
@@ -454,6 +462,14 @@ pktengine_drop_pkts(const unsigned char *eng_name)
 		TRACE_PKTENGINE_FUNC_END();
 		return -1;
 	}
+
+	if (eng->run == 1) {
+		TRACE_LOG("Can't drop packets as "
+			  "engine %s is already running\n",
+			  eng_name);
+		TRACE_PKTENGINE_FUNC_END();
+		return -1;
+	}
 	
 	r = add_new_rule(eng, NULL, DROP);
 
@@ -479,6 +495,14 @@ pktengine_redirect_pkts(const unsigned char *eng_name,
 		return -1;
 	}
 	
+	if (eng->run == 1) {
+		TRACE_LOG("Can't redirect packets to %s as "
+			  "engine %s is already running\n",
+			  oifname, eng_name);
+		TRACE_PKTENGINE_FUNC_END();
+		return -1;
+	}
+
 	r = add_new_rule(eng, NULL, REDIRECT);
 
 	/* open up outgoing interface */

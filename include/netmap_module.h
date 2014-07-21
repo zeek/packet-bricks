@@ -18,7 +18,7 @@ struct txq_entry {
 };
 
 typedef struct CommNode {
-	struct nm_desc *pipe_nmd;		/* Node-local pipe descriptor */
+	struct nm_desc *out_nmd;		/* Node-local pipe descriptor */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
 } CommNode;

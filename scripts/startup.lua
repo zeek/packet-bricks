@@ -1,4 +1,4 @@
-7-- /usr/bin/lua
+-- /usr/bin/lua
 ---------------------- STARTUP SCRIPT ---------------------------------
 
 
@@ -64,6 +64,10 @@ end
 
 
 
+
+
+
+
 -----------------------------------------------------------------------
 -- S I N G L E - T H R E A D E D - S E T U P
 -----------------------------------------------------------------------
@@ -93,6 +97,7 @@ function init()
 	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_PARAMS_PATH .. "default_pipes")
 
 	 for cnt = 0, 3 do
+	     -- Use this line to test SAMPLing
 	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="SAMPLE"})
 
 	     -- Use this line to copy packets to all registered channels
@@ -101,12 +106,12 @@ function init()
 	     -- Use this line to drop all packets
 	     --pkteng.drop_pkts({engine="e0"})
 
-	     -- Use this line to forward packets to a different Ethernet port (under construction)
-	     --pkteng.redirect_pkts({engine="e0", ifname="eth2"})
-
 	     -- XXX
 	     ----pkteng.open_channel({engine="e0", channel="netmap:bro{" .. cnt})
 	 end
+
+	 -- Use this line to forward packets to a different Ethernet port (under construction)
+	 --pkteng.redirect_pkts({engine="e0", ifname="eth2"})
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
@@ -182,7 +187,8 @@ function init4()
 	 for cnt = 0, 3 do
 	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
 	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})
-		 
+
+	 	 -- Use this line to test SAMPLing
 		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="SAMPLE"})
 
 	     	 -- Use this line to copy packets to all registered channels

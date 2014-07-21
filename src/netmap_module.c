@@ -206,40 +206,6 @@ drop_packets(struct netmap_ring *ring, engine *eng)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-static void
-redirect_packets(struct netmap_ring *ring, engine *eng, Rule *r)
-{
-	TRACE_NETMAP_FUNC_START();
-	uint32_t cur, rx, n;
-	netmap_module_context *ctxt = 
-		(netmap_module_context *) eng->private_context;
-	unsigned char *p;
-	struct netmap_slot *slot;
-	struct nm_desc *txnmd = NULL;
-	CommNode *cn = NULL;
-
-	cur = ring->cur;
-	n = nm_ring_space(ring);
-	n = MIN(ctxt->batch_size, n);
-
-	for (rx = 0; rx < n; rx++) {
-		slot = &ring->slot[cur];
-		p = (unsigned char *)NETMAP_BUF(ring, slot->buf_idx);
-		cn = (CommNode *)r->destInfo[pkt_hdr_hash(p) % r->count];
-		
-		/* update the statistics */
-		eng->byte_count += slot->len;
-		eng->pkt_count++;
-		TRACE_DEBUG_LOG("Got one!\n");
-		cur = nm_ring_next(ring, cur);
-	}
-	ring->head = ring->cur = cur;
-
-	UNUSED(cn);
-	UNUSED(txnmd);
-	TRACE_NETMAP_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
 static int32_t
 sample_packets(engine *eng, CommNode *cn)
 {
@@ -249,12 +215,12 @@ sample_packets(engine *eng, CommNode *cn)
         const u_int n = cn->cur_txq;	/* how many queued packets */
         struct txq_entry *x = cn->q;
         int retry = TX_RETRIES;		/* max retries */
-        struct nm_desc *dst = cn->pipe_nmd;
+        struct nm_desc *dst = cn->out_nmd;
 
 	/* if queued pkts are zero.... skip! */
         if (n == 0) {
                 TRACE_DEBUG_LOG("Nothing to forward to pipe nmd: %p\n",
-				cn->pipe_nmd);
+				cn->out_nmd);
 		TRACE_NETMAP_FUNC_END();
                 return 0;
         }
@@ -293,7 +259,7 @@ sample_packets(engine *eng, CommNode *cn)
         }
         if (i < n) {
                 if (retry-- > 0) {
-                        ioctl(cn->pipe_nmd->fd, NIOCTXSYNC);
+                        ioctl(cn->out_nmd->fd, NIOCTXSYNC);
                         goto try_sample_again;
                 }
                 TRACE_DEBUG_LOG("%d buffers leftover", n - i);
@@ -312,13 +278,13 @@ copy_packets(engine *eng, CommNode *cn, unsigned char tally_pkts)
         int i = 0;
 	const int n = cn->cur_txq;	/* how many queued pkts */
         int retry = TX_RETRIES;		/* max retries */
-        struct nm_desc *dst = cn->pipe_nmd;
+        struct nm_desc *dst = cn->out_nmd;
         struct txq_entry *x = cn->q;
 	
 	/* if queued pkts are zero.... skip! */
         if (n == 0) {
                 TRACE_DEBUG_LOG("Nothing to forward to pipe nmd: %p\n",
-				cn->pipe_nmd);
+				cn->out_nmd);
 		TRACE_NETMAP_FUNC_END();
                 return 0;
         }
@@ -355,7 +321,7 @@ copy_packets(engine *eng, CommNode *cn, unsigned char tally_pkts)
 	}
 	if (i < n) {
 		if (retry-- > 0) {
-			ioctl(cn->pipe_nmd->fd, NIOCTXSYNC);
+			ioctl(cn->out_nmd->fd, NIOCTXSYNC);
 			goto try_copy_again;
 		}
 		TRACE_DEBUG_LOG("%d buffers leftover", n - i);
@@ -401,6 +367,7 @@ netmap_callback(void *engptr, Rule *r)
 			drop_packets(rxring, eng);
 		}
 		break;
+	case REDIRECT:
 	case SAMPLE:
 		for (i = nmc->local_nmd->first_rx_ring;
 		     i <= nmc->local_nmd->last_rx_ring;
@@ -444,17 +411,6 @@ netmap_callback(void *engptr, Rule *r)
 		}
 		if (cn != NULL && cn->cur_txq > 0)
 			sample_packets(eng, cn);
-		break;
-	case REDIRECT:
-		for (i = nmc->local_nmd->first_rx_ring; 
-		     i <= nmc->local_nmd->last_rx_ring; 
-		     i++) {
-			rxring = NETMAP_RXRING(nifp, i);
-			if (nm_ring_empty(rxring))
-				continue;
-			
-			redirect_packets(rxring, eng, r);
-		}
 		break;
 	case MODIFY:
 		break;
@@ -554,8 +510,8 @@ netmap_delete_all_channels(void *engptr, Rule *r)
 	
 	for (i = 0; i < r->count; i++) {
 		cn = (CommNode *)r->destInfo[i];
-		if (cn->pipe_nmd != NULL)
-			nm_close(cn->pipe_nmd);
+		if (cn->out_nmd != NULL)
+			nm_close(cn->out_nmd);
 		free(cn);
 	}
 
@@ -588,16 +544,16 @@ netmap_create_channel(void *engptr, Rule *r, char *targ)
 
 	cn = (CommNode *)r->destInfo[r->count - 1];	
 	uint64_t flags = NM_OPEN_NO_MMAP | NM_OPEN_ARG3;
-	cn->pipe_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
-	if (cn->pipe_nmd == NULL) {
-		TRACE_ERR("Can't open %p(%s)\n", cn->pipe_nmd, ifname);
+	cn->out_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
+	if (cn->out_nmd == NULL) {
+		TRACE_ERR("Can't open %p(%s)\n", cn->out_nmd, ifname);
 		TRACE_NETMAP_FUNC_END();
 	}
 
 	TRACE_DEBUG_LOG("zerocopy %s", 
-			(nmc->local_nmd->mem == cn->pipe_nmd->mem) ? 
+			(nmc->local_nmd->mem == cn->out_nmd->mem) ? 
 			"enabled\n" : "disabled\n");
-	fd = cn->pipe_nmd->fd;
+	fd = cn->out_nmd->fd;
 
 	TRACE_LOG("Created %s interface\n", ifname);
 
@@ -628,7 +584,7 @@ netmap_set_action(void *engptr, Rule *r, char *rarg)
 	cn = (CommNode *)r->destInfo[r->count - 1];
 	if (r->tgt == DROP) {
 		/* no need to open a CommNode */
-		cn->pipe_nmd = NULL;
+		cn->out_nmd = NULL;
 		TRACE_NETMAP_FUNC_END();
 		return -1;
 	} else if (r->tgt == REDIRECT) {
@@ -637,16 +593,16 @@ netmap_set_action(void *engptr, Rule *r, char *rarg)
 		/* setting nm-oifname*/
 		sprintf(noifname, "netmap:%s", oifname);
 		uint64_t flags = NM_OPEN_NO_MMAP | NM_OPEN_ARG3;
-		cn->pipe_nmd = nm_open(noifname, NULL, flags, nmc->local_nmd); 
-		if (cn->pipe_nmd == NULL) {
-			TRACE_ERR("Can't open %p(%s)\n", cn->pipe_nmd, oifname);
+		cn->out_nmd = nm_open(noifname, NULL, flags, nmc->local_nmd); 
+		if (cn->out_nmd == NULL) {
+			TRACE_ERR("Can't open %p(%s)\n", cn->out_nmd, oifname);
 			TRACE_NETMAP_FUNC_END();
 		}
 		
 		TRACE_LOG("zerocopy %s", 
-			  (nmc->local_nmd->mem == cn->pipe_nmd->mem) ? 
+			  (nmc->local_nmd->mem == cn->out_nmd->mem) ? 
 			  "enabled\n" : "disabled\n");
-		fd = cn->pipe_nmd->fd;
+		fd = cn->out_nmd->fd;
 	}
 
 	TRACE_NETMAP_FUNC_END();
