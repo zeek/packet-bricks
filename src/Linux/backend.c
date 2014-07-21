@@ -118,7 +118,7 @@ process_request_backend(engine *eng, int epoll_fd)
 	Rule *r = add_new_rule(eng, NULL, rb->t);
 
 	/* create communication back channel */
-	ev.data.fd = eng->iom.create_channel(eng, r, channelname, client_sock);
+	ev.data.fd = eng->iom.create_channel(eng, r, channelname/*, client_sock*/);
 	ev.events = EPOLLIN | EPOLLOUT;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
 		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",

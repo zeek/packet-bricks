@@ -26,7 +26,7 @@ platform_help_wrap(lua_State *L)
 		"    show_stats()\n"
 		"    shutdown()\n"
 		"  Available subsystems within "PLATFORM_NAME" have their own help() methods:\n"
-		"    pkteng <under_construction> \n"
+		"    pkteng \n"
 		);
 	TRACE_LUA_FUNC_END();
         return 0;

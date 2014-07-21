@@ -426,6 +426,10 @@ pktengine_open_channel(const unsigned char *eng_name,
 		r = add_new_rule(eng, NULL, SAMPLE);
 	else if (!strcmp((char *)action, "COPY"))
 		r = add_new_rule(eng, NULL, COPY);
+	else if (!strcmp((char *)action, "DROP"))
+		r = add_new_rule(eng, NULL, DROP);
+	else if (!strcmp((char *)action, "REDIRECT"))
+		r = add_new_rule(eng, NULL, REDIRECT);
 	else {
 		TRACE_LOG("Unrecognized action inserted: <%s>\n",
 			  (char *)action);
@@ -434,7 +438,7 @@ pktengine_open_channel(const unsigned char *eng_name,
 	}
 	
 	/* create communication back channel */
-	eng->iom.create_channel(eng, r, (char *)channel_name, 0);
+	eng->iom.create_channel(eng, r, (char *)channel_name);
 
 	TRACE_PKTENGINE_FUNC_END();
 	return 0;

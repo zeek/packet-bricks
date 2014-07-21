@@ -206,6 +206,36 @@ drop_packets(struct netmap_ring *ring, engine *eng)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+static void
+redirect_packets(struct netmap_ring *ring, engine *eng)
+{
+	TRACE_NETMAP_FUNC_START();
+	uint32_t cur, rx, n;
+	netmap_module_context *ctxt = 
+		(netmap_module_context *) eng->private_context;
+	char *p;
+	struct netmap_slot *slot;
+
+	cur = ring->cur;
+	n = nm_ring_space(ring);
+	n = MIN(ctxt->batch_size, n);
+
+	for (rx = 0; rx < n; rx++) {
+		slot = &ring->slot[cur];
+		p = NETMAP_BUF(ring, slot->buf_idx);
+		
+		/* update the statistics */
+		eng->byte_count += slot->len;
+		eng->pkt_count++;
+		TRACE_DEBUG_LOG("Got one!\n");
+		cur = nm_ring_next(ring, cur);
+	}
+	ring->head = ring->cur = cur;
+
+	UNUSED(p);
+	TRACE_NETMAP_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 static int32_t
 sample_packets(engine *eng, CommNode *cn)
 {
@@ -351,7 +381,8 @@ netmap_callback(void *engptr, Rule *r)
 		return -1;
 	}
 
-	tgt = (r == NULL || (r->tgt == SAMPLE && r->count == 0)) ? DROP : r->tgt;
+	//tgt = (r == NULL || (r->tgt == SAMPLE && r->count == 0)) ? DROP : r->tgt;
+	tgt = (r == NULL) ? DROP : r->tgt;
 	nifp = nmc->local_nmd->nifp;
 
 	switch (tgt) {
@@ -411,6 +442,15 @@ netmap_callback(void *engptr, Rule *r)
 			sample_packets(eng, cn);
 		break;
 	case REDIRECT:
+		for (i = nmc->local_nmd->first_rx_ring; 
+		     i <= nmc->local_nmd->last_rx_ring; 
+		     i++) {
+			rxring = NETMAP_RXRING(nifp, i);
+			if (nm_ring_empty(rxring))
+				continue;
+			
+			redirect_packets(rxring, eng);
+		}
 		break;
 	case MODIFY:
 		break;
@@ -510,7 +550,8 @@ netmap_delete_all_channels(void *engptr, Rule *r)
 	
 	for (i = 0; i < r->count; i++) {
 		cn = (CommNode *)r->destInfo[i];
-		nm_close(cn->pipe_nmd);
+		if (cn->pipe_nmd != NULL)
+			nm_close(cn->pipe_nmd);
 		free(cn);
 	}
 
@@ -520,7 +561,7 @@ netmap_delete_all_channels(void *engptr, Rule *r)
 }
 /*---------------------------------------------------------------------*/
 int32_t
-netmap_create_channel(void *engptr, Rule *r, char *targ, int32_t csock) 
+netmap_create_channel(void *engptr, Rule *r, char *targ) 
 {
 	TRACE_NETMAP_FUNC_START();
 	char ifname[IFNAMSIZ];
@@ -528,7 +569,7 @@ netmap_create_channel(void *engptr, Rule *r, char *targ, int32_t csock)
 	engine *eng = (engine *)engptr;
 	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
 	CommNode *cn;
-
+	
 	/* setting the name */
 	snprintf(ifname, IFNAMSIZ, "%s", targ);
 
@@ -541,6 +582,13 @@ netmap_create_channel(void *engptr, Rule *r, char *targ, int32_t csock)
 		return -1;
 	}
 	
+	if (r->tgt == DROP) {
+		/* no need to open a CommNode */
+		cn->pipe_nmd = NULL;
+		TRACE_NETMAP_FUNC_END();
+		return -1;
+	}
+
 	cn = (CommNode *)r->destInfo[r->count - 1];
 	uint64_t flags = NM_OPEN_NO_MMAP | NM_OPEN_ARG3;
 	cn->pipe_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
@@ -558,8 +606,6 @@ netmap_create_channel(void *engptr, Rule *r, char *targ, int32_t csock)
 
 	TRACE_NETMAP_FUNC_END();
 
-	UNUSED(targ);
-	UNUSED(csock);
 	return fd;
 }
 /*---------------------------------------------------------------------*/

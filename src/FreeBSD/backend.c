@@ -119,7 +119,7 @@ process_request_backend(engine *eng, struct kevent chlist[])
 	Rule *r = add_new_rule(eng, NULL, rb->t);
 
 	/* create communication back channel */
-	fd = eng->iom.create_channel(eng, r, channelname, client_sock);
+	fd = eng->iom.create_channel(eng, r, channelname/*, client_sock*/);
 	EV_SET(&chlist[fd], fd, EVFILT_READ | EVFILT_WRITE, EV_ADD, 0, 0, NULL);
 
 	/* add client sock to the polling layer */

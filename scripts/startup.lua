@@ -94,14 +94,19 @@ function init()
 
 	 for cnt = 0, 3 do
 	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="SAMPLE"})
+
+	     -- Use this line to copy packets to all registered channels
 	     --pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="COPY"})
+
+	     -- Use this line to drop all packets
+	     --pkteng.open_channel({engine="e0", channel="null", action="DROP"})
+
+	     -- Use this line to forward packets to a different Ethernet port (under construction)
+	     --pkteng.open_channel({engine="e0", channel="eth2", action="REDIRECT"})
+
+	     -- XXX
 	     ----pkteng.open_channel({engine="e0", channel="netmap:bro{" .. cnt})
 	 end
-
-	 -- VALE EXTENSIONS COMMENTED OUT --
-	 --pkteng.open_channel({engine="e0", channel="valeA:s"})
-	 --pkteng.open_channel({engine="e0", channel="valeB:s"})
-	 --pkteng.open_channel({engine="e0", channel="valeC:s"})
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
@@ -178,7 +183,15 @@ function init4()
 	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
 	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})
 		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="SAMPLE"})
+
+	     	 -- Use this line to copy packets to all registered channels
 		 --pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="COPY"})
+
+		 -- Use this line to drop all packets
+		 --pkteng.open_channel({engine="e" .. cnt, channel="null", action="DROP"})
+
+		 -- Use this line to forward packets to a different Ethernet port (under construction)
+	     	 --pkteng.open_channel({engine="e" .. cnt, channel="eth2", action="REDIRECT"})
 	 end
 end
 -----------------------------------------------------------------------

@@ -153,11 +153,15 @@ reading traffic:
 # tcpdump -i netmap:eth3}2 &
 # tcpdump -i netmap:eth3}3 &
 
-Host-PACF currently supports SAMPLE (load balancer) and COPY (forward
-copy of each packet to every registered application) Rule Types. In the
-current version, all channels MUST share the same "action" keywords (i.e.
-all registered channels should either have "SAMPLE" or "COPY" actions.
-This limitation will be removed in future versions.
+Host-PACF currently supports the following Rule Types ("actions"):
+
+1- SAMPLE (load balancer),
+2- COPY (forward copy of each packet to every registered application), and
+3- DROP (drop all packets that are read from the interface.
+
+In the current version, all channels MUST share the same "action" keywords 
+(i.e. all registered channels should either have "SAMPLE", "COPY" or "DROP"
+actions). This limitation will be removed in future versions.
 
 
 For user's convenience, the host-pacf package comes with a reference
