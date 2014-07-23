@@ -71,3 +71,6 @@ then
 fi
 
 AC_OUTPUT(Makefile)
+AC_OUTPUT(src/Makefile)
+AC_OUTPUT(src/FreeBSD/Makefile)
+AC_OUTPUT(src/Linux/Makefile)

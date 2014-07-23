@@ -20,4 +20,8 @@ clean:
 	cd $(OSARCH) && $(MAKE) clean
 	$(RM) -rf *~
 	$(RM) -rf $(OBJDIR)
+
+distclean:
+	cd $(OSARCH) && $(MAKE) distclean
+	$(RM) -rf Makefile
 #---------------------------------------------------------------------#

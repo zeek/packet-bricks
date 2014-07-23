@@ -82,4 +82,18 @@ typedef struct {
 	char *dir;
 } progvars_t __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
+/**
+ * Function to call LUA interpreted shell
+ * If you want to spawn a shell, pass 1 as a param
+ */
+int
+lua_kickoff(uint8_t daemonize);
+
+/**
+ * Initializes only the client shell with the intention
+ * of talking to the pacf server...
+ */
+int
+lua_load_client_shell();
+/*---------------------------------------------------------------------*/
 #endif /* __LUA_INTERPRETER_H__ */

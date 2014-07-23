@@ -113,6 +113,7 @@ pushline(lua_State *L, int firstline)
         /* line ends with newline? */
         if (l > 0 && b[l-1] == '\n')
                 b[l-1] = '\0';  /* remove it */
+	//TRACE_DEBUG_LOG("Input line is %s\n", b);
         /* first line starts with `=' ? */
         if (firstline && b[0] == '=')
                 lua_pushfstring(L, "return %s", b+1);  /* change it to `return' */
@@ -146,6 +147,7 @@ loadline (lua_State *L)
                 lua_insert(L, -2);  /* ...between the two lines */
                 lua_concat(L, 3);  /* join them */
         }
+	TRACE_LOG("%s\n", lua_tostring(L, 1));
         lua_saveline(L, 1);
         lua_remove(L, 1);  /* remove line */
 
@@ -303,6 +305,7 @@ load_startup(lua_State *L)
                 if(stat(fname, &st) != -1) {
                         TRACE_LOG("Executing %s\n", fname);
                         dofile(L, fname);
+			//dostring(L, "pacf.help()", "init");
                 }
         }
 
@@ -348,7 +351,7 @@ pmain(lua_State *L) {
         load_startup(L);
         if (has_i)
                 dotty(L);
-        else if (script == 0 && !has_e && !has_v) {
+        else if (!strcmp(argv[1], "on") && script == 0 && !has_e && !has_v) {
                 if (lua_stdin_is_tty()) {
                         print_version();
                         dotty(L);
@@ -361,11 +364,90 @@ pmain(lua_State *L) {
         return 0;
 }
 /*---------------------------------------------------------------------*/
-int
-lua_kickoff(void)
+static void
+do_cshell(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 	
+        int status;
+        const char *oldprogname = progname;
+        progname = NULL;
+	
+        while (!stop_processing && (status = loadline(L)) != -1) {
+        }
+        lua_settop(L, 0);  /* clear stack */
+        TRACE_FLUSH();
+        progname = oldprogname;
+	
+	TRACE_LUA_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+static int
+_cshell(lua_State *L) {
+	TRACE_LUA_FUNC_START();
+	
+        struct Smain *s;
+        char **argv;
+
+        globalL = L;
+        s = (struct Smain *)lua_touserdata(L, 1);
+        argv = s->argv;
+
+        if (argv[0] && argv[0][0])
+                progname = argv[0];
+
+        /* stop collector during initialization */
+        lua_gc(L, LUA_GCSTOP, 0);
+        /* open libraries */
+        luaL_openlibs(L);
+        lua_gc(L, LUA_GCRESTART, 0);
+        s->status = handle_luainit(L);
+
+        if (s->status != 0) {
+		TRACE_LUA_FUNC_END();
+		return 0;
+	}
+
+        load_startup(L);
+	
+	do_cshell(L);
+
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+int
+lua_kickoff(uint8_t daemonize)
+{
+	TRACE_LUA_FUNC_START();
+	
+	int status;
+	struct Smain s;
+	char *argv[] = {"lua_kickoff", ((daemonize == 0) ? "on" : "off")};
+	lua_State *L;
+	
+	/* create state */
+	L = lua_open();
+	if (L == NULL)
+		TRACE_ERR("cannot create state: not enough memory\n");
+	
+	s.argc = 2;
+	s.argv = argv;
+	
+	TRACE_LOG("%s", "About to call lua_cpcall from lua_kickoff!\n");
+	status = lua_cpcall(L, &pmain, &s);
+	TRACE_LOG("%s", "Done with lua_cpcall from lua_kickoff!\n");
+	report(L, status);
+	lua_close(L);
+	
+	TRACE_LUA_FUNC_END();
+	return ((status || s.status) ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------*/
+int
+lua_load_client_shell()
+{
+	TRACE_LUA_FUNC_START();
 	int status;
 	struct Smain s;
 	char *argv[] = {"lua_kickoff"};
@@ -379,13 +461,12 @@ lua_kickoff(void)
 	s.argc = 1;
 	s.argv = argv;
 	
-	TRACE_LOG("%s", "About to call lua_cpcall from lua_kickoff!\n");
-	status = lua_cpcall(L, &pmain, &s);
-	TRACE_LOG("%s", "Done with lua_cpcall from lua_kickoff!\n");
+	status = lua_cpcall(L, &_cshell, &s);
 	report(L, status);
 	lua_close(L);
 	
 	TRACE_LUA_FUNC_END();
 	return ((status || s.status) ? EXIT_FAILURE : EXIT_SUCCESS);
+	TRACE_LUA_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

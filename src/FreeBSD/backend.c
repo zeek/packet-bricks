@@ -25,7 +25,7 @@
  * Code self-explanatory...
  */
 static void
-create_listening_socket(engine *eng)
+create_listening_socket_for_eng(engine *eng)
 {
 	TRACE_BACKEND_FUNC_START();
 
@@ -151,7 +151,7 @@ initiate_backend(engine *eng)
 	kq = kqueue();
 
 	/* create listening socket */
-	create_listening_socket(eng);
+	create_listening_socket_for_eng(eng);
 
 	/* register listening socket */
 	EV_SET(&chlist[eng->listen_fd], eng->listen_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);

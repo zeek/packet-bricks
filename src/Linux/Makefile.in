@@ -11,7 +11,9 @@ $(OBJDIR)/%.o: %.c
 all: $(OBJ)
 
 .PHONY: clean
-
 clean:
 	$(RM) -rf *~
+
+distclean:
+	$(RM) -rf Makefile
 #---------------------------------------------------------------------#

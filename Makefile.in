@@ -6,7 +6,8 @@ JEINCPATH := @JEINCPATH@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
 BINDIR := $(shell pwd)/bin
-BIN := $(BINDIR)/pacf
+BINNAME := pacf
+BIN := $(BINDIR)/$(BINNAME)
 OSARCH := $(shell uname)
 OSARCH := $(findstring $(OSARCH),FreeBSD Linux Darwin)
 DEBUG_CFLAGS := -g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
@@ -43,7 +44,7 @@ else
 	endif
 endif
 #---------------------------------------------------------------------#
-all: pacf
+all: $(BINNAME)
 
 objs:
 	mkdir -p $(OBJDIR)
@@ -54,27 +55,40 @@ objs-dbg:
 	mkdir -p $(OBJDIR)
 	cd src && $(MAKE)
 
-pacf: objs
+$(BINNAME): objs
 	mkdir -p $(BINDIR)
 	$(MSG) "   LD $@"
 	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)
+	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -d $$""@"> $(BINDIR)/$(BINNAME)-server
+	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
+	@echo "#!/bin/bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
+	chmod a+x $(BINDIR)/$(BINNAME)-server
+	chmod a+x $(BINDIR)/$(BINNAME)-shell
+	chmod a+x $(BINDIR)/$(BINNAME)-kill-server
 	strip $(BIN)
 
-run: pacf
+run: $(BINNAME)
 	$(BIN) -f scripts/startup.lua
 #---------------------------------------------------------------------#
-debug: pacf-debug
+debug: $(BINNAME)-debug
 
-pacf-debug: objs-dbg
+$(BINNAME)-debug: objs-dbg
 	mkdir -p $(BINDIR)
 	$(MSG) "   LD $@-debug"
 	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)
+	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -d $$""@" > $(BINDIR)/$(BINNAME)-server
+	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
+	@echo "#!/bin/bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
+	chmod a+x $(BINDIR)/$(BINNAME)-server
+	chmod a+x $(BINDIR)/$(BINNAME)-shell
+	chmod a+x $(BINDIR)/$(BINNAME)-kill-server
 #---------------------------------------------------------------------#
 clean:
 	cd src && $(MAKE) clean
 	$(RM) -rf $(BINDIR) include/*~ tags scripts/*~ *~
 
 distclean: clean
+	cd src && $(MAKE) distclean
 	$(RM) -rf Makefile autom4te.cache config.log config.status
 
 .PHONY: clean

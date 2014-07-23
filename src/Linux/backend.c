@@ -18,12 +18,80 @@
 #include "pacf_interface.h"
 /* for errno */
 #include <errno.h>
+/* for close (2) */
+#include <unistd.h>
+/*---------------------------------------------------------------------*/
+void
+start_listening_reqs()
+{
+	TRACE_BACKEND_FUNC_START();
+	/* socket info about the listen sock */
+	struct sockaddr_in serv; 
+	int listen_fd, client_sock;
+	size_t read_size, total_read;
+	char client_msg[2000];
+	
+	total_read = read_size = 0;
+	/* zero the struct before filling the fields */
+	memset(&serv, 0, sizeof(serv));
+	/* set the type of connection to TCP/IP */           
+	serv.sin_family = AF_INET;
+	/* set the address to any interface */                
+	serv.sin_addr.s_addr = htonl(INADDR_ANY); 
+	/* set the server port number */    
+	serv.sin_port = htons(PACF_LISTEN_PORT);
+ 
+	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (listen_fd == -1) {
+		TRACE_ERR("Failed to create listening socket for pacf\n");
+		TRACE_BACKEND_FUNC_END();
+	}
+	
+	/* bind serv information to mysocket */
+	if (bind(listen_fd, (struct sockaddr *)&serv, sizeof(struct sockaddr)) == -1) {
+		TRACE_ERR("Failed to bind listening socket to port %d for pacf\n",
+			  PACF_LISTEN_PORT);
+		TRACE_BACKEND_FUNC_END();
+	}
+	
+	/* start listening, allowing a queue of up to 1 pending connection */
+	if (listen(listen_fd, LISTEN_BACKLOG) == -1) {
+		TRACE_ERR("Failed to start listen on port %d (for pacf)\n",
+			  PACF_LISTEN_PORT);
+		TRACE_BACKEND_FUNC_END();
+	}
+
+	do {
+#if 0
+		client_sock = accept(listen_fd, NULL, NULL);
+		if (client_sock < 0) {
+			TRACE_ERR("accept failed: %s\n", strerror(errno));
+			TRACE_BACKEND_FUNC_END();
+		}
+		
+		/* Receive message from client */
+		while ((read_size = recv(client_sock, 
+					 &client_msg[total_read],
+					 sizeof(req_block) - total_read, 0)) > 0) {
+			total_read += read_size;
+			if ((unsigned)(total_read >= sizeof(req_block))) break;
+		}
+		close(client_sock);
+#endif
+		sleep(1);
+	} while (1);
+	
+	UNUSED(client_sock);
+	UNUSED(total_read);
+	UNUSED(client_msg);
+	TRACE_BACKEND_FUNC_END();
+}
 /*---------------------------------------------------------------------*/
 /*
  * Code self-explanatory...
  */
 static void
-create_listening_socket(engine *eng)
+create_listening_socket_for_eng(engine *eng)
 {
 	TRACE_BACKEND_FUNC_START();
 
@@ -173,7 +241,7 @@ initiate_backend(engine *eng)
 	}
 
 	/* create listening socket */
-	create_listening_socket(eng);
+	create_listening_socket_for_eng(eng);
 
 	/* register listening socket */
 	ev.events = EPOLLIN | EPOLLOUT;

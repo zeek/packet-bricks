@@ -34,22 +34,6 @@ typedef enum {
 	BYTE_NOTIFY
 } Target;
 /*---------------------------------------------------------------------*/
-/**
- * Rule-related data structures start here...
- * XXX: The following structs are still being revised...
- */
-
-/*
- * Arguments passed to the rule
- */
-typedef void RuleArg;
-
-#define MAX_PROCNAME_LEN		4
-typedef struct TargetArgs {
-	pid_t pid;
-	unsigned char proc_name[MAX_PROCNAME_LEN];
-} TargetArgs;
-/*---------------------------------------------------------------------*/
 typedef struct {
 	uint8_t addr8[6];
 } EthAddress;
@@ -158,6 +142,20 @@ typedef struct Filter {
 } Filter __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
+ * Rule-related data structures start here...
+ * XXX: The following structs are still being revised...
+ */
+
+/*
+ * Arguments passed to the Target
+ */
+#define MAX_PROCNAME_LEN		4
+typedef struct TargetArgs {
+	pid_t pid;
+	unsigned char proc_name[MAX_PROCNAME_LEN];
+} TargetArgs;
+/*---------------------------------------------------------------------*/
+/**
  * Request block: this struct is passed to the system by the userland
  * application when it makes a certain request.
  * XXX - UNDER CONSTRUCTION
@@ -194,5 +192,13 @@ typedef struct resp_block {
 
 	unsigned char resp_payload[0];
 } resp_block __attribute__((aligned(__WORDSIZE)));
+/*---------------------------------------------------------------------*/
+#define PACF_LISTEN_PORT		1111
+/**
+ * PACF interface that accepts incoming requests from pacf shell and
+ * userland apps...
+ */
+void
+start_listening_reqs();
 /*---------------------------------------------------------------------*/
 #endif /* !__PACF_INTERFACE_H__ */
