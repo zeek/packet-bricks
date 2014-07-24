@@ -11,7 +11,7 @@
  * 	- MODIFY:	  for updating a packet field and 
  * 			  then forwarding
  *	- DROP: 	  for dropping packet
- *	- SAMPLE: 	  for stealing the packet from the 
+ *	- SHARE: 	  for stealing packet from the 
  * 		     	  interface to a monitoring daemon
  *	- COPY: 	  for passing copy of the packet to the 
  * 			  monitoring daemon
@@ -27,7 +27,7 @@ typedef enum {
 	REDIRECT = 1,
 	MODIFY,
 	DROP,
-	SAMPLE,
+	SHARE,
 	COPY,
 	LIMIT,
 	PKT_NOTIFY,
@@ -158,13 +158,13 @@ typedef struct TargetArgs {
 /**
  * Request block: this struct is passed to the system by the userland
  * application when it makes a certain request.
- * XXX - UNDER CONSTRUCTION
+ * XXX - UNDER CONSTRUCTION AND SERIOUSLY OUTDATED
  */
 typedef struct req_block {
 	/* length of the request */
 	uint32_t len;
 	/* 
-	 * currently _SAMPLE_ is the only 
+	 * currently _SHARE_ is the only 
 	 * target that is enabled 
 	 */
 	Target t;

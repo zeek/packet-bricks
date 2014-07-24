@@ -82,18 +82,19 @@ typedef struct {
 	char *dir;
 } progvars_t __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
+typedef enum LuaMode {
+	LUA_EXE_HOME_SHELL = 0, 
+	LUA_EXE_REMOTE_SHELL,
+	LUA_EXE_SCRIPT,
+	LUA_EXE_STR
+} LuaMode;
 /**
- * Function to call LUA interpreted shell
- * If you want to spawn a shell, pass 1 as a param
+ * Function to call variants of lua. They can be
+ * one of the following: home_shell, remote_shell,
+ * script or str. In case of str, the 2nd arg needs
+ * to be filled
  */
 int
-lua_kickoff(uint8_t daemonize);
-
-/**
- * Initializes only the client shell with the intention
- * of talking to the pacf server...
- */
-int
-lua_load_client_shell();
+lua_kickoff(LuaMode, char *);
 /*---------------------------------------------------------------------*/
 #endif /* __LUA_INTERPRETER_H__ */

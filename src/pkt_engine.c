@@ -430,8 +430,8 @@ pktengine_open_channel(const unsigned char *eng_name,
 	}
 	
 	/* add the rule for channel */
-	if (!strcmp((char *)action, "SAMPLE"))
-		r = add_new_rule(eng, NULL, SAMPLE);
+	if (!strcmp((char *)action, "SHARE"))
+		r = add_new_rule(eng, NULL, SHARE);
 	else if (!strcmp((char *)action, "COPY"))
 		r = add_new_rule(eng, NULL, COPY);
 	else {

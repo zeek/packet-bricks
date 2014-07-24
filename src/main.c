@@ -166,8 +166,8 @@ do_daemonize()
 	if (pid == 0) {
 		if ((fd = open("/dev/null", O_RDWR)) >= 0) {
 			dup2(fd, 0);
-			dup2(fd, 1);
-			dup2(fd, 2);
+			//dup2(fd, 1);
+			//dup2(fd, 2);
 			if (fd > 2) close(fd);
 		}
 	}
@@ -250,7 +250,7 @@ main(int argc, char **argv)
 			load_lua_file(optarg);
 			break;
 		case 's':
-			lua_load_client_shell();
+			lua_kickoff(LUA_EXE_REMOTE_SHELL, NULL);
 			return EXIT_SUCCESS;
 		default:
 			print_help(*argv);
@@ -268,7 +268,7 @@ main(int argc, char **argv)
 			TRACE_ERR("Can't lock the pid file.\n"
 				  "Is a previous pacf daemon already running??\n");
 		}			
-		lua_kickoff(daemonize);
+		lua_kickoff((daemonize) ? LUA_EXE_SCRIPT : LUA_EXE_HOME_SHELL, NULL);
 	}
 
 	/* initialize file printing mini-module */

@@ -35,5 +35,11 @@
  */
 void
 initiate_backend(engine *eng);
+
+/**
+ * Connects to a pacf server for remote shell commands
+ */
+int
+connect_to_pacf_server();
 /*---------------------------------------------------------------------*/
 #endif /* __BACKEND_H__ */

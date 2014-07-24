@@ -20,6 +20,43 @@
 #include <errno.h>
 /* for close (2) */
 #include <unistd.h>
+/* for remote shell defines */
+#include "lua_interpreter.h"
+/* for inet_addr */
+#include <arpa/inet.h>
+/*---------------------------------------------------------------------*/
+int
+connect_to_pacf_server()
+{
+	TRACE_BACKEND_FUNC_START();
+	int sock;
+	struct sockaddr_in server;
+     
+	/* Create socket */
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock == -1) {
+		TRACE_ERR("Could not create socket: %s\n", 
+			  strerror(errno));
+		TRACE_BACKEND_FUNC_END();
+		return -1;
+	}
+	TRACE_DEBUG_LOG("Socket created");
+     
+	server.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server.sin_family = AF_INET;
+	server.sin_port = htons(PACF_LISTEN_PORT);
+ 
+	/* Connect to remote server */
+	if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
+		TRACE_ERR("Connect failed!: %s\n", strerror(errno));
+		TRACE_BACKEND_FUNC_END();
+		return -1;
+	}
+     
+	TRACE_DEBUG_LOG("Connected\n");
+	TRACE_BACKEND_FUNC_END();
+	return sock;
+}
 /*---------------------------------------------------------------------*/
 void
 start_listening_reqs()
@@ -29,7 +66,7 @@ start_listening_reqs()
 	struct sockaddr_in serv; 
 	int listen_fd, client_sock;
 	size_t read_size, total_read;
-	char client_msg[2000];
+	char client_msg[LUA_MAXINPUT];
 	
 	total_read = read_size = 0;
 	/* zero the struct before filling the fields */
@@ -62,23 +99,29 @@ start_listening_reqs()
 	}
 
 	do {
-#if 0
 		client_sock = accept(listen_fd, NULL, NULL);
 		if (client_sock < 0) {
 			TRACE_ERR("accept failed: %s\n", strerror(errno));
 			TRACE_BACKEND_FUNC_END();
 		}
-		
-		/* Receive message from client */
-		while ((read_size = recv(client_sock, 
-					 &client_msg[total_read],
-					 sizeof(req_block) - total_read, 0)) > 0) {
-			total_read += read_size;
-			if ((unsigned)(total_read >= sizeof(req_block))) break;
+		while (1) {
+			/* Receive message from client */
+			while ((read_size = recv(client_sock, 
+						 &client_msg[total_read],
+						 LUA_MAXINPUT - total_read, 0)) > 0) {
+				total_read += read_size;
+				if ((unsigned)(total_read >= LUA_MAXINPUT) || 
+				    client_msg[total_read - 1] == '\0') break;
+			}
+			/* 
+			 * if total_read == 0, 
+			 * then this means that the client closed conn. 
+			 */
+			if (total_read == 0) break;
+			/* execute the client requested cmd */
+			lua_kickoff(LUA_EXE_STR, client_msg);
+			total_read = 0;
 		}
-		close(client_sock);
-#endif
-		sleep(1);
 	} while (1);
 	
 	UNUSED(client_sock);

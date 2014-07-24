@@ -13,9 +13,12 @@
 #include <sys/stat.h>
 /* for basic configuration */
 #include "config.h"
+/* for server connection */
+#include "backend.h"
+/* for write()/close() fns */
+#include <unistd.h>
 /*---------------------------------------------------------------------*/
 extern volatile uint32_t stop_processing;
-static const char *progname = "lua";
 lua_State *globalL = NULL;
 progvars_t pv = {
 	.pid_file = "/var/run/"PLATFORM_PROMPT".pid",
@@ -113,7 +116,7 @@ pushline(lua_State *L, int firstline)
         /* line ends with newline? */
         if (l > 0 && b[l-1] == '\n')
                 b[l-1] = '\0';  /* remove it */
-	//TRACE_DEBUG_LOG("Input line is %s\n", b);
+
         /* first line starts with `=' ? */
         if (firstline && b[0] == '=')
                 lua_pushfstring(L, "return %s", b+1);  /* change it to `return' */
@@ -126,7 +129,7 @@ pushline(lua_State *L, int firstline)
 }
 /*---------------------------------------------------------------------*/
 static int
-loadline (lua_State *L)
+loadline(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 
@@ -147,10 +150,7 @@ loadline (lua_State *L)
                 lua_insert(L, -2);  /* ...between the two lines */
                 lua_concat(L, 3);  /* join them */
         }
-	TRACE_LOG("%s\n", lua_tostring(L, 1));
-        lua_saveline(L, 1);
-        lua_remove(L, 1);  /* remove line */
-
+	TRACE_DEBUG_LOG("%s\n", lua_tostring(L, 1));
 	TRACE_LUA_FUNC_END();
         return status;
 }
@@ -205,10 +205,10 @@ dotty(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	
         int status;
-        const char *oldprogname = progname;
-        progname = NULL;
 	
         while (!stop_processing && (status = loadline(L)) != -1) {
+		lua_saveline(L, 1);
+		lua_remove(L, 1);  /* remove line */
                 if (status == 0) status = docall(L, 0, 0);
                 report(L, status);
                 if (status == 0 && lua_gettop(L) > 0) {  /* any result to print? */
@@ -223,7 +223,6 @@ dotty(lua_State *L)
         }
         lua_settop(L, 0);  /* clear stack */
         TRACE_FLUSH();
-        progname = oldprogname;
 	
 	TRACE_LUA_FUNC_END();
 }
@@ -287,8 +286,6 @@ init_lua(lua_State *L, struct Smain *s)
         lua_gc(L, LUA_GCRESTART, 0);
         s->status = handle_luainit(L);
 
-        register_lua_procs(L);
-	
 	TRACE_LUA_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
@@ -303,9 +300,7 @@ load_startup(lua_State *L)
 
         if (fname != NULL) {
                 if(stat(fname, &st) != -1) {
-                        TRACE_LOG("Executing %s\n", fname);
                         dofile(L, fname);
-			//dostring(L, "pacf.help()", "init");
                 }
         }
 
@@ -324,108 +319,115 @@ print_version(void)
 	TRACE_LUA_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+static void
+do_rshell(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	int csock, status, rc;
+	char input_line[LUA_MAXINPUT];
+	uint32_t input_len;
+
+	csock = connect_to_pacf_server();
+	input_len = 0;
+
+        while (!stop_processing && (status = loadline(L)) != -1) {
+		strcpy(input_line, lua_tostring(L, 1));
+		input_len = strlen(input_line);
+
+		/* next send the entire command */ 
+		/* also sending the last '\0' char that serves */
+		/* as a delimiter */
+		rc = write(csock, input_line, input_len + 1);
+		if (rc == -1) goto write_error;
+		
+		lua_saveline(L, 1);
+		lua_remove(L, 1);  /* remove line */
+        }
+        lua_settop(L, 0);  /* clear stack */
+        TRACE_FLUSH();
+	
+	TRACE_LUA_FUNC_END();
+	close(csock);
+	return;
+
+ write_error:
+	TRACE_ERR("Failed to send message (%s) of len: %d to server!\n",
+		  input_line, input_len);
+}
+/*---------------------------------------------------------------------*/
 static int
 pmain(lua_State *L) {
 	TRACE_LUA_FUNC_START();
 
         struct Smain *s;
         char **argv;
-        int script;
-        int has_i, has_v, has_e;
 
-        has_i = has_v = has_e = 0;
-        script = 0;
         globalL = L;
         s = (struct Smain *)lua_touserdata(L, 1);
         argv = s->argv;
 
-        if (argv[0] && argv[0][0])
-                progname = argv[0];
         init_lua(L, s);
 
         if (s->status != 0) {
 		TRACE_LUA_FUNC_END();
 		return 0;
 	}
-        if (has_v) print_version();
-        load_startup(L);
-        if (has_i)
-                dotty(L);
-        else if (!strcmp(argv[1], "on") && script == 0 && !has_e && !has_v) {
-                if (lua_stdin_is_tty()) {
-                        print_version();
-                        dotty(L);
-                }
-                else /* executes stdin as a file */
-                        dofile(L, NULL);
-        }
 
-	TRACE_LUA_FUNC_END();
-        return 0;
-}
-/*---------------------------------------------------------------------*/
-static void
-do_cshell(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-	
-        int status;
-        const char *oldprogname = progname;
-        progname = NULL;
-	
-        while (!stop_processing && (status = loadline(L)) != -1) {
-        }
-        lua_settop(L, 0);  /* clear stack */
-        TRACE_FLUSH();
-        progname = oldprogname;
-	
-	TRACE_LUA_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static int
-_cshell(lua_State *L) {
-	TRACE_LUA_FUNC_START();
-	
-        struct Smain *s;
-        char **argv;
-
-        globalL = L;
-        s = (struct Smain *)lua_touserdata(L, 1);
-        argv = s->argv;
-
-        if (argv[0] && argv[0][0])
-                progname = argv[0];
-
-        /* stop collector during initialization */
-        lua_gc(L, LUA_GCSTOP, 0);
-        /* open libraries */
-        luaL_openlibs(L);
-        lua_gc(L, LUA_GCRESTART, 0);
-        s->status = handle_luainit(L);
-
-        if (s->status != 0) {
-		TRACE_LUA_FUNC_END();
-		return 0;
+        if (!strcmp(argv[0], "home-shell")) {
+		register_lua_procs(L);
+		TRACE_LOG("Executing %s\n", pv.lua_startup);
+		load_startup(L);
+		if (lua_stdin_is_tty()) {
+			print_version();
+			dotty(L);
+		}
+	} else if (!strcmp(argv[0], "remote-shell")) {
+		print_version();
+		do_rshell(L);
+	} else if (!strcmp(argv[0], "script")) {
+		register_lua_procs(L);
+		TRACE_LOG("Executing %s\n", pv.lua_startup);
+		load_startup(L);
+		dofile(L, NULL);
+	} else if (!strcmp(argv[0], "string")) {
+		register_lua_procs(L);
+		load_startup(L);
+		dostring(L, argv[1], "init");
 	}
-
-        load_startup(L);
-	
-	do_cshell(L);
 
 	TRACE_LUA_FUNC_END();
         return 0;
 }
 /*---------------------------------------------------------------------*/
 int
-lua_kickoff(uint8_t daemonize)
+lua_kickoff(LuaMode lm, char *str)
 {
 	TRACE_LUA_FUNC_START();
 	
 	int status;
 	struct Smain s;
-	char *argv[] = {"lua_kickoff", ((daemonize == 0) ? "on" : "off")};
+	char *argv[2];
 	lua_State *L;
 	
+	switch (lm) {
+	case LUA_EXE_HOME_SHELL:
+		argv[0] = "home-shell";
+		break;
+	case LUA_EXE_REMOTE_SHELL:
+		argv[0] = "remote-shell";
+		break;
+	case LUA_EXE_SCRIPT:
+		argv[0] = "script";
+		break;
+	case LUA_EXE_STR:
+		argv[0] = "string";
+		argv[1] = str;
+		break;
+	default:
+		/* control will never come here */
+		TRACE_ERR("Wrong choice entered!\n");
+	}
+
 	/* create state */
 	L = lua_open();
 	if (L == NULL)
@@ -434,39 +436,11 @@ lua_kickoff(uint8_t daemonize)
 	s.argc = 2;
 	s.argv = argv;
 	
-	TRACE_LOG("%s", "About to call lua_cpcall from lua_kickoff!\n");
 	status = lua_cpcall(L, &pmain, &s);
-	TRACE_LOG("%s", "Done with lua_cpcall from lua_kickoff!\n");
 	report(L, status);
 	lua_close(L);
 	
 	TRACE_LUA_FUNC_END();
 	return ((status || s.status) ? EXIT_FAILURE : EXIT_SUCCESS);
-}
-/*---------------------------------------------------------------------*/
-int
-lua_load_client_shell()
-{
-	TRACE_LUA_FUNC_START();
-	int status;
-	struct Smain s;
-	char *argv[] = {"lua_kickoff"};
-	lua_State *L;
-	
-	/* create state */
-	L = lua_open();
-	if (L == NULL)
-		TRACE_ERR("cannot create state: not enough memory\n");
-	
-	s.argc = 1;
-	s.argv = argv;
-	
-	status = lua_cpcall(L, &_cshell, &s);
-	report(L, status);
-	lua_close(L);
-	
-	TRACE_LUA_FUNC_END();
-	return ((status || s.status) ? EXIT_FAILURE : EXIT_SUCCESS);
-	TRACE_LUA_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

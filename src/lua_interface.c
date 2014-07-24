@@ -121,7 +121,7 @@ luaopen_platform(lua_State *L)
 	TRACE_LUA_FUNC_START();
 
 	platform_dir_create_meta(L);
-        TRACE_LOG("%s", "Loading "PLATFORM_NAME" command metatable\n");
+        TRACE_DEBUG_LOG("%s", "Loading "PLATFORM_NAME" command metatable\n");
         luaL_openlib(L, PLATFORM_PROMPT, platformlib, 0);
         platform_set_info(L);
 
@@ -556,7 +556,7 @@ luaopen_pkteng(lua_State *L)
 	TRACE_LUA_FUNC_START();
 
 	pkteng_dir_create_meta(L);
-        TRACE_LOG("%s", "Loading packet engine command metatable\n");
+        TRACE_DEBUG_LOG("%s", "Loading packet engine command metatable\n");
         luaL_openlib(L, "pkteng", pktenglib, 0);
         pkteng_set_info(L);
 

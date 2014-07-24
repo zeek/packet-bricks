@@ -97,8 +97,8 @@ function init()
 	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_PARAMS_PATH .. "default_pipes")
 
 	 for cnt = 0, 3 do
-	     -- Use this line to test SAMPLing
-	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="SAMPLE"})
+	     -- Use this line to test SHARing
+	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="SHARE"})
 
 	     -- Use this line to copy packets to all registered channels
 	     --pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="COPY"})
@@ -143,7 +143,7 @@ function stop()
 	 sleep(SLEEP_TIMEOUT)
 
 	 pkteng.delete({engine="e0"})
-	 pacf.shutdown()
+	 --pacf.shutdown()
 end
 -----------------------------------------------------------------------
 
@@ -188,8 +188,8 @@ function init4()
 	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
 	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})
 
-	 	 -- Use this line to test SAMPLing
-		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="SAMPLE"})
+	 	 -- Use this line to test SHARing
+		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="SHARE"})
 
 	     	 -- Use this line to copy packets to all registered channels
 		 --pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="COPY"})
@@ -239,7 +239,7 @@ function stop4()
 	 	 pkteng.delete({engine="e" .. cnt})
 	 end
 
-	 pacf.shutdown()
+	 --pacf.shutdown()
 end
 -----------------------------------------------------------------------
 

@@ -351,7 +351,7 @@ netmap_callback(void *engptr, Rule *r)
 		return -1;
 	}
 
-	//tgt = (r == NULL || (r->tgt == SAMPLE && r->count == 0)) ? DROP : r->tgt;
+	//tgt = (r == NULL || (r->tgt == SHARE && r->count == 0)) ? DROP : r->tgt;
 	tgt = (r == NULL) ? DROP : r->tgt;
 	nifp = nmc->local_nmd->nifp;
 
@@ -368,7 +368,7 @@ netmap_callback(void *engptr, Rule *r)
 		}
 		break;
 	case REDIRECT:
-	case SAMPLE:
+	case SHARE:
 		for (i = nmc->local_nmd->first_rx_ring;
 		     i <= nmc->local_nmd->last_rx_ring;
 		     i++) {
