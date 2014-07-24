@@ -12,26 +12,33 @@ forward packets to end host applications.
 The following guide provides a walkthrough of the scripts/startup.lua file
 which also explains what this system is capable of.
 
-	 _______
-	|       |
-	| APP 1 |\    eth3:{0
-	|_______| \_______________
-			         |
-	 _______	         |
-	|       |     eth3:{1    |
-	| APP 2 |_______________ |
-	|_______|	       | |	
-			       | |		   1/10 Gbps link
-			      {HOST-PACF}eth3 <--- ||||||||||||||
-	 _______	       | |	
-	|       |     eth3:{2  | |
-	| APP 3 |______________| |
-	|_______|		 |
-		      		 |
-	 _______   ______________|
-	|       | /   eth3:{3  	 
-	| APP 4 |/
-	|_______|
+
+
+						     _________
+						    |	      |
+						    |  APP 1  |
+						    |_________|
+						    /
+      	   	    	      	     ______________/
+      	   	    	      	     |
+      	   	    	      	     |		     _________
+      	   	    	      	     |              |	      |
+      	   	    	      	     |  ____________|  APP 2  |
+      	   	    	      	     | |            |_________|
+   1/10 Gbps link     	     	     | |	
+   |||||||||||||| ------->eth3{HOST-PACF}	     _________
+				     | |	    |	      |
+				     | |____________|  APP 3  |
+				     | 		    |_________|
+				     |
+				     |
+	 			     |_____________  
+				     		   \
+						    \_________
+	      			     		    |	      |
+	                     			    |  APP 4  |
+						    |_________|
+			         
 
 
 User can start the program by running the following command:
@@ -55,12 +62,12 @@ _________________________________________________________________
           pkteng
 _________________________________________________________________
 
-On the other hand, the user can run `pacf-shell` to access the
-interface shell to communicate with pacf-server if the system
-is run in daemon mode.
+Alternatively, the user can run `pacf-shell` to access the
+interface shell to communicate with daemonized pacf-server.
 
-You can either hit Ctrl+D or enter the following command to exit
-the program:
+You can hit Ctrl+D to exit the pacf-shell client. To gracefully
+turn the daemon off, the user may enter the following command to 
+exit the program:
 
 _________________________________________________________________
 	pacf> pacf.shutdown()
@@ -142,10 +149,10 @@ To start forwarding packets from host-pacf to an application, the
 user needs to run the following command before starting the engine:
 
 __________________________________________________________________________________________
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{0", action="SAMPLE"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{1", action="SAMPLE"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{2", action="SAMPLE"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{3", action="SAMPLE"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{0", action="SHARE"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{1", action="SHARE"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{2", action="SHARE"})
+	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{3", action="SHARE"})
 __________________________________________________________________________________________
 
 This creates four netmap-specific channels named "netmap:eth3{x" where
@@ -163,7 +170,7 @@ reading traffic:
 
 Host-PACF currently supports the following Rule Types ("actions"):
 
-1- SAMPLE (load balancer),
+1- SHARE (load balancer),
 2- COPY (forward copy of each packet to every registered application),
 3- DROP (drop all packets that are read from the interface).
    	DROP can be employed by using the following command:
@@ -175,7 +182,7 @@ Host-PACF currently supports the following Rule Types ("actions"):
 
 In the current version, all channels for an engine MUST share the same 
 "action" keywords (i.e. all registered channels should either have 
-"SAMPLE" or "COPY" actions). This limitation will be removed in future 
+"SHARE" or "COPY" actions). This limitation will be removed in future 
 versions. This restriction is only limited to shared channels within a
 single engine. Please see scripts/startup.lua file for more details.
 
@@ -183,7 +190,8 @@ For user's convenience, the host-pacf package comes with a reference
 LUA script file. You can use the following command to load the script
 file in host-pacf at startup:
 
-# bin/pacf -f scripts/startup.lua
+# bin/pacf -f scripts/startup.lua, OR
+# bin/pacf-server -f scripts/startup.lua
 
 The user is recommended to skim through the script file. It is
 heavily documented and also contains the code for how to run a 4-threaded
