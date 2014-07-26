@@ -11,8 +11,8 @@
 STATS_PRINT_CYCLE_DEFAULT = 2
 SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
-NETMAP_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
-NETMAP_PIPES=32
+NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
+NETMAP_PIPES=64
 
 --see if the directory exists
 
@@ -48,6 +48,36 @@ function shell(c)
 end
 
 
+-- check if netmap module is loaded in the system
+
+function netmap_loaded()
+	 if string.find((tostring(shell('uname'))), 'Linux') ~= nil then
+	    if directory_exists(NETMAP_LIN_PARAMS_PATH) then
+	       return true
+	    end
+	 end
+	 if string.find((tostring(shell('uname'), 'FreeBSD'))) ~= nil then
+	    if (tostring(shell('sysctl -a --pattern netmap'))) ~= nil then
+	       return true
+	    end
+	 end
+	 return false
+end
+
+
+-- enable netmap pipes framework
+
+function enable_nmpipes()
+	if string.find((tostring(shell('uname'))), 'Linux') ~= nil then
+	 	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_LIN_PARAMS_PATH .. "default_pipes")
+	end
+	if string.find((tostring(shell('uname'))), 'FreeBSD') ~= nil then
+	   	 shell("sysctl -w dev.netmap.default_pipes=\"" .. tostring(NETMAP_PIPES) .. "\"")
+	end	
+end
+
+
+
 
 -- check if you are root
 -- XXX This needs to be improved
@@ -79,7 +109,7 @@ end
 
 function init()
 	 -- check if netmap module is loaded
-	 if directory_exists(NETMAP_PARAMS_PATH) == false then
+	 if netmap_loaded() == false then
 	    print 'Netmap module does not exist'
 	    os.exit(-1)
 	 end
@@ -94,7 +124,7 @@ function init()
 	 pkteng.link({engine="e0", ifname="eth3", batch=PKT_BATCH})
 
 	 -- enable underlying netmap pipe framework
-	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_PARAMS_PATH .. "default_pipes")
+	 enable_nmpipes()
 
 	 for cnt = 0, 3 do
 	     -- Use this line to test SHARing
@@ -170,7 +200,7 @@ end
 
 function init4()
 	 -- check if netmap module is loaded
-	 if directory_exists(NETMAP_PARAMS_PATH) == false then
+	 if netmap_loaded() == false then
 	    print 'Netmap module does not exist'
 	    os.exit(-1)
 	 end
@@ -182,7 +212,7 @@ function init4()
 	 end
 
 	 -- enable underlying netmap pipe framework
-	 shell("echo " .. tostring(NETMAP_PIPES) .. " > " .. NETMAP_PARAMS_PATH .. "default_pipes")
+	 enable_nmpipes()
 
 	 for cnt = 0, 3 do
 	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})

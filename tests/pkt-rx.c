@@ -110,30 +110,30 @@ main(int argc, char **argv)
 		}
 	else
 		{
-			fprintf(stderr, "successfully opened %p (tx rings: %d", rxnmd, rxnmd->req.nr_tx_slots);
+			fprintf(stderr, "successfully opened %p (tx rings: %d\n", rxnmd, rxnmd->req.nr_tx_slots);
 		}
 
 	int i;
 	for ( i=0; i<OUTPUT_RINGS; ++i )
 		{
 		char interface[25];
-		sprintf(interface, "valeA:s");
-		fprintf(stderr, "opening pipe named %s", interface);
+		sprintf(interface, "valebro:p{%d", i);
+		fprintf(stderr, "opening pipe named %s\n", interface);
 		uint64_t flags = NM_OPEN_NO_MMAP;// | NM_OPEN_ARG3;// | NM_OPEN_RING_CFG;
 
 		txnmds[i] = nm_open(interface, NULL, flags, rxnmd);
 		if (txnmds[i] == NULL)
 			{
-			printf("cannot open %p", txnmds[i]);
+			printf("cannot open %p\n", txnmds[i]);
 			return (1);
 			}
 		else
 			{
-				fprintf(stderr, "successfully opened pipe #%d %p (tx slots: %d)", i, txnmds[i], txnmds[i]->req.nr_tx_slots);
+				fprintf(stderr, "successfully opened pipe #%d %p (tx slots: %d)\n", i, txnmds[i], txnmds[i]->req.nr_tx_slots);
 			// Is this right?  Do pipes only have one ring?
 			txrings[i] = NETMAP_TXRING(txnmds[i]->nifp, 0);
 			}
-		fprintf(stderr, "zerocopy %s", (rxnmd->mem == txnmds[i]->mem) ? "enabled" : "disabled");
+		fprintf(stderr, "zerocopy %s", (rxnmd->mem == txnmds[i]->mem) ? "enabled\n" : "disabled\n");
 		}
 
 	sleep(2);

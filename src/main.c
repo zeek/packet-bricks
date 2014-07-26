@@ -32,12 +32,19 @@ extern progvars_t pv;
 /* global variable to indicate start/stop for lua interpreter */
 volatile uint32_t stop_processing = 0;
 /* do we have to daemonize? */
-static uint8_t daemonize = 0;
+//static uint8_t daemonize = 0;
+/* do we have to make a remote shell? */
+//static uint8_t rshell = 0;
+/* remote shell args: "ipaddr:port" */
+//static int8_t *rshell_args = NULL;
 
 /* global variable definitions */
 PacfInfo pc_info = {
 	.batch_size 		= DEFAULT_BATCH_SIZE,
-	.lua_startup_file 	= NULL
+	.lua_startup_file 	= NULL,
+	.daemonize		= 0,
+	.rshell			= 0,
+	.rshell_args		= NULL
 };
 /*---------------------------------------------------------------------*/
 /**
@@ -53,7 +60,9 @@ clean_exit(int exit_val)
 	if (pc_info.lua_startup_file != NULL)
 		free((unsigned char *)pc_info.lua_startup_file);
 
-	if (!daemonize) fprintf(stdout, "Goodbye!\n");
+	if (pc_info.rshell_args != NULL)
+		free(pc_info.rshell_args);
+	if (!pc_info.daemonize) fprintf(stdout, "Goodbye!\n");
 	TRACE_FUNC_END();
 	exit(exit_val);
 
@@ -66,7 +75,7 @@ static inline void
 print_help(char *progname)
 {
 	TRACE_FUNC_START();
-	fprintf(stdout, "Usage: %s [-b batch_size] "
+	fprintf(stdout, "Usage: %s [-d|-s] [-b batch_size] "
 		"[-f start_lua_script_file] [-h]\n", progname);
 	
 	TRACE_FUNC_END();
@@ -166,8 +175,8 @@ do_daemonize()
 	if (pid == 0) {
 		if ((fd = open("/dev/null", O_RDWR)) >= 0) {
 			dup2(fd, 0);
-			//dup2(fd, 1);
-			//dup2(fd, 2);
+			dup2(fd, 1);
+			dup2(fd, 2);
 			if (fd > 2) close(fd);
 		}
 	}
@@ -226,15 +235,21 @@ main(int argc, char **argv)
 	int rc;
 
 	/* accept command-line arguments */
-	while ( (rc = getopt(argc, argv, "b:hsdf:")) != -1) {
+	while ( (rc = getopt(argc, argv, "a:b:hsdf:")) != -1) {
 		switch(rc) {
+		case 'a':
+			pc_info.rshell_args = (int8_t *)strdup(optarg);
+			if (NULL == pc_info.rshell_args) {
+				TRACE_ERR("Can't strdup remote shell args!!\n");
+			}
+			break;
 		case 'b':
 			pc_info.batch_size = atoi(optarg);
 			TRACE_DEBUG_LOG("Taking batch_size as %d\n", 
 					pc_info.batch_size);
 			break;
 		case 'd':
-			daemonize = 1;
+			pc_info.daemonize = 1;
 			break;
 		case 'h':
 			print_help(*argv);
@@ -250,8 +265,8 @@ main(int argc, char **argv)
 			load_lua_file(optarg);
 			break;
 		case 's':
-			lua_kickoff(LUA_EXE_REMOTE_SHELL, NULL);
-			return EXIT_SUCCESS;
+			pc_info.rshell = 1;
+			break;
 		default:
 			print_help(*argv);
 			break;
@@ -261,14 +276,34 @@ main(int argc, char **argv)
 	/* init_modules */
 	init_modules();
 
-	if ((daemonize && (rc=do_daemonize()) == 0) ||
-	    !daemonize) {
+	/* check if rshell and daemonize are both enabled */
+	if (pc_info.daemonize && pc_info.rshell) {
+		fprintf(stdout, "You cannot create a daemon process and "
+			"a remote shell at the same time!\n");
+		fflush(stdout);
+		print_help(*argv);
+		return EXIT_FAILURE;
+	}
+	
+	/* warp to remote shell, if asked */
+	if (pc_info.rshell) {
+		if (pc_info.rshell_args == NULL)
+			fprintf(stdout, "Using localhost and port %d by default\n",
+				PACF_LISTEN_PORT);
+		lua_kickoff(LUA_EXE_REMOTE_SHELL, pc_info.rshell_args);
+		return EXIT_SUCCESS;
+	}
+
+	/* daemonize, if asked */
+	if ((pc_info.daemonize && (rc=do_daemonize()) == 0) ||
+	    !pc_info.daemonize) {
 		if (mark_pid_file(pv.pid_file) != 0) {
 			TRACE_FUNC_END();
 			TRACE_ERR("Can't lock the pid file.\n"
 				  "Is a previous pacf daemon already running??\n");
 		}			
-		lua_kickoff((daemonize) ? LUA_EXE_SCRIPT : LUA_EXE_HOME_SHELL, NULL);
+		lua_kickoff((pc_info.daemonize) ? 
+			    LUA_EXE_SCRIPT : LUA_EXE_HOME_SHELL, NULL);
 	}
 
 	/* initialize file printing mini-module */
@@ -278,7 +313,7 @@ main(int argc, char **argv)
 	 * if the user wants to daemonize and the process 
 	 * is the child, then jump to accepting requests...
 	 */
-	if (daemonize && rc == 0) start_listening_reqs();
+	if (pc_info.daemonize && rc == 0) start_listening_reqs();
 	
 	TRACE_FUNC_END();
 	clean_exit(EXIT_SUCCESS);

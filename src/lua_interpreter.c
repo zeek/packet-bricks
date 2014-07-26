@@ -8,6 +8,8 @@
 #include <string.h>
 /* for uint?_* types */
 #include <sys/types.h>
+/* for recv */
+#include <sys/socket.h>
 #include <stdint.h>
 /* for file stat */
 #include <sys/stat.h>
@@ -320,26 +322,38 @@ print_version(void)
 }
 /*---------------------------------------------------------------------*/
 static void
-do_rshell(lua_State *L)
+do_rshell(lua_State *L, char *rshell_args)
 {
 	TRACE_LUA_FUNC_START();
 	int csock, status, rc;
 	char input_line[LUA_MAXINPUT];
 	uint32_t input_len;
+	char msg_back;
 
-	csock = connect_to_pacf_server();
+	csock = connect_to_pacf_server(rshell_args);
 	input_len = 0;
 
         while (!stop_processing && (status = loadline(L)) != -1) {
 		strcpy(input_line, lua_tostring(L, 1));
 		input_len = strlen(input_line);
-
+		input_line[input_len] = REMOTE_LUA_CMD_DELIM;
 		/* next send the entire command */ 
-		/* also sending the last '\0' char that serves */
+		/* also sending the last char as REMOTE_LUA_CMD_DELIM that serves */
 		/* as a delimiter */
 		rc = write(csock, input_line, input_len + 1);
 		if (rc == -1) goto write_error;
 		
+		/* 
+		 * keep on reading till you get 'REMOTE_LUA_CMD_DELIM' delimiter 
+		 * or the server closes the socket
+		 */
+		do {
+			rc = read(csock, &msg_back, 1);
+			if (rc <= 0 || msg_back == REMOTE_LUA_CMD_DELIM) break;
+			rc = write(2, &msg_back, 1);
+		} while (1);
+
+		fflush(stdout);
 		lua_saveline(L, 1);
 		lua_remove(L, 1);  /* remove line */
         }
@@ -355,12 +369,57 @@ do_rshell(lua_State *L)
 		  input_line, input_len);
 }
 /*---------------------------------------------------------------------*/
+void 
+process_str_request(lua_State *L, void *argv)
+{
+	TRACE_LUA_FUNC_START();
+	int read_size, total_read, rc;
+	char client_msg[LUA_MAXINPUT];
+	int client_sock = *((int *)argv);
+	total_read = rc = 0;
+	
+	/* Receive message from client */
+	while ((read_size = recv(client_sock, 
+				 &client_msg[total_read],
+				 LUA_MAXINPUT - total_read, 0)) > 0) {
+		total_read += read_size;
+		if ((unsigned)(total_read >= LUA_MAXINPUT) || 
+		    client_msg[total_read - 1] == REMOTE_LUA_CMD_DELIM) {
+			client_msg[total_read - 1] = '\0';
+			break;
+		}
+	}
+	/* 
+	 * if total_read == 0, 
+	 * then this means that the client closed conn. 
+	 *
+	 * Otherwise process the lua command
+	 */
+	if (total_read != 0) {
+		char delim = REMOTE_LUA_CMD_DELIM;
+		register_lua_procs(L);
+		load_startup(L);
+		setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+		/* redirect stdout and stderr to client_sock */
+		dup2(client_sock, 1);
+		dup2(client_sock, 2);
+		/* redirect command output to the client */
+		dostring(L, client_msg, "init");
+		rc = write(client_sock, &delim, 1);
+		/* redirect stdout and stderr back to /dev/null */
+		dup2(0, 1);
+		dup2(0, 2);
+	}
+	TRACE_LUA_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 static int
 pmain(lua_State *L) {
 	TRACE_LUA_FUNC_START();
 
         struct Smain *s;
         char **argv;
+	int rc;
 
         globalL = L;
         s = (struct Smain *)lua_touserdata(L, 1);
@@ -383,24 +442,23 @@ pmain(lua_State *L) {
 		}
 	} else if (!strcmp(argv[0], "remote-shell")) {
 		print_version();
-		do_rshell(L);
+		do_rshell(L, argv[1]);
 	} else if (!strcmp(argv[0], "script")) {
 		register_lua_procs(L);
 		TRACE_LOG("Executing %s\n", pv.lua_startup);
 		load_startup(L);
 		dofile(L, NULL);
 	} else if (!strcmp(argv[0], "string")) {
-		register_lua_procs(L);
-		load_startup(L);
-		dostring(L, argv[1], "init");
+		process_str_request(L, argv[1]);
 	}
 
 	TRACE_LUA_FUNC_END();
+	UNUSED(rc);
         return 0;
 }
 /*---------------------------------------------------------------------*/
 int
-lua_kickoff(LuaMode lm, char *str)
+lua_kickoff(LuaMode lm, void *reqptr)
 {
 	TRACE_LUA_FUNC_START();
 	
@@ -415,13 +473,14 @@ lua_kickoff(LuaMode lm, char *str)
 		break;
 	case LUA_EXE_REMOTE_SHELL:
 		argv[0] = "remote-shell";
+		argv[1] = reqptr;
 		break;
 	case LUA_EXE_SCRIPT:
 		argv[0] = "script";
 		break;
 	case LUA_EXE_STR:
 		argv[0] = "string";
-		argv[1] = str;
+		argv[1] = reqptr;
 		break;
 	default:
 		/* control will never come here */

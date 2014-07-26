@@ -21,6 +21,180 @@
 /* for errno */
 #include <errno.h>
 /*---------------------------------------------------------------------*/
+int
+connect_to_pacf_server(char *rshell_args)
+{
+	TRACE_BACKEND_FUNC_START();
+	int sock;
+	struct sockaddr_in server;
+	char *ip_addr, *port_str;
+	uint16_t port;
+
+	if (rshell_args == NULL)
+		ip_addr = port_str = NULL;
+	else {
+		/* first parse the ipaddr and port string */
+		ip_addr = strtok(rshell_args, ":");
+		port_str = strtok(NULL, ":");
+	}
+	port = (port_str == NULL) ? PACF_LISTEN_PORT : atoi(port_str);
+
+	/* Create socket */
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock == -1) {
+		TRACE_ERR("Could not create socket: %s\n", 
+			  strerror(errno));
+		TRACE_BACKEND_FUNC_END();
+		return -1;
+	}
+	TRACE_DEBUG_LOG("Socket created");
+     
+	server.sin_addr.s_addr = (ip_addr == NULL) ? 
+		inet_addr("127.0.0.1") : inet_addr(ip_addr);
+	server.sin_family = AF_INET;
+	server.sin_port = htons(port);
+ 
+	/* Connect to remote server */
+	if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
+		TRACE_ERR("Connect failed!: %s\n", strerror(errno));
+		TRACE_BACKEND_FUNC_END();
+		return -1;
+	}
+     
+	TRACE_DEBUG_LOG("Connected\n");
+	TRACE_BACKEND_FUNC_END();
+	UNUSED(rshell_args);
+	return sock;
+}
+/*---------------------------------------------------------------------*/
+void
+start_listening_reqs()
+{
+	TRACE_BACKEND_FUNC_START();
+	/* socket info about the listen sock */
+	struct sockaddr_in serv; 
+	int listen_fd, client_sock;
+	struct epoll_event ev, events[EPOLL_MAX_EVENTS];
+	int epoll_fd, nfds, n;	
+
+	/* zero the struct before filling the fields */
+	memset(&serv, 0, sizeof(serv));
+	/* set the type of connection to TCP/IP */           
+	serv.sin_family = AF_INET;
+	/* set the address to any interface */                
+	serv.sin_addr.s_addr = htonl(INADDR_ANY); 
+	/* set the server port number */    
+	serv.sin_port = htons(PACF_LISTEN_PORT);
+
+	/* create pacf socket for listening remote shell requests */
+	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (listen_fd == -1) {
+		TRACE_ERR("Failed to create listening socket for pacf\n");
+		TRACE_BACKEND_FUNC_END();
+	}
+	
+	/* bind serv information to mysocket */
+	if (bind(listen_fd, (struct sockaddr *)&serv, sizeof(struct sockaddr)) == -1) {
+		TRACE_ERR("Failed to bind listening socket to port %d for pacf\n",
+			  PACF_LISTEN_PORT);
+		TRACE_BACKEND_FUNC_END();
+	}
+	
+	/* start listening, allowing a queue of up to 1 pending connection */
+	if (listen(listen_fd, LISTEN_BACKLOG) == -1) {
+		TRACE_ERR("Failed to start listen on port %d (for pacf)\n",
+			  PACF_LISTEN_PORT);
+		TRACE_BACKEND_FUNC_END();
+	}
+
+	/* XXX - TODO: port this to kqueue version... */
+#if 0
+	/* set up the epolling structure */
+	epoll_fd = epoll_create(EPOLL_MAX_EVENTS);
+	if (epoll_fd == -1) {
+		TRACE_ERR("PACF failed to create an epoll fd!\n");
+		TRACE_BACKEND_FUNC_END();
+		return;
+	}
+
+
+	/* register listening socket */
+	ev.events = EPOLLIN | EPOLLOUT;
+	ev.data.fd = listen_fd;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &ev) == -1) {
+		TRACE_LOG("PACF failed to exe epoll_ctl for fd: %d\n",
+			  epoll_fd);
+		TRACE_BACKEND_FUNC_END();
+		return;
+	}
+	
+	/*
+	 * Main loop that processes incoming remote shell commands
+	 * if the remote request arrives at listen_fd, it accepts connections
+	 * and creates a new 'shell'
+	 * if the remote request comes from a client request, it calls
+	 * the lua string command function to execute the command
+	 */
+
+	do {
+		/* wait for new epoll requests */
+		nfds = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, -1);
+		if (nfds == -1) {
+			if (errno == EINTR) continue;
+			TRACE_ERR("PACF poll error: %s\n", strerror(errno));
+			TRACE_BACKEND_FUNC_END();
+		}
+		/* got some request... now process each one of them */
+		for (n = 0; n < nfds; n++) {
+			/* the request is for a new shell */
+			if (events[n].data.fd == listen_fd) {
+				client_sock = accept(listen_fd, NULL, NULL);
+				if (client_sock < 0) {
+					TRACE_ERR("accept failed: %s\n", strerror(errno));
+					TRACE_BACKEND_FUNC_END();
+				}
+				lua_kickoff(LUA_EXE_STR, &client_sock);
+				/* add client_sock and listen_fd for epolling again */
+				ev.data.fd = client_sock;
+				ev.events = EPOLLIN;
+				if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+					TRACE_ERR("Can't register client sock for epolling!\n");
+					TRACE_BACKEND_FUNC_END();
+				}
+				ev.data.fd = listen_fd;
+				ev.events = EPOLLIN | EPOLLOUT;
+				if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
+					TRACE_ERR("Can't register client sock for epolling!\n");
+					TRACE_BACKEND_FUNC_END();
+				}
+			} else { /* events[n].data.fd == regular sock */
+				/* 
+				 * if the client socket has incoming read, this means we are getting
+				 * some lua commands.... execute them 
+				 */
+				if (events[n].events == EPOLLIN || events[n].events == EPOLLPRI) {
+					lua_kickoff(LUA_EXE_STR, &events[n].data.fd);
+					ev.data.fd = events[n].data.fd;
+					ev.events = EPOLLIN;
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
+						TRACE_ERR("Can't register client sock for epolling!\n");
+						TRACE_BACKEND_FUNC_END();
+					}
+				} else { /* the only other epoll request is for error output.. close the socket then */
+					ev.data.fd = events[n].data.fd;
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, ev.data.fd, &ev) == -1) {
+						TRACE_ERR("Can't register client sock for epolling!\n");
+						TRACE_BACKEND_FUNC_END();
+					}	
+					close(ev.data.fd);
+				}
+			}
+		}
+	} while (1);
+#endif
+	TRACE_BACKEND_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 /*
  * Code self-explanatory...
  */
@@ -66,6 +240,8 @@ create_listening_socket_for_eng(engine *eng)
 	TRACE_BACKEND_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+#if 0
+/* This function has been disabled... it will be re-enabled in the near future */
 /**
  * XXX - This function needs to be revised..
  * Services incoming request from userland applications and takes
@@ -133,6 +309,7 @@ process_request_backend(engine *eng, struct kevent chlist[])
 	TRACE_BACKEND_FUNC_END();
 	return;
 }
+#endif
 /*---------------------------------------------------------------------*/
 /**
  * Creates listening socket to serve as a conduit between userland
@@ -177,9 +354,12 @@ initiate_backend(engine *eng)
 				/* continue kqueueing */
 				EV_SET(&chlist[eng->dev_fd], eng->dev_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
 			} 
+#if 0
+			/* XXX - temporarily disabled */
 			/* process app reqs */
 			else if ((int)chlist[n].ident == eng->listen_fd)
 				process_request_backend(eng, chlist);
+#endif
 		}
 	}
 

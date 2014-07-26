@@ -82,6 +82,7 @@ typedef struct {
 	char *dir;
 } progvars_t __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
+#define	REMOTE_LUA_CMD_DELIM	127
 typedef enum LuaMode {
 	LUA_EXE_HOME_SHELL = 0, 
 	LUA_EXE_REMOTE_SHELL,
@@ -95,6 +96,6 @@ typedef enum LuaMode {
  * to be filled
  */
 int
-lua_kickoff(LuaMode, char *);
+lua_kickoff(LuaMode, void *);
 /*---------------------------------------------------------------------*/
 #endif /* __LUA_INTERPRETER_H__ */

@@ -38,8 +38,10 @@ initiate_backend(engine *eng);
 
 /**
  * Connects to a pacf server for remote shell commands
+ * rshell_args contains either NULL (use default) or
+ * string "ipaddr:port"
  */
 int
-connect_to_pacf_server();
+connect_to_pacf_server(char *rshell_args);
 /*---------------------------------------------------------------------*/
 #endif /* __BACKEND_H__ */

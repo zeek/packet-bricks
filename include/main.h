@@ -13,11 +13,15 @@
  *		 - number of packets that needs to be picked up from the
  *		 - interface at one time. lua_startup file contains the
  *		 - the LUA script that will be interpreted by pacf...
+ *		 - ...plus a few others
  */
 typedef struct PacInfo {
 	uint16_t batch_size; /* read these many packets per read */
 	const unsigned char *lua_startup_file; /* path to lua startup file 
 						  given at cmd line */	
+	uint8_t daemonize; /* do we have to daemonize the process? */
+	uint8_t rshell; 	/* do we have to make a remote shell? */
+	int8_t *rshell_args; /* remote shell args: "ipaddr:port" */
 } PacfInfo __attribute__((aligned(__WORDSIZE)));
 
 extern PacfInfo pc_info;
