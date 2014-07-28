@@ -13,6 +13,8 @@ SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
 NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
 NETMAP_PIPES=64
+NO_CPU_AFF=-1
+NO_QIDS=-1
 
 --see if the directory exists
 
@@ -102,10 +104,10 @@ end
 -- S I N G L E - T H R E A D E D - S E T U P
 -----------------------------------------------------------------------
 --init function  __initializes pkteng thread and links it with a__
---		 __netmap-enabled interface. collects 1024 packets at__
---		 __a time. "cpu" and "batch" params are optional__
---		 __Next creates 4 netmap pipe channels to forward__
---		 __packets to userland applications__
+--		 __netmap-enabled interface. collects PKT_BATCH__
+--		 __pkts at a time. "cpu" and "batch" params can remain__
+--		 __unspecified by passing '-1'. Next creates 4 netmap__
+--		 __pipe channels to forward packets to userland apps__
 
 function init()
 	 -- check if netmap module is loaded
@@ -120,41 +122,44 @@ function init()
 	    os.exit(-1)
 	 end
 
-	 pkteng.new({name="e0", type="netmap"})
-	 pkteng.link({engine="e0", ifname="eth3", batch=PKT_BATCH})
+	 -- create a global variable pe
+	 pe = PktEngine.new("e0", "netmap", NO_CPU_AFF)
+
+	 pe:link("eth3", PKT_BATCH, NO_QIDS)
 
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
 	 for cnt = 0, 3 do
 	     -- Use this line to test SHARing
-	     pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="SHARE"})
+	     pe:open_channel("netmap:eth3{" .. cnt, "SHARE")
 
 	     -- Use this line to copy packets to all registered channels
-	     --pkteng.open_channel({engine="e0", channel="netmap:eth3{" .. cnt, action="COPY"})
+	     --pe:open_channel("netmap:eth3{" .. cnt, "COPY")
 
 	     -- Use this line to drop all packets
-	     --pkteng.drop_pkts({engine="e0"})
+	     --pe:drop_pkts()
 
 	     -- XXX
-	     ----pkteng.open_channel({engine="e0", channel="netmap:bro{" .. cnt})
+	     ----pe:open_channel("netmap:bro{" .. cnt)
 	 end
 
-	 -- Use this line to forward packets to a different Ethernet port (under construction)
-	 --pkteng.redirect_pkts({engine="e0", ifname="eth2"})
+	 -- Use this line to forward packets to a different Ethernet port
+	 --pe:redirect_pkts("eth2")
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
 --		  __stats for STATS_PRINT_CYCLE_DEFAULT secs__
 
 function start()
-	 pkteng.start({engine="e0"})
+	 -- start reading pkts from the interface
+	 pe:start()
 
 	 local i = 0
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
-	     --pkteng.show_stats({engine="e0"})
-	     pacf.show_stats()
+	     --pe:show_stats()
+	     PACF.show_stats()
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end
@@ -163,17 +168,17 @@ end
 --		 __it then unlinks the interface from the engine and__
 --		 __finally frees the engine context from the system__
 function stop()
-	 --pkteng.show_stats({engine="e0"})
-	 pacf.show_stats()
+	 --pe:show_stats()
+	 PACF.show_stats()
 
-	 pkteng.stop({engine="e0"})
+	 pe:stop()
 	 sleep(SLEEP_TIMEOUT)
 
-	 pkteng.unlink({engine="e0", ifname="eth3"})
+	 pe:unlink()
 	 sleep(SLEEP_TIMEOUT)
 
-	 pkteng.delete({engine="e0"})
-	 --pacf.shutdown()
+	 pe:delete()
+	 --PACF.shutdown()
 end
 -----------------------------------------------------------------------
 
@@ -185,9 +190,9 @@ end
 -- 4 - T H R E A D S - S E T U P
 -----------------------------------------------------------------------
 --init4 function __initializes 4 pkteng threads and links it with a__
---		 __netmap-enabled interface. collects 1024 packets __
---		 __at a time. "cpu", "batch" & "qid" params are    __
---		 __ optional.					   __
+--		 __netmap-enabled interface. collects PKT_BATCH    __
+--		 __pkts at a time. "cpu", "batch" & "qid" params   __
+--		 __can remain unspecified by passing '-1'	   __
 --		 __						   __
 --		 ++_____________HOW TO USE H.W QUEUES______________++
 --		 ++Please make sure that the driver is initialized ++
@@ -214,21 +219,23 @@ function init4()
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
+	 -- create a global variable of table type to create 4 engines
+	 pes = {}
 	 for cnt = 0, 3 do
-	 	 pkteng.new({name="e" .. cnt, type="netmap", cpu=cnt})
-	 	 pkteng.link({engine="e" .. cnt, ifname="eth3", batch=PKT_BATCH, qid=cnt})
+	 	 pes["pe" .. cnt] = PktEngine.new("e" .. cnt, "netmap", cnt)
+	 	 pes["pe" .. cnt]:link("eth3", PKT_BATCH, cnt)
 
 	 	 -- Use this line to test SHARing
-		 pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="SHARE"})
+		 pes["pe" .. cnt]:open_channel("netmap:eth3{" .. cnt, "SHARE")
 
 	     	 -- Use this line to copy packets to all registered channels
-		 --pkteng.open_channel({engine="e" .. cnt, channel="netmap:eth3{" .. cnt, action="COPY"})
+		 --pes["pe" .. cnt]:open_channel("netmap:eth3{" .. cnt, "COPY")
 
 		 -- Use this line to drop all packets
-	     	 --pkteng.drop_pkts({engine="e0"})
+	     	 --pes["pe" .. cnt]:drop_pkts()
 
-		 -- Use this line to forward packets to a different Ethernet port (under construction)
-	     	 --pkteng.redirect_pkts({engine="e" .. cnt, ifname="eth2"})
+		 -- Use this line to forward packets to a different Ethernet port
+	     	 --pes["pe" .. cnt]:redirect_pkts("eth2")
 	 end
 end
 -----------------------------------------------------------------------
@@ -237,13 +244,13 @@ end
 
 function start4()
 	 for cnt = 0, 3 do
-	 	 pkteng.start({engine="e" .. cnt})
+	 	 pes["pe" .. cnt]:start()
 	 end
 
 	 local i = 0
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
-	     pacf.show_stats()
+	     PACF.show_stats()
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end
@@ -252,24 +259,24 @@ end
 --		 __it then unlinks the interface from the engine and__
 --		 __finally frees the engine context from the system__
 function stop4()
-	 pacf.show_stats()
+	 PACF.show_stats()
 	 for cnt = 0, 3 do
-		 pkteng.stop({engine="e" .. cnt})
+		 pes["pe" .. cnt]:stop()
 	 end
 
 	 sleep(SLEEP_TIMEOUT)
 
 	 for cnt = 0, 3 do
-	 	 pkteng.unlink({engine="e" .. cnt, ifname="eth3"})
+	 	 pes["pe" .. cnt]:unlink()
 	 end
 
 	 sleep(SLEEP_TIMEOUT)
 
 	 for cnt = 0, 3 do
-	 	 pkteng.delete({engine="e" .. cnt})
+	 	 pes["pe" .. cnt]:delete()
 	 end
 
-	 --pacf.shutdown()
+	 --PACF.shutdown()
 end
 -----------------------------------------------------------------------
 
@@ -283,11 +290,11 @@ end
 -- __"main" function (Commented for user's convenience)__
 --
 -------- __This command prints out the main help menu__
--- pacf.help()
+-- PACF.help()
 -------- __This command shows the current status of PACF__
--- pacf.print_status()
+-- PACF.print_status()
 -------- __This prints out the __pkt_engine__ help menu__
--- pkteng.help()
+-- PktEngine.help()
 -------- __Initialize the system__
 -- init()
 -------- __Start the engine__
@@ -295,5 +302,5 @@ end
 -------- __Stop the engine__
 -- stop()
 -------- __The following commands quits the session__
--- pacf.shutdown()
+-- PACF.shutdown()
 -----------------------------------------------------------------------

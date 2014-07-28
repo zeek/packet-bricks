@@ -457,6 +457,27 @@ pmain(lua_State *L) {
         return 0;
 }
 /*---------------------------------------------------------------------*/
+/**
+ * The lua_kicoff function can run in 4 modes:
+ *
+ * 1- HOME SHELL mode: This mode is invoked by the non-daemonized version
+ * 		       of PACF. The system initializes everything before
+ *		       control is handed over to the LUA shell. Once the
+ *		       terminates, the entire system also shuts down. This
+ * 		       mode is only used for testing purposes.
+ *
+ * 2- REMOTE SHELL mode: This mode works when PACF is already running in
+ *			daemonized mode. The remote shell is used to connect
+ *			to the PACF daemon server and send/recv instructions/
+ *			output.
+ *
+ * 3- SCRIPT mode:	This mode is used to only read and load a LUA script
+ *			file during PACF server initialization
+ *
+ * 4- STR mode:		This mode is used to execute single line instructions
+ *			in the PACF server when it is taking instructions from
+ *			remote clients (shell)
+ */
 int
 lua_kickoff(LuaMode lm, void *reqptr)
 {

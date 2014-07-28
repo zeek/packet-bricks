@@ -1,5 +1,7 @@
 /* for header definitions */
 #include "lua_interface.h"
+/* for LUA_MAXINPUT */
+#include "lua_interpreter.h"
 /* for logging */
 #include "pacf_log.h"
 /* for basic configuration */
@@ -122,7 +124,7 @@ luaopen_platform(lua_State *L)
 
 	platform_dir_create_meta(L);
         TRACE_DEBUG_LOG("%s", "Loading "PLATFORM_NAME" command metatable\n");
-        luaL_openlib(L, PLATFORM_PROMPT, platformlib, 0);
+        luaL_openlib(L, PLATFORM_NAME, platformlib, 0);
         platform_set_info(L);
 
 	TRACE_LUA_FUNC_END();
@@ -139,415 +141,310 @@ pktengine_help_wrap(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
-		"    open_channel( {engine=<ioengine_name>, channel=<channel_name>, action=<action_name>} )\n"
-	     	"    drop_pkts({engine=<ioengine_name>})\n"
-	     	"    redirect_pkts({engine=<ioengine_name>, ifname=<interface>})\n"
-		"    add_filter(<params still need to be determined>) <DISABLED>\n"
-		"    new( {name=<ioengine_name>, type=<io_type>, [cpu=<cpu number>]} )\n"
-		"    delete( {engine=<ioengine_name>} )\n"
-		"    link( {engine=<ioengine_name>, ifname=<interface>, [batch=<chunk_size>}] )\n"
-		"    unlink( {engine=<ioengine_name>, ifname=<interface>} )\n"
-		"    start( {engine=<ioengine_name>} )\n"
-		"    stop( {engine=<ioengine_name>} )\n"
-		"    show_stats( {engine=<ioengine_name>} )\n"
+		"    open_channel(<channel_name>, <action_name>)\n"
+	     	"    drop_pkts()\n"
+	     	"    redirect_pkts(<interface>)\n"
+		"    new(<ioengine_name>, <io_type>, <cpu number>)\n"
+		"    delete()\n"
+		"    link(<interface>, <chunk_size>)\n"
+		"    unlink()\n"
+		"    start()\n"
+		"    stop()\n"
+		"    show_stats()\n"
 		);
 	UNUSED(L);
 	TRACE_LUA_FUNC_END();
         return 0;
 }
 /*---------------------------------------------------------------------*/
-static int
-pktengine_new_wrap(lua_State *L)
+static PktEngine *
+to_pkteng(lua_State *L, int index)
 {
 	TRACE_LUA_FUNC_START();
-
-	const unsigned char *name;
-	const unsigned char *type;
-	int cpu = -1;
-
-	/* this will load netmap module */
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "name");
-        name = (unsigned char *)lua_tostring(L, -1);
-        lua_getfield(L, 1, "type");
-	type = (unsigned char *)lua_tostring(L, -1);
-        lua_getfield(L, 1, "cpu");
-        if (lua_isnumber(L, -1))
-		cpu = lua_tointeger(L, -1);
-        lua_remove(L, -1);
-
-
-        if (name == NULL) {
-		TRACE_LOG("pktengine_new: Engine name not specified!\n");
-                lua_remove(L, -1);
-		TRACE_LUA_FUNC_END();
-                return 0;
-        }
-	if (type == NULL) {
-		TRACE_LOG("pktengine_new: pkt library name not specified!\n");
-                lua_remove(L, -1);
-		TRACE_LUA_FUNC_END();
-                return 0;
-	}
-
-	TRACE_DEBUG_LOG("Pkt engine name is: %s, type is %s,"
-			" and cpu is: %d\n",
-			name, type, cpu);
-        pktengine_new(name, type, cpu);
-        lua_remove(L, -1);
-        lua_remove(L, -1);
-
+	PktEngine *pe = (PktEngine *)lua_touserdata(L, index);
+	if (pe == NULL) luaL_typerror(L, index, "PktEngine");
 	TRACE_LUA_FUNC_END();
-        return 0;
+	return pe;
+}
+/*---------------------------------------------------------------------*/
+static PktEngine *
+push_pkteng(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	PktEngine *pe = (PktEngine *)lua_newuserdata(L, sizeof(PktEngine));
+	luaL_getmetatable(L, "PktEngine");
+	lua_setmetatable(L, -2);
+	TRACE_LUA_FUNC_END();
+	return pe;
+}
+/*---------------------------------------------------------------------*/
+static PktEngine *
+check_pkteng(lua_State *L, int index)
+{
+	TRACE_LUA_FUNC_START();
+	PktEngine *pe;
+	luaL_checktype(L, index, LUA_TUSERDATA);
+	pe = (PktEngine *)luaL_checkudata(L, index, "PktEngine");
+	if (pe == NULL) luaL_typerror(L, index, "PktEngine");
+	TRACE_LUA_FUNC_END();
+	return pe;
 }
 /*---------------------------------------------------------------------*/
 static int
-pktengine_delete_wrap(lua_State *L)
+pkteng_new(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	unsigned char *name;
+	const char *ename = luaL_optstring(L, 1, 0);
+	const char *type = luaL_optstring(L, 2, 0);
+	int cpu = luaL_optint(L, 3, 0);
 
-	/* this will unload netmap module */
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "engine");
-        name = (unsigned char *)lua_tostring(L, -1);
+	PktEngine *pe = push_pkteng(L);
+	pe->eng_name = ename;
+	pe->type = type;
+	pe->cpu = cpu;
 
-	if (name == NULL) {
-		TRACE_LOG("Engine with %s does not exist\n", name);
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	
-	TRACE_DEBUG_LOG("Pkt with engine name %s is deleted\n",
-			name);
-	pktengine_delete(name);
-	lua_remove(L, -1);
-	
+	pktengine_new((uint8_t *)pe->eng_name, (uint8_t *)pe->type, pe->cpu);
 	TRACE_LUA_FUNC_END();
-        return 0;
+	return 1;
 }
 /*---------------------------------------------------------------------*/
 static int
-pktengine_link_wrap(lua_State *L)
+pkteng_link(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	unsigned char *name;
-	unsigned char *ifname;
-	int batch_size, qid;
+	PktEngine *pe = check_pkteng(L, 1);
+	pe->ifname = luaL_checkstring(L, 2);
+	pe->batch = luaL_checkint(L, 3);
+	pe->qid = luaL_checkint(L, 4);
+	lua_settop(L, 1);
 
-	/* set initial batch size to -1 */
-	batch_size = qid = -1;
-
-	/* this configures iface */
-	luaL_checktype(L, 1, LUA_TTABLE);
-	lua_getfield(L, 1, "engine");
-	name = (unsigned char *)lua_tostring(L, -1);
-	if (name == NULL) {
-		TRACE_LOG("Engine name is absent\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-    
-        lua_getfield(L, 1, "ifname");
-        ifname = (unsigned char *)lua_tostring(L, -1);
-	if (ifname == NULL) {
-		TRACE_LOG("Engine %s needs an interface to link to\n", name);
-		lua_remove(L, -1);
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-        lua_getfield(L, 1, "batch");
-        if (lua_isnumber(L, -1))
-		batch_size = lua_tointeger(L, -1);
-        lua_remove(L, -1);
-
-        lua_getfield(L, 1, "qid");
-        if (lua_isnumber(L, -1))
-		qid = lua_tointeger(L, -1);
-        lua_remove(L, -1);
-
-	TRACE_DEBUG_LOG("Pkt engine name is: %s, interface name is: %s, "
-			"and batch_size is: %d and qid: %d\n",
-			name, ifname, batch_size, qid);
-	pktengine_link_iface(name, ifname, batch_size, qid);
+	TRACE_DEBUG_LOG("Engine info so far...:\n"
+			"\tName: %s\n"
+			"\tIfname: %s\n"
+			"\tType: %s\n"
+			"\tCpu: %d\n"
+			"\tBatch: %d\n"
+			"\tQid: %d\n",
+			pe->eng_name,
+			pe->ifname,
+			pe->type,
+			pe->cpu,
+			pe->batch,
+			pe->qid);
 	
-	lua_remove(L, -1);
-	lua_remove(L, -1);
+	pktengine_link_iface((uint8_t *)pe->eng_name, 
+			     (uint8_t *)pe->ifname, 
+			     pe->batch, pe->qid);
 	
 	TRACE_LUA_FUNC_END();
-        return 0;
+	return 1;
 }
 /*---------------------------------------------------------------------*/
 static int
-pktengine_unlink_wrap(lua_State *L)
+pkteng_open_channel(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	/* this will remove iface */
-	unsigned char *name;
-	unsigned char *ifname;
-	
-	/* this configures iface */
-	luaL_checktype(L, 1, LUA_TTABLE);
-	lua_getfield(L, 1, "engine");
-	name = (unsigned char *)lua_tostring(L, -1);
-	if (name == NULL) {
-		TRACE_LOG("Engine needs a name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-        lua_getfield(L, 1, "ifname");
-        ifname = (unsigned char *)lua_tostring(L, -1);
-	if (ifname == NULL) {
-		TRACE_LOG("Engine %s needs an interface\n", name);
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	
-	TRACE_DEBUG_LOG("Pkt engine name is: %s " 
-			"and interface name is: %s\n",
-			name, ifname);	
-	pktengine_unlink_iface(name, ifname);
-	lua_remove(L, -1);
-	lua_remove(L, -1);
-	
-	TRACE_LUA_FUNC_END();
-        return 0;
-}
-/*---------------------------------------------------------------------*/
-static int
-pktengine_start_wrap(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-
-	unsigned char *name;
-	/* this will start netmap engine */
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "engine");
-        name = (unsigned char *)lua_tostring(L, -1);
-
-	if (name == NULL) {
-		TRACE_LOG("Engine needs a name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	pktengine_start(name);
-        lua_remove(L, -1);
-
-	TRACE_LUA_FUNC_END();
-        return 0;
-}
-/*---------------------------------------------------------------------*/
-static int
-pktengine_stop_wrap(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-
-	/* this will stop netmap engine */
-	unsigned char *name;
-
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "engine");
-        name = (unsigned char *)lua_tostring(L, -1);
-	if (name == NULL) {
-		TRACE_LOG("Engine needs a name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	pktengine_stop(name);       	
-	lua_remove(L, -1);
-
-	TRACE_LUA_FUNC_END();
-        return 0;
-}
-/*---------------------------------------------------------------------*/
-static int
-pktengine_open_channel_wrap(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-
-	/* this will stop netmap engine */
-	unsigned char *ename;
-	unsigned char *cname;
-	unsigned char *action;
 	int rc;
+	const char *cname;
+	const char *action;
+	PktEngine *pe = check_pkteng(L, 1);
+	cname = luaL_checkstring(L, 2);
+	action = luaL_checkstring(L, 3);
+	lua_settop(L, 1);
 
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "engine");
-        ename = (unsigned char *)lua_tostring(L, -1);
-	if (ename == NULL) {
-		TRACE_LOG("This command needs an engine name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	lua_getfield(L, 1, "channel");
-        cname = (unsigned char *)lua_tostring(L, -1);
-	if (cname == NULL) {
-		TRACE_LOG("The command needs a channel name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	lua_getfield(L, 1, "action");
-        action = (unsigned char *)lua_tostring(L, -1);
-	if (action == NULL) {
-		TRACE_LOG("The command needs an action\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	rc = pktengine_open_channel(ename, cname, action);
+	rc = pktengine_open_channel((uint8_t *)pe->eng_name, 
+				    (uint8_t *)cname, 
+				    (uint8_t *)action);
 	if (rc == -1) {
 		TRACE_LOG("Failed to open channel %s\n", cname);
 	}
-	lua_remove(L, -1);
-	lua_remove(L, -1);
-	lua_remove(L, -1);
-
 	TRACE_LUA_FUNC_END();
-        return 0;
+	return 1;
 }
 /*---------------------------------------------------------------------*/
 static int
-pktengine_drop_pkts_wrap(lua_State *L)
+pkteng_redirect_pkts(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-
-	/* this will stop netmap engine */
-	unsigned char *ename;
 	int rc;
-
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "engine");
-        ename = (unsigned char *)lua_tostring(L, -1);
-	if (ename == NULL) {
-		TRACE_LOG("This command needs an engine name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-
-	rc = pktengine_drop_pkts(ename);
+	PktEngine *pe = check_pkteng(L, 1);
+	const char *oifname = luaL_checkstring(L, 2);
+	lua_settop(L, 1);
+	rc = pktengine_redirect_pkts((uint8_t *)pe->eng_name, 
+				     (uint8_t *)oifname);
 	if (rc == -1) {
-		TRACE_LOG("Failed to set drop target for engine %s\n", ename);
+		TRACE_LOG("Failed to set redirect target for engine %s\n", 
+			  pe->eng_name);
 	}
-	lua_remove(L, -1);
-
-	TRACE_LUA_FUNC_END();
-        return 0;
-}
-/*---------------------------------------------------------------------*/
-static int
-pktengine_redirect_pkts_wrap(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-
-	/* this will stop netmap engine */
-	unsigned char *ename, *ifname;
-	int rc;
-
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "engine");
-        ename = (unsigned char *)lua_tostring(L, -1);
-	if (ename == NULL) {
-		TRACE_LOG("This command needs an engine name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-
-	lua_getfield(L, 1, "ifname");
-        ifname = (unsigned char *)lua_tostring(L, -1);
-	if (ifname == NULL) {
-		TRACE_LOG("This command needs an outgoing interface name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-
-	rc = pktengine_redirect_pkts(ename, ifname);
-	if (rc == -1) {
-		TRACE_LOG("Failed to set redirect target for engine %s\n", ename);
-	}
-	lua_remove(L, -1);
-	lua_remove(L, -1);
-
-	TRACE_LUA_FUNC_END();
-        return 0;
-}
-/*---------------------------------------------------------------------*/
-static int
-pktengine_dump_stats_wrap(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-
-	/* this will show per link statistics */
-     	unsigned char *name;
-	luaL_checktype(L, 1, LUA_TTABLE);
-        lua_getfield(L, 1, "engine");
-        name = (unsigned char *)lua_tostring(L, -1);
-
-	if (name == NULL) {
-		TRACE_LOG("Engine needs a name\n");
-		TRACE_LUA_FUNC_END();
-		return -1;
-	}
-	pktengine_dump_stats(name);
-	lua_remove(L, -1);
-
-	TRACE_LUA_FUNC_END();
-        return 0;
-}
-/*---------------------------------------------------------------------*/
-static void
-pkteng_set_info(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-
-        lua_pushliteral (L, "_COPYRIGHT");
-        lua_pushliteral (L, "Copyright (C) 2014");
-        lua_settable (L, -3);
-        lua_pushliteral (L, "_DESCRIPTION");
-        lua_pushliteral (L, PLATFORM_NAME" Packet Engine command interface");
-        lua_settable (L, -3);
-	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "Engine "VERSION);
-        lua_settable (L, -3);
-	lua_pushinteger(L, 0);
-        lua_setglobal(L, "analyze");
-        lua_pushinteger(L, 1);
-        lua_setglobal(L, "forward");
-        lua_pushinteger(L, 2);
-        lua_setglobal(L, "block");
-        lua_pushinteger(L, 3);
-	lua_setglobal(L, "reset");
-
-	TRACE_LUA_FUNC_START();
-}
-/*---------------------------------------------------------------------*/
-static int
-pkteng_dir_create_meta(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-
-	luaL_newmetatable (L, PKTENG_METATABLE);
-	/* set its __gc field */
-        lua_pushstring (L, "__gc");
-        lua_settable (L, -2);
 	
 	TRACE_LUA_FUNC_END();
-        return 1;
+	return 1;
 }
 /*---------------------------------------------------------------------*/
-static const struct luaL_reg
-pktenglib[] = {
-        {"help", pktengine_help_wrap},
-        {"new", pktengine_new_wrap},
-        {"delete", pktengine_delete_wrap},
-        {"link", pktengine_link_wrap},
-	{"unlink", pktengine_unlink_wrap},
-	{"start", pktengine_start_wrap},
-        {"stop", pktengine_stop_wrap},
-        {"show_stats", pktengine_dump_stats_wrap},
-	{"open_channel", pktengine_open_channel_wrap},
-	{"redirect_pkts", pktengine_redirect_pkts_wrap},
-	{"drop_pkts", pktengine_drop_pkts_wrap},
-        {NULL, NULL}
+static int
+pkteng_start(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	PktEngine *pe = check_pkteng(L, 1);
+	lua_settop(L, 1);
+
+	pktengine_start((uint8_t *)pe->eng_name);
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
+pkteng_show_stats(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	PktEngine *pe = check_pkteng(L, 1);
+	lua_settop(L, 1);
+	
+	pktengine_dump_stats((uint8_t *)pe->eng_name);
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
+pkteng_delete(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	PktEngine *pe = check_pkteng(L, 1);
+	lua_settop(L, 1);
+	
+	pktengine_delete((uint8_t *)pe->eng_name);
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
+pkteng_unlink(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	PktEngine *pe = check_pkteng(L, 1);
+	lua_settop(L, 1);
+
+	pktengine_unlink_iface((uint8_t *)pe->eng_name, 
+			       (uint8_t *)pe->ifname);	
+
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
+pkteng_stop(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	PktEngine *pe = check_pkteng(L, 1);
+	lua_settop(L, 1);
+	pktengine_stop((uint8_t *)pe->eng_name);
+
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
+pkteng_drop_pkts(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	int rc;
+	PktEngine *pe = check_pkteng(L, 1);
+	lua_settop(L, 1);
+
+	rc = pktengine_drop_pkts((uint8_t *)pe->eng_name);
+	if (rc == -1) {
+		TRACE_LOG("Failed to set drop target for engine %s\n",
+			  pe->eng_name);
+	}	
+
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static const luaL_reg pkteng_methods[] = {
+        {"new",           pkteng_new},
+        {"link",          pkteng_link},
+	{"open_channel",  pkteng_open_channel},
+	{"redirect_pkts", pkteng_redirect_pkts},
+        {"start",         pkteng_start},
+	{"show_stats",	  pkteng_show_stats},
+        {"delete",	  pkteng_delete},
+        {"unlink",        pkteng_unlink},
+        {"stop",          pkteng_stop},
+	{"drop_pkts",	  pkteng_drop_pkts},
+	{"help",	  pktengine_help_wrap},
+        {0, 0}
 };
+/*---------------------------------------------------------------------*/
+/**
+ * Overloaded garbage collector
+ */
+static int
+pkteng_gc(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	TRACE_DEBUG_LOG("Wiping off PktEngine: %p\n", to_pkteng(L, 1));
+	TRACE_LUA_FUNC_END();
+	UNUSED(L);
+	return 0;
+}
+/*---------------------------------------------------------------------*/
+/**
+ * Will only work for Lua-5.2
+ */
+static int
+pkteng_tostring(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	char buff[LUA_MAXINPUT];
+	PktEngine *pe;
+	fprintf(stderr, "Calling %s\n", __FUNCTION__);
+	pe = to_pkteng(L, 1);
+	sprintf(buff, "PktEngine:\n\tName: %s\n\tType: %s\n\tBatch: %d\n",
+		pe->eng_name, pe->type, pe->batch);
+	lua_pushfstring(L, "%s", buff);
+
+	TRACE_LUA_FUNC_END();
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static const luaL_reg pkteng_meta[] = {
+        {"__gc",       pkteng_gc},
+        {"__tostring", pkteng_tostring},
+        {0, 0}
+};
+/*---------------------------------------------------------------------*/
+int
+pkteng_register(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* create methods table, add it to the globals */
+	luaL_openlib(L, "PktEngine", pkteng_methods, 0);
+	/* create metatable for PktEngine, & add it to the Lua registry */
+	luaL_newmetatable(L, "PktEngine");
+	/* fill metatable */
+	luaL_openlib(L, 0, pkteng_meta, 0);
+	lua_pushliteral(L, "__index");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* metatable.__index = methods */
+	lua_rawset(L, -3);
+	lua_pushliteral(L, "__metatable");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* hide metatable: metatable.__metatable = methods */
+	lua_rawset(L, -3);
+	/* drop metatable */
+	lua_pop(L, 1);
+	TRACE_LUA_FUNC_END();
+	return 1; /* return methods on the stack */
+}
 /*---------------------------------------------------------------------*/
 static int
 luaopen_pkteng(lua_State *L)
@@ -555,10 +452,7 @@ luaopen_pkteng(lua_State *L)
 	/* this loads the pkteng lua interface */
 	TRACE_LUA_FUNC_START();
 
-	pkteng_dir_create_meta(L);
-        TRACE_DEBUG_LOG("%s", "Loading packet engine command metatable\n");
-        luaL_openlib(L, "pkteng", pktenglib, 0);
-        pkteng_set_info(L);
+	pkteng_register(L);
 
 	TRACE_LUA_FUNC_END();
         return 1;

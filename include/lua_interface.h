@@ -3,9 +3,26 @@
 /*---------------------------------------------------------------------*/
 /* for data types */
 #include <stdint.h>
+/* for lua interface */
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+/*---------------------------------------------------------------------*/
+/**
+ * Struct that accepts lua commands corresponding to the 
+ * PktEngine module. All resource management pertaining
+ * to this struct is governed by the LUA interpreter.
+ *
+ * Garbage collection is implemented in LUA...
+ */
+typedef struct PktEngine {
+	const char *eng_name;
+	const char *ifname;
+	const char *type;
+	int cpu;
+	int batch;
+	int qid;
+} PktEngine;
 /*---------------------------------------------------------------------*/
 /** 
  * Register multiple lua modules in this func

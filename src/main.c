@@ -31,12 +31,6 @@
 extern progvars_t pv;
 /* global variable to indicate start/stop for lua interpreter */
 volatile uint32_t stop_processing = 0;
-/* do we have to daemonize? */
-//static uint8_t daemonize = 0;
-/* do we have to make a remote shell? */
-//static uint8_t rshell = 0;
-/* remote shell args: "ipaddr:port" */
-//static int8_t *rshell_args = NULL;
 
 /* global variable definitions */
 PacfInfo pc_info = {
