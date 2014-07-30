@@ -10,7 +10,7 @@
 #include "net/netmap_user.h"
 /*---------------------------------------------------------------------*/
 /* Macros related to TXQ entry */
-#define TXQ_MAX				32
+#define TXQ_MAX				2048
 /*---------------------------------------------------------------------*/
 struct txq_entry {
         void *ring;
@@ -19,6 +19,7 @@ struct txq_entry {
 
 typedef struct CommNode {
 	struct nm_desc *out_nmd;		/* Node-local pipe descriptor */
+	char nm_ifname[IFNAMSIZ];		/* name of the node */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
 } CommNode;

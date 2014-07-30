@@ -125,27 +125,40 @@ function init()
 	 -- create a global variable pe
 	 pe = PktEngine.new("e0", "netmap", NO_CPU_AFF)
 
-	 pe:link("eth3", PKT_BATCH, NO_QIDS)
+	 -- create ingress interface
+	 intf_in = Interface.new("eth3")
+
+	 -- now link it!
+	 pe:link(intf_in, PKT_BATCH, NO_QIDS)
+
+
+	 -- egress interfaces
+	 intf0 = Interface.new("eth3{0")
+	 intf1 = Interface.new("eth3{1")
+	 intf2 = Interface.new("eth3{2")
+	 intf3 = Interface.new("eth3{3")
+	 intf_out = Interface.new("eth2")
+
 
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
-	 for cnt = 0, 3 do
-	     -- Use this line to test SHARing
-	     pe:open_channel("netmap:eth3{" .. cnt, "SHARE")
 
-	     -- Use this line to copy packets to all registered channels
-	     --pe:open_channel("netmap:eth3{" .. cnt, "COPY")
+	 -- Use this line to load balance traffic across interfaces
+	 intf_in:connect_loadbal(pe, intf0, intf1, intf2, intf3)
+	 
+	 -- Use this line to split traffic across interfaces (incl. egress iface)
+	 --intf_in:connect_loadbal(pe, intf0, intf1, intf2, intf3, intf_out)
 
-	     -- Use this line to drop all packets
-	     --pe:drop_pkts()
+	 --intf_in:connect_dup(pe, intf0, intf1)
+	 --intf0:connect_dup(pe, intf2, intf3)
 
-	     -- XXX
-	     ----pe:open_channel("netmap:bro{" .. cnt)
-	 end
+	 -- Use this line to duplicate traffic across interfaces
+	 --intf_in:connect_dup(pe, intf0, intf1, intf2, intf3)
+	 --intf_in:connect_dup(pe, intf0, intf1, intf2, intf3, intf_out)
 
 	 -- Use this line to forward packets to a different Ethernet port
-	 --pe:redirect_pkts("eth2")
+	 --intf_in:connect_loadbal(pe, intf_out)
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
@@ -221,21 +234,29 @@ function init4()
 
 	 -- create a global variable of table type to create 4 engines
 	 pes = {}
+	 -- create a global ingress interface variable
+	 intf_in = Interface.new("eth3")
+
+	 -- egress interfaces
+	 intf_out = Interface.new("eth2")
+
+
+	 -- enable underlying netmap pipe framework
+	 enable_nmpipes()
+
 	 for cnt = 0, 3 do
 	 	 pes["pe" .. cnt] = PktEngine.new("e" .. cnt, "netmap", cnt)
-	 	 pes["pe" .. cnt]:link("eth3", PKT_BATCH, cnt)
+	 	 pes["pe" .. cnt]:link(intf_in, PKT_BATCH, cnt)
+		 
+		 intf = Interface.new("eth3{" .. cnt)
+		 -- Use this line to load balance traffic across interfaces
+	 	 intf_in:connect_loadbal(pes["pe" .. cnt], intf)
 
-	 	 -- Use this line to test SHARing
-		 pes["pe" .. cnt]:open_channel("netmap:eth3{" .. cnt, "SHARE")
+	 	 -- Use this line to duplicate traffic across interfaces
+	 	 --intf_in:connect_dup(pes["pe" .. cnt], intf)
 
-	     	 -- Use this line to copy packets to all registered channels
-		 --pes["pe" .. cnt]:open_channel("netmap:eth3{" .. cnt, "COPY")
-
-		 -- Use this line to drop all packets
-	     	 --pes["pe" .. cnt]:drop_pkts()
-
-		 -- Use this line to forward packets to a different Ethernet port
-	     	 --pes["pe" .. cnt]:redirect_pkts("eth2")
+	 	 -- Use this line to forward packets to a different Ethernet port
+	 	 --intf_in:connect_loadbal(pes["pe" .. cnt], intf_out)
 	 end
 end
 -----------------------------------------------------------------------

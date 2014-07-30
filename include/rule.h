@@ -5,6 +5,8 @@
 #include "queue.h"
 /* for Rule def'n fields */
 #include "pacf_interface.h"
+/* for IFNAMSIZ */
+#include <net/if.h>
 /*---------------------------------------------------------------------*/
 /** 
  * XXX: This is the rule definition that will make the entire rule table
@@ -12,7 +14,9 @@
  */
 typedef struct Rule {
 	Target tgt;
+	unsigned char ifname[IFNAMSIZ];
 	unsigned count;
+	void *local_desc;
 	void **destInfo;
 	
 	TAILQ_ENTRY(Rule) entry;
@@ -30,7 +34,7 @@ init_rules_table(void *engptr);
  * Inserts a new rule in the rule db
  */				    
 Rule *
-add_new_rule(void *engptr, Filter *filt, Target tgt);
+add_new_rule(void *engptr, const uint8_t *ifname, Filter *filt, Target tgt);
 
 /**
  * Deletes all rules in the rule db for the engine

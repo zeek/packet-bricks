@@ -122,7 +122,7 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		nic->global_nmd->req.nr_ringid = qid;
 	} 
 
-	nic->global_nmd->req.nr_ringid |= NETMAP_NO_TX_POLL;
+	//nic->global_nmd->req.nr_ringid |= NETMAP_NO_TX_POLL;
 
 	/* setting batch size */
 	nmc->batch_size = batchsize;
@@ -338,14 +338,15 @@ netmap_callback(void *engptr, Rule *r)
 	TRACE_NETMAP_FUNC_START();
 	int i;
 	engine *eng = (engine *)engptr;
-	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
+	//	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
+	struct nm_desc *local_nmd = (struct nm_desc *)r->local_desc;
 	struct netmap_if *nifp;
 	struct netmap_ring *rxring;
 	CommNode *cn = NULL;
 	Target tgt;
 	uint32_t j = 0;
 
-	if (nmc->local_nmd == NULL) {
+	if (local_nmd == NULL) {
 		TRACE_LOG("netmap context was not properly initialized\n");
 		TRACE_NETMAP_FUNC_END();
 		return -1;
@@ -353,12 +354,12 @@ netmap_callback(void *engptr, Rule *r)
 
 	//tgt = (r == NULL || (r->tgt == SHARE && r->count == 0)) ? DROP : r->tgt;
 	tgt = (r == NULL) ? DROP : r->tgt;
-	nifp = nmc->local_nmd->nifp;
+	nifp = local_nmd->nifp;
 
 	switch (tgt) {
 	case DROP:
-		for (i = nmc->local_nmd->first_rx_ring; 
-		     i <= nmc->local_nmd->last_rx_ring; 
+		for (i = local_nmd->first_rx_ring; 
+		     i <= local_nmd->last_rx_ring; 
 		     i++) {
 			rxring = NETMAP_RXRING(nifp, i);
 			if (nm_ring_empty(rxring))
@@ -369,8 +370,8 @@ netmap_callback(void *engptr, Rule *r)
 		break;
 	case REDIRECT:
 	case SHARE:
-		for (i = nmc->local_nmd->first_rx_ring;
-		     i <= nmc->local_nmd->last_rx_ring;
+		for (i = local_nmd->first_rx_ring;
+		     i <= local_nmd->last_rx_ring;
 		     i++) {
 			rxring = NETMAP_RXRING(nifp, i);
 			
@@ -415,8 +416,8 @@ netmap_callback(void *engptr, Rule *r)
 	case MODIFY:
 		break;
 	case COPY:
-		for (i = nmc->local_nmd->first_rx_ring;
-		     i <= nmc->local_nmd->last_rx_ring;
+		for (i = local_nmd->first_rx_ring;
+		     i <= local_nmd->last_rx_ring;
 		     i++) {
 			rxring = NETMAP_RXRING(nifp, i);
 			
@@ -520,8 +521,25 @@ netmap_delete_all_channels(void *engptr, Rule *r)
 	UNUSED(engptr);
 }
 /*---------------------------------------------------------------------*/
+static struct nm_desc *
+find_local_desc_from_ruleset(rule_list *rlist, const char *ifname)
+{
+	TRACE_NETMAP_FUNC_START();
+	Rule *r;
+	TAILQ_FOREACH(r, rlist, entry) {
+		uint32_t i;
+		for (i = 0; i < r->count; i++) {
+			CommNode *cn = r->destInfo[i]; 
+			if (!strcmp(cn->nm_ifname, ifname))
+				return cn->out_nmd;
+		}
+	}
+	TRACE_NETMAP_FUNC_END();
+	return NULL;
+}
+/*---------------------------------------------------------------------*/
 int32_t
-netmap_create_channel(void *engptr, Rule *r, char *targ) 
+netmap_create_channel(void *engptr, Rule *r, char *in_name, char *out_name) 
 {
 	TRACE_NETMAP_FUNC_START();
 	char ifname[IFNAMSIZ];
@@ -530,8 +548,31 @@ netmap_create_channel(void *engptr, Rule *r, char *targ)
 	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
 	CommNode *cn;
 	
+	/* first locate the in_nmd */
+	if (!strcmp((char *)eng->link_name, in_name))
+		r->local_desc = nmc->local_nmd;
+	else {
+#if 0
+		struct nm_desc *out_interim = find_local_desc_from_ruleset(&eng->r_list, in_name);
+		if (!strcmp(in_name, "eth3{0")) {
+			uint64_t flags = NM_OPEN_NO_MMAP | NM_OPEN_ARG3;
+			r->local_desc = nm_open("netmap:eth3}0", NULL, flags, out_interim);
+		} else {
+			r->local_desc = out_interim;
+		}
+#endif
+		r->local_desc = find_local_desc_from_ruleset(&eng->r_list, in_name);
+		if (r->local_desc == NULL) {
+			TRACE_ERR("Trying to locate the local nmd_desc for "
+				  "interface %s that does not exist!\n",
+				  in_name);
+			TRACE_NETMAP_FUNC_END();
+			return -1;
+		}
+	}
+	
 	/* setting the name */
-	snprintf(ifname, IFNAMSIZ, "%s", targ);
+	snprintf(ifname, IFNAMSIZ, "netmap:%s", out_name);
 
 	/* create a comm. interface */	
 	r->destInfo[r->count-1] = calloc(1, sizeof(CommNode));
@@ -544,21 +585,23 @@ netmap_create_channel(void *engptr, Rule *r, char *targ)
 
 	cn = (CommNode *)r->destInfo[r->count - 1];	
 	uint64_t flags = NM_OPEN_NO_MMAP | NM_OPEN_ARG3;
-	cn->out_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
+	cn->out_nmd = nm_open(ifname, NULL, flags, r->local_desc); 
 	if (cn->out_nmd == NULL) {
 		TRACE_ERR("Can't open %p(%s)\n", cn->out_nmd, ifname);
 		TRACE_NETMAP_FUNC_END();
 	}
+	strcpy(cn->nm_ifname, out_name);
 
-	TRACE_DEBUG_LOG("zerocopy %s", 
-			(nmc->local_nmd->mem == cn->out_nmd->mem) ? 
+	printf("cn->nm_ifname is %s\n", cn->nm_ifname);
+	TRACE_LOG("zerocopy %s", 
+			(((struct nm_desc *)r->local_desc)->mem == cn->out_nmd->mem) ? 
 			"enabled\n" : "disabled\n");
 	fd = cn->out_nmd->fd;
 
 	TRACE_LOG("Created %s interface\n", ifname);
 
 	TRACE_NETMAP_FUNC_END();
-
+	UNUSED(in_name);
 	return fd;
 }
 /*---------------------------------------------------------------------*/

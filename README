@@ -78,55 +78,47 @@ _________________________________________________________________
 In host-pacf, the most important component is the pkteng module.
 It manages the reception and distribution of ingress traffic coming
 thru an interface. After running host-pacf again, use the following 
-command to create a pkteng instance:
+command to create a pkteng instance, pe:
 
 _________________________________________________________________
-	pacf> pkteng.new({name="e0", type="netmap"})
+	pacf> pe = PktEngine.new("e0", "netmap", NO_CPU_AFF)
 _________________________________________________________________
 
-The _name_ field is internally used by host-pacf as pkteng's ID. You
+The "e0" field is internally used by host-pacf as pkteng's ID. You
 can delete the pkteng instance by running the following command:
 
 _________________________________________________________________
-	pacf> pkteng.delete({engine="e0"})
+	pacf> pe:delete()
 _________________________________________________________________
 
-The pkteng instance can be instantiated with 1 more (optional) 
-parameter:
+The pkteng instance can be instantiated with the possibility of
+affinitizing the engine thread to an arbitrary cpu:
 
 _________________________________________________________________
-	pacf> pkteng.new({name="e0", type="netmap", cpu=1})
+	pacf> pe = PktEngine.new("e0", "netmap", 1)
 _________________________________________________________________
 
-The _cpu_ parameter affinitizes the module to CPU 1 once the engine
-thread starts reading packets. You can bind a pkteng with an interface
-by running the following command:
+The last parameter affinitizes the module to CPU 1 once the engine
+thread starts reading packets. You can bind a pkteng with an 
+interface by running the following command:
 
 _________________________________________________________________
-	pacf> pkteng.link({engine="e0", ifname="eth3"})
+	pacf> intf = Interface.new("eth3")
+	pacf> pe:link(intf, 1024, NO_QIDS)
 _________________________________________________________________
 
-This binds pkteng "e0" with interface eth3. One can unbind the 
+This binds pkteng pe with interface eth3 and asks the system to
+read ingress packets 1024 packets at a time. One can unbind the 
 interface with the following command:
 
 _________________________________________________________________
-	pacf> pkteng.unlink({engine="e0", ifname="eth3"})
+	pacf> pe:unlink()
 _________________________________________________________________
-
-The pkteng link command also comes with an additional (optional)
-parameter:
-
-___________________________________________________________________
-	pacf> pkteng.link({engine="e0", ifname="eth3", batch=1024})
-___________________________________________________________________
-
-The _batch_ option will instruct the engine to read packets from the
-interface 1024 packets at a time.
 
 The user can start the engine with the following command:
 
 _________________________________________________________________
-	pacf> pkteng.start({engine="e0"})
+	pacf> pe:start()
 _________________________________________________________________
 
 The engine will start sniffing for packets from the interface 
@@ -134,7 +126,7 @@ promiscuously. You can use the following command to get the latest
 packets related statistics from the engine:
 
 _________________________________________________________________
-	pacf> pkteng.show_stats({engine="e0"})
+	pacf> pe.show_stats()
 _________________________________________________________________
 
 Please note that you cannot unlink an interface from the pkteng
@@ -142,17 +134,19 @@ while the engine is running. To stop the engine, please run the
 following command:
 
 _________________________________________________________________
-	pacf> pkteng.stop({engine="e0"})
+	pacf> pe:stop()
 _________________________________________________________________
 
 To start forwarding packets from host-pacf to an application, the
 user needs to run the following command before starting the engine:
 
 __________________________________________________________________________________________
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{0", action="SHARE"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{1", action="SHARE"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{2", action="SHARE"})
-	pacf> pkteng.open_channel({engine="e0", channel="netmap:eth3{3", action="SHARE"})
+	pacf> intf_in = Interface.new("eth3")
+	pacf> intf0 = Interface.new("eth3{0")
+	pacf> intf1 = Interface.new("eth3{1")
+	pacf> intf2 = Interface.new("eth3{2")
+	pacf> intf3 = Interface.new("eth3{3")
+	pacf> intf_in:connect_loadbal(pe, intf0, intf1, intf2, intf3)
 __________________________________________________________________________________________
 
 This creates four netmap-specific channels named "netmap:eth3{x" where
@@ -170,25 +164,15 @@ reading traffic:
 
 Host-PACF currently supports the following Rule Types ("actions"):
 
-1- SHARE (load balancer),
-2- COPY (forward copy of each packet to every registered application),
-3- DROP (drop all packets that are read from the interface).
-   	DROP can be employed by using the following command:
-	     pkteng.drop_pkts({engine="e0"}), and
-4- REDIRECT (redirect all packets to an outgoing network interface)
-   	REDIRECT can be employed by using the following command:
-	     pkteng.redirect_pkts({engine="e0", ifname="eth2"})
+1- Load balancing (using Interface:connect_loadbal() method), and
+2- Forwarding copy of each packet to every registered application
+   (using Interface:connect_dup() method)
 
-
-In the current version, all channels for an engine MUST share the same 
-"action" keywords (i.e. all registered channels should either have 
-"SHARE" or "COPY" actions). This limitation will be removed in future 
-versions. This restriction is only limited to shared channels within a
-single engine. Please see scripts/startup.lua file for more details.
 
 For user's convenience, the host-pacf package comes with a reference
-LUA script file. You can use the following command to load the script
-file in host-pacf at startup:
+LUA script file: please see scripts/startup.lua file for details. 
+Also, you can use the following command to load the script file in 
+host-pacf at startup:
 
 # bin/pacf -f scripts/startup.lua, OR
 # bin/pacf-server -f scripts/startup.lua

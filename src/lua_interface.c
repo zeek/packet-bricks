@@ -11,7 +11,6 @@
 /*---------------------------------------------------------------------*/
 extern volatile uint32_t stop_processing;
 #define METATABLE		PLATFORM_NAME" Metatable"
-#define PKTENG_METATABLE	"Packet Engine Metatable"
 /*---------------------------------------------------------------------*/
 /**
  * PLATFORM LUA INTERFACE 
@@ -136,7 +135,7 @@ luaopen_platform(lua_State *L)
  */
 /*---------------------------------------------------------------------*/
 static int
-pktengine_help_wrap(lua_State *L)
+pktengine_help(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
@@ -213,7 +212,11 @@ pkteng_link(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 	PktEngine *pe = check_pkteng(L, 1);
-	pe->ifname = luaL_checkstring(L, 2);
+	Interface *iface;
+	luaL_checktype(L, 2, LUA_TUSERDATA);
+	iface = (Interface *)luaL_checkudata(L, 2, "Interface");
+	if (iface == NULL) luaL_typerror(L, 2, "Interface");
+	pe->ifname = iface->name;
 	pe->batch = luaL_checkint(L, 3);
 	pe->qid = luaL_checkint(L, 4);
 	lua_settop(L, 1);
@@ -253,6 +256,7 @@ pkteng_open_channel(lua_State *L)
 	lua_settop(L, 1);
 
 	rc = pktengine_open_channel((uint8_t *)pe->eng_name, 
+				    (uint8_t *)pe->ifname,
 				    (uint8_t *)cname, 
 				    (uint8_t *)action);
 	if (rc == -1) {
@@ -378,7 +382,7 @@ static const luaL_reg pkteng_methods[] = {
         {"unlink",        pkteng_unlink},
         {"stop",          pkteng_stop},
 	{"drop_pkts",	  pkteng_drop_pkts},
-	{"help",	  pktengine_help_wrap},
+	{"help",	  pktengine_help},
         {0, 0}
 };
 /*---------------------------------------------------------------------*/
@@ -458,6 +462,202 @@ luaopen_pkteng(lua_State *L)
         return 1;
 }
 /*---------------------------------------------------------------------*/
+/**
+ * Interface interface :P
+ */
+/*---------------------------------------------------------------------*/
+static int
+iface_help(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	fprintf(stdout, "Interface Commands:\n"
+		"    help()\n"
+		"    connect_loadbal(<interfaces>, <batch_cnt>)\n"
+	     	"    connect_dup(<interfaces>, <batch_cnt>)\n"
+		);
+	UNUSED(L);
+	TRACE_LUA_FUNC_END();
+        return 0;
+}
+/*---------------------------------------------------------------------*/
+static Interface *
+to_iface(lua_State *L, int index)
+{
+	TRACE_LUA_FUNC_START();
+	Interface *iface = (Interface *)lua_touserdata(L, index);
+	if (iface == NULL) luaL_typerror(L, index, "Interface");
+	TRACE_LUA_FUNC_END();
+	return iface;
+}
+/*---------------------------------------------------------------------*/
+static Interface *
+push_iface(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	Interface *iface = (Interface *)lua_newuserdata(L, sizeof(Interface));
+	luaL_getmetatable(L, "Interface");
+	lua_setmetatable(L, -2);
+	TRACE_LUA_FUNC_END();
+	return iface;
+}
+/*---------------------------------------------------------------------*/
+static Interface *
+check_iface(lua_State *L, int index)
+{
+	TRACE_LUA_FUNC_START();
+	Interface *iface;
+	luaL_checktype(L, index, LUA_TUSERDATA);
+	iface = (Interface *)luaL_checkudata(L, index, "Interface");
+	if (iface == NULL) luaL_typerror(L, index, "Interface");
+	TRACE_LUA_FUNC_END();
+	return iface;
+}
+/*---------------------------------------------------------------------*/
+static int
+iface_new(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	const char *link_name = luaL_optstring(L, 1, 0);
+	Interface *iface = push_iface(L);
+	iface->name = link_name;
+	TRACE_LUA_FUNC_END();
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
+iface_connect_loadbal(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	Interface *from_intf;
+	PktEngine *pe;
+	int nargs = lua_gettop(L);
+	int i;
+
+	from_intf = check_iface(L, 1);
+	pe = check_pkteng(L, 2);
+	for (i = 3; i <= nargs; i++) {
+		Interface *to_intf = check_iface(L, i);
+		pktengine_open_channel((uint8_t *)pe->eng_name,
+				       (uint8_t *)from_intf->name,
+				       (uint8_t *)to_intf->name,
+				       (uint8_t *)"SHARE");
+	}
+	lua_settop(L, 1);
+
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
+iface_connect_dup(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	Interface *from_intf;
+	PktEngine *pe;
+	int nargs = lua_gettop(L);
+	int i;
+
+	from_intf = check_iface(L, 1);
+	pe = check_pkteng(L, 2);
+	for (i = 3; i <= nargs; i++) {
+		Interface *to_intf = check_iface(L, i);
+		pktengine_open_channel((uint8_t *)pe->eng_name,
+				       (uint8_t *)from_intf->name,
+				       (uint8_t *)to_intf->name,
+				       (uint8_t *)"COPY");
+	}
+	lua_settop(L, 1);
+
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static const luaL_reg iface_methods[] = {
+        {"new",           	iface_new},
+        {"connect_loadbal",	iface_connect_loadbal},
+	{"connect_dup",		iface_connect_dup},
+	{"help",		iface_help},
+        {0, 0}
+};
+/*---------------------------------------------------------------------*/
+/**
+ * Overloaded garbage collector
+ */
+static int
+iface_gc(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	TRACE_DEBUG_LOG("Wiping off Interface: %p\n", to_iface(L, 1));
+	TRACE_LUA_FUNC_END();
+	UNUSED(L);
+	return 0;
+}
+/*---------------------------------------------------------------------*/
+/**
+ * Will only work for Lua-5.2
+ */
+static int
+iface_tostring(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	char buff[LUA_MAXINPUT];
+	Interface *iface;
+	fprintf(stderr, "Calling %s\n", __FUNCTION__);
+	iface = to_iface(L, 1);
+	sprintf(buff, "Interface:\n\tName: %s\n",
+		iface->name);
+	lua_pushfstring(L, "%s", buff);
+
+	TRACE_LUA_FUNC_END();
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static const luaL_reg iface_meta[] = {
+        {"__gc",       iface_gc},
+        {"__tostring", iface_tostring},
+        {0, 0}
+};
+/*---------------------------------------------------------------------*/
+int
+iface_register(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* create methods table, add it to the globals */
+	luaL_openlib(L, "Interface", iface_methods, 0);
+	/* create metatable for Interface, & add it to the Lua registry */
+	luaL_newmetatable(L, "Interface");
+	/* fill metatable */
+	luaL_openlib(L, 0, iface_meta, 0);
+	lua_pushliteral(L, "__index");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* metatable.__index = methods */
+	lua_rawset(L, -3);
+	lua_pushliteral(L, "__metatable");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* hide metatable: metatable.__metatable = methods */
+	lua_rawset(L, -3);
+	/* drop metatable */
+	lua_pop(L, 1);
+	TRACE_LUA_FUNC_END();
+	return 1; /* return methods on the stack */
+}
+/*---------------------------------------------------------------------*/
+static int
+luaopen_iface(lua_State *L)
+{
+	/* this loads the pkteng lua interface */
+	TRACE_LUA_FUNC_START();
+
+	iface_register(L);
+
+	TRACE_LUA_FUNC_END();
+        return 1;
+}
+/*---------------------------------------------------------------------*/
 int
 register_lua_procs(lua_State *L)
 {
@@ -466,6 +666,7 @@ register_lua_procs(lua_State *L)
 	/* loads all lua interfaces */
 	luaopen_platform(L);
 	luaopen_pkteng(L);
+	luaopen_iface(L);
 
 	TRACE_LUA_FUNC_END();
 	return 0;

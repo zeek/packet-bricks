@@ -4,6 +4,8 @@
 #include "pkt_engine.h"
 /* for logging */
 #include "pacf_log.h"
+/* for strcmp */
+#include <string.h>
 /*---------------------------------------------------------------------*/
 inline void
 init_rules_table(void *engptr)
@@ -16,12 +18,13 @@ init_rules_table(void *engptr)
 }
 /*---------------------------------------------------------------------*/
 static Rule *
-rule_find(engine *eng, Target tgt)
+rule_find(engine *eng, const uint8_t *from_cname, Target tgt)
 {
 	TRACE_RULE_FUNC_START();
 	Rule *r;
 	TAILQ_FOREACH(r, &eng->r_list, entry) {
-		if (r->tgt == tgt) {
+		if (r->tgt == tgt && 
+		    !strcmp((char *)r->ifname, (char *)from_cname)) {
 			TRACE_RULE_FUNC_END();
 			return r;
 		}
@@ -31,13 +34,13 @@ rule_find(engine *eng, Target tgt)
 }
 /*---------------------------------------------------------------------*/
 Rule *
-add_new_rule(void *engptr, Filter *filt, Target tgt)
+add_new_rule(void *engptr, const uint8_t *from_cname, Filter *filt, Target tgt)
 {
 	TRACE_RULE_FUNC_START();
 	Rule *r;
 	engine *eng = (engine *)engptr;
 
-	r = rule_find(eng, tgt);
+	r = rule_find(eng, from_cname, tgt);
 	if (r == NULL) {
 		r = calloc(1, sizeof(Rule));
 		if (r == NULL) {
@@ -47,6 +50,7 @@ add_new_rule(void *engptr, Filter *filt, Target tgt)
 			return NULL;
 		}
 		r->tgt = tgt;
+		strcpy((char *)r->ifname, (char *)from_cname);
 	}
 
 	r->count++;

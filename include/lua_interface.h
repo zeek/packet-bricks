@@ -10,7 +10,7 @@
 /*---------------------------------------------------------------------*/
 /**
  * Struct that accepts lua commands corresponding to the 
- * PktEngine module. All resource management pertaining
+ * PktEngine abstract. All resource management pertaining
  * to this struct is governed by the LUA interpreter.
  *
  * Garbage collection is implemented in LUA...
@@ -23,6 +23,17 @@ typedef struct PktEngine {
 	int batch;
 	int qid;
 } PktEngine;
+
+/**
+ * Struct that accepts lua commands corresponding to the 
+ * Interface abstract. All resource management pertaining
+ * to this struct is governed by the LUA interpreter.
+ *
+ * Garbage collection is implemented in LUA...
+ */
+typedef struct Interface {
+	const char *name;
+} Interface;
 /*---------------------------------------------------------------------*/
 /** 
  * Register multiple lua modules in this func
