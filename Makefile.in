@@ -5,6 +5,7 @@ LUAINCPATH := @LUAINCPATH@
 JEINCPATH := @JEINCPATH@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
+USEREADLINE := @USEREADLINE@
 BINDIR := $(shell pwd)/bin
 BINNAME := pacf
 BIN := $(BINDIR)/$(BINNAME)
@@ -24,6 +25,11 @@ endif
 export OSARCH
 export OBJDIR := $(shell pwd)/.objs
 export CFLAGS += -O3 -pipe -Wall -Wunused-function -Wextra -Werror -D_GNU_SOURCE -D__USE_GNU 
+ifeq ($(USEREADLINE),1)
+	DEBUG_CFLAGS += -DLUA_USE_READLINE
+	export CFLAGS += -DLUA_USE_READLINE
+	export LDFLAGS += -lreadline
+endif
 export NETMAP_INCLUDE := -I$(shell pwd)/include/netmap
 
 ifeq ($(OSARCH),FreeBSD)

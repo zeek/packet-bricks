@@ -524,3 +524,14 @@ lua_kickoff(LuaMode lm, void *reqptr)
 	return ((status || s.status) ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------*/
+/**
+ * Function that returns user data blindly. Suprised that this does
+ * exist in LUA API... :(
+ */
+LUALIB_API void *
+luaL_optudata(lua_State *L, int ud)
+{
+	void *p = lua_touserdata(L, ud);
+	return p;
+}
+/*---------------------------------------------------------------------*/

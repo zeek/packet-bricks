@@ -15,8 +15,6 @@ NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
 NETMAP_PIPES=64
 NO_CPU_AFF=-1
 NO_QIDS=-1
-BI_TUPLED=2
-QUAD_TUPLED=4
 
 --see if the directory exists
 
@@ -127,23 +125,65 @@ function init()
 	 -- create a global variable pe
 	 local pe = PktEngine.new("e0", "netmap", NO_CPU_AFF)
 
+	 -- create ingress interface
+	 local intf_in = Interface.new("eth3")
+
+	 -- now link it!
+	 pe:link(intf_in, PKT_BATCH, NO_QIDS)
+
+
+	 -- egress interfaces
+	 local intf0 = Interface.new("eth3{0")
+	 local intf1 = Interface.new("eth3{1")
+	 --local intf2 = Interface.new("eth3{2")
+	 --local intf3 = Interface.new("eth3{3")
+	 local intf_out = Interface.new("eth2")
+
 
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
 
-	 local lb = LoadBalancer.new(BI_TUPLED)
-	 --lb = LoadBalancer.new(QUAD_TUPLED)
-         lb:connect_input("eth3") 
-         lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth2")
+	 -- Use this line to load balance traffic across interfaces
+	 intf_in:connect_loadbal(pe, intf0, intf1, intf_out)
+	 
+	 -- Use this line to split traffic across interfaces (incl. egress iface)
+	 --intf_in:connect_loadbal(pe, intf0, intf1, intf2, intf3, intf_out)
 
-         --local dup = Duplicator.new()
-         --dup:connect_input("eth3")
-         --dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
+         
+	 --lb0 = LoadBalance.new("2-tuple")
+         --brolb0 = LoadBalance.new("2-tuple")
+	 --lb0:connect_input(intf_in) 
+         --lb0:connect_output(intf0, intf1)
 
-	 -- now link it!
-         pe:link(lb, PKT_BATCH, NO_QIDS)
-	 --pe:link(dup, PKT_BATCH, NO_QIDS)
+         --dup0 = Duplicator.new()
+         --dup0:connect_input(intf_in)
+         --dup0:connect_output(brolb0)
+         --dup0:connect_output(snortlb0)
+         --dup0:connect_output(tcpdump_if)
+
+
+         -- i0 <-> dup0 <-> filter0(name="blocker") <-> i1
+         --         |
+         --       filter1(name="shunter")
+         --         |
+         --        lb0 -> bro, snort, etc 
+
+         --pe.add(lb0)
+         --pe.add(dup0)
+
+
+         --lb0:balance_as("4-tuple")
+
+	 --intf_in:connect_loadbal(pe, intf0, intf1)
+	 --intf0:connect_loadbal(pe, intf2, intf3)
+
+	 -- Use this line to duplicate traffic across interfaces
+	 --intf_in:connect_dup(pe, intf0, intf1, intf2, intf3)
+	 --intf_in:connect_dup(pe, intf0, intf1, intf2, intf3, intf_out)
+
+	 -- Use this line to forward packets to a different Ethernet port
+	 --intf_in:connect_loadbal(pe, intf_out)
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
@@ -219,18 +259,31 @@ function init4()
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
-	 for cnt = 0, 3 do
-	 	 local pe = PktEngine.new("e" .. cnt, "netmap", cnt)
-		 local lb = LoadBalancer.new(QUAD_TUPLED)
-		
-		 lb:connect_input("eth3")
-		 lb:connect_output("eth3{" .. cnt)
-		 pe:link(lb, PKT_BATCH, cnt)
+	 -- create a global variable of table type to create 4 engines
+	 local pes = {}
+	 -- create a global ingress interface variable
+	 local intf_in = Interface.new("eth3")
 
-		 --local dup = Duplicator.new()
-		 --dup:connect_input("eth3")
-		 --dup:connect_output("eth3{" .. cnt)
-		 --pe:link(dup, PKT_BATCH, cnt)
+	 -- egress interfaces
+	 local intf_out = Interface.new("eth2")
+
+
+	 -- enable underlying netmap pipe framework
+	 enable_nmpipes()
+
+	 for cnt = 0, 3 do
+	 	 pes["pe" .. cnt] = PktEngine.new("e" .. cnt, "netmap", cnt)
+	 	 pes["pe" .. cnt]:link(intf_in, PKT_BATCH, cnt)
+		 
+		 local intf = Interface.new("eth3{" .. cnt)
+		 -- Use this line to load balance traffic across interfaces
+	 	 intf_in:connect_loadbal(pes["pe" .. cnt], intf)
+
+	 	 -- Use this line to duplicate traffic across interfaces
+	 	 --intf_in:connect_dup(pes["pe" .. cnt], intf)
+
+	 	 -- Use this line to forward packets to a different Ethernet port
+	 	 --intf_in:connect_loadbal(pes["pe" .. cnt], intf_out)
 	 end
 end
 -----------------------------------------------------------------------

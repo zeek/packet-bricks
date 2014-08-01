@@ -97,5 +97,12 @@ typedef enum LuaMode {
  */
 int
 lua_kickoff(LuaMode, void *);
+
+/**
+ * Function that returns user data blindly. Suprised that this does
+ * exist in LUA API... :(
+ */
+LUALIB_API void *
+luaL_optudata(lua_State *L, int ud);
 /*---------------------------------------------------------------------*/
 #endif /* __LUA_INTERPRETER_H__ */

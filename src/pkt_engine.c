@@ -51,7 +51,7 @@ load_io_module(engine *e) {
 	
 }
 /*---------------------------------------------------------------------*/
-static inline engine *
+inline engine *
 engine_find(const unsigned char *name)
 {
 	TRACE_PKTENGINE_FUNC_START();
@@ -463,70 +463,6 @@ pktengine_open_channel(const unsigned char *eng_name,
 				(char *)from_channel_name,
 				(char *)to_channel_name);
 	
-	TRACE_PKTENGINE_FUNC_END();
-	return 0;
-}
-/*---------------------------------------------------------------------*/
-int32_t
-pktengine_drop_pkts(const unsigned char *eng_name)
-{
-	TRACE_PKTENGINE_FUNC_START();
-	engine *eng;
-	Rule *r = NULL;
-	
-	eng = engine_find(eng_name);
-	if (eng == NULL) {
-		TRACE_LOG("Can't find engine with name: %s\n",
-			  eng_name);
-		TRACE_PKTENGINE_FUNC_END();
-		return -1;
-	}
-
-	if (eng->run == 1) {
-		TRACE_LOG("Can't drop packets as "
-			  "engine %s is already running\n",
-			  eng_name);
-		TRACE_PKTENGINE_FUNC_END();
-		return -1;
-	}
-	
-	r = add_new_rule(eng, eng->link_name, NULL, DROP);
-
-	eng->iom.set_action(eng, r, NULL);
-
-	TRACE_PKTENGINE_FUNC_END();
-	return 0;
-}
-/*---------------------------------------------------------------------*/
-int32_t
-pktengine_redirect_pkts(const unsigned char *eng_name, 
-			const unsigned char *oifname)
-{
-	TRACE_PKTENGINE_FUNC_START();
-	engine *eng;
-	Rule *r = NULL;
-	
-	eng = engine_find(eng_name);
-	if (eng == NULL) {
-		TRACE_LOG("Can't find engine with name: %s\n",
-			  eng_name);
-		TRACE_PKTENGINE_FUNC_END();
-		return -1;
-	}
-	
-	if (eng->run == 1) {
-		TRACE_LOG("Can't redirect packets to %s as "
-			  "engine %s is already running\n",
-			  oifname, eng_name);
-		TRACE_PKTENGINE_FUNC_END();
-		return -1;
-	}
-
-	r = add_new_rule(eng, eng->link_name, NULL, REDIRECT);
-
-	/* open up outgoing interface */
-	eng->iom.set_action(eng, r, (char *)oifname);
-
 	TRACE_PKTENGINE_FUNC_END();
 	return 0;
 }

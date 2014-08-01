@@ -158,5 +158,11 @@ pktengine_drop_pkts(const unsigned char *eng_name);
 int32_t
 pktengine_redirect_pkts(const unsigned char *eng_name,
 			const unsigned char *ifname);
+
+/**
+ * Search for a registered engine in the engine list
+ */
+engine *
+engine_find(const unsigned char *name);
 /*---------------------------------------------------------------------*/
 #endif /* !__PKT_ENGINE_H__ */

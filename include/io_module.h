@@ -32,8 +32,6 @@
  *		   create_channel(): Function that establishes comm interface
  *				     with userland processes
  *
- *		   set_action(): Function that sets actions (e.g. DROP, REDIRECT)
- *
  *		   delete_all_channels(): Function that tears down all channels
  *					 associated with a particular rule
  *

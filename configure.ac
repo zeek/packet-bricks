@@ -6,6 +6,14 @@ AC_DISABLE_OPTION_CHECKING
 AC_CHECK_HEADER(linux/sched.h,,,) 
 AC_CHECK_HEADER(pthread.h,,,) 
 AC_CHECK_LIB(m, cos)
+# Check if libreadline exists
+a=1
+AC_CHECK_LIB(readline, readline,,[a=0],)
+if test $a == 1
+then
+	AC_SUBST(USEREADLINE, 1)
+fi
+
 # Check lua-5.1 path (lib & inc)
 AC_ARG_WITH(stuff, [  --with-lua-lib 	  path to the liblua5.1 install root])
 if test "$with_lua_lib" != ""
