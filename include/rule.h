@@ -16,9 +16,9 @@ typedef struct Rule {
 	Target tgt;
 	unsigned char ifname[IFNAMSIZ];
 	unsigned count;
-	void *local_desc;
 	void **destInfo;
-	
+
+	struct Rule *r;	
 	TAILQ_ENTRY(Rule) entry;
 } Rule __attribute__((aligned(__WORDSIZE)));
 

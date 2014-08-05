@@ -27,7 +27,7 @@ load_io_module(engine *e) {
 	case IO_NETMAP:
 		e->iom = netmap_module;
 		break;
-#if 0
+#if 0 /* disabled for the moment */
 	case IO_DPDK:
 		e->iom = dpdk_module;
 		break;
@@ -428,6 +428,7 @@ pktengine_open_channel(const unsigned char *eng_name,
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
 	Rule *r = NULL;
+	Target t = 0;
 		
 	eng = engine_find(eng_name);
 	if (eng == NULL) {
@@ -446,11 +447,13 @@ pktengine_open_channel(const unsigned char *eng_name,
 	}
 	
 	/* add the rule for channel */
-	if (!strcmp((char *)action, "SHARE"))
-		r = add_new_rule(eng, from_channel_name, NULL, SHARE);
-	else if (!strcmp((char *)action, "COPY"))
+	if (!strcmp((char *)action, "SHARE")) {
+		t = SHARE;
+		r = add_new_rule(eng, from_channel_name, NULL, t);
+	} else if (!strcmp((char *)action, "COPY")) {
+		t = COPY;
 		r = add_new_rule(eng, from_channel_name, NULL, COPY);
-	else {
+	} else {
 		TRACE_LOG("Unrecognized action inserted: <%s>\n",
 			  (char *)action);
 		TRACE_PKTENGINE_FUNC_END();
@@ -461,7 +464,8 @@ pktengine_open_channel(const unsigned char *eng_name,
 	eng->iom.create_channel(eng,
 				r,
 				(char *)from_channel_name,
-				(char *)to_channel_name);
+				(char *)to_channel_name,
+				t);
 	
 	TRACE_PKTENGINE_FUNC_END();
 	return 0;

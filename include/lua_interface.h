@@ -39,6 +39,7 @@ typedef struct Linker_Intf {
 	const char *input_link;			/* ingress interface name */
 	const char *output_link[MAX_OUTLINKS];	/* outgress interface names */
 	int output_count;			/* output links count */
+	struct Linker_Intf *next_linker;	/* pointer to next link */
 } Linker_Intf;
 /*---------------------------------------------------------------------*/
 /** 

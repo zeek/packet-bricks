@@ -207,7 +207,7 @@ drop_packets(struct netmap_ring *ring, engine *eng)
 }
 /*---------------------------------------------------------------------*/
 static int32_t
-share_packets(engine *eng, CommNode *cn)
+sample_packets(engine *eng, CommNode *cn)
 {
 	TRACE_NETMAP_FUNC_START();
         u_int dr; 			/* destination ring */
@@ -225,7 +225,7 @@ share_packets(engine *eng, CommNode *cn)
                 return 0;
         }
 
- try_sharing_again:	
+ try_sample_again:	
         /* scan all output rings; dr is the destination ring index */
         for (dr = dst->first_tx_ring; i < n && dr <= dst->last_tx_ring; dr++) {
                 struct netmap_ring *ring = NETMAP_TXRING(dst->nifp, dr);
@@ -260,7 +260,7 @@ share_packets(engine *eng, CommNode *cn)
         if (i < n) {
                 if (retry-- > 0) {
                         ioctl(cn->out_nmd->fd, NIOCTXSYNC);
-                        goto try_sharing_again;
+                        goto try_sample_again;
                 }
                 TRACE_DEBUG_LOG("%d buffers leftover", n - i);
         }
@@ -367,6 +367,7 @@ fetch_cn(Rule *r, uint32_t hash, uint32_t level)
 	TRACE_NETMAP_FUNC_END();
 }
 /*------------------------------------------------------------------------*/
+#if 0
 int32_t
 netmap_callback(void *engptr, Rule *r)
 {
@@ -402,6 +403,7 @@ netmap_callback(void *engptr, Rule *r)
 			drop_packets(rxring, eng);
 		}
 		break;
+	case REDIRECT:
 	case SHARE:
 		for (i = local_nmd->first_rx_ring;
 		     i <= local_nmd->last_rx_ring;
@@ -428,10 +430,12 @@ netmap_callback(void *engptr, Rule *r)
 					sleep(NETMAP_LINK_WAIT_TIME);
 				}
 				__builtin_prefetch(buf);
+				//cn = (CommNode *)r->destInfo[pkt_hdr_hash(buf) % r->count];
 				cn = fetch_cn(r, pkt_hdr_hash(buf), 0);
+				//printf("cn ifname: %s\n", cn->nm_ifname);
 				dst = cn->cur_txq;
 				if (dst >= TXQ_MAX) {
-					share_packets(eng, cn);
+					sample_packets(eng, cn);
 					continue;
 				}
 				
@@ -444,7 +448,7 @@ netmap_callback(void *engptr, Rule *r)
 			}
 		}
 		if (cn != NULL && cn->cur_txq > 0)
-			share_packets(eng, cn);
+			sample_packets(eng, cn);
 		break;
 	case MODIFY:
 		break;
@@ -519,6 +523,135 @@ netmap_callback(void *engptr, Rule *r)
 	return 0;
 }
 /*---------------------------------------------------------------------*/
+#else
+/*---------------------------------------------------------------------*/
+void
+flush_all_cnodes(Rule *r)
+{
+	TRACE_NETMAP_FUNC_START();
+	CommNode *cn;
+	int i;
+	for (i = 0; i < r->count; i++) {
+		cn = (CommNode *)r->destInfo[i];
+		if (cn->r != NULL) {
+			flush_all_cnodes(cn->r);
+		} else { /* cn->r == NULL */
+			if (cn->cur_txq > 0) {
+				for (j = 0; j < r->count; j++) {
+					cn = (CommNode *)r->destInfo[j];
+					copy_packets(eng, cn, (j == 0));
+				}
+			}
+		}
+	}
+	TRACE_NETMAP_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+void
+dispatch_pkt(struct netmap_ring *rxring, engine *eng, Rule *r, uint8_t *buf)
+{
+	TRACE_NETMAP_FUNC_START();
+	CommNode *cn = NULL;
+	uint j, src, dst;
+	src = rxring->cur;
+
+	if (r->tgt == SHARE) {
+		cn = (CommNode *)r->destInfo[pkt_hdr_hash(buf) % r->count];
+		dst = cn->cur_txq;
+		if (cn->r != NULL) {
+			dispatch_pkt(rxring, eng, cn->r, buf);
+		} else {
+			if (cn->cur_txq >= TXQ_MAX) {
+				sample_packets(eng, cn);
+			}
+			cn->q[dst].ring = rxring;
+			cn->q[dst].slot_idx = src;
+			cn->cur_txq++;
+		}
+	} else if(r->tgt == COPY) {
+		/* pick any cn as reference */
+		cn = (CommNode *)r->destInfo[0];
+		dst = cn->cur_txq;
+		if (dst >= TXQ_MAX) {
+			for (j = 0; j < r->count; j++) {
+				cn = (CommNode *)r->destInfo[j];
+				if (cn->r != NULL) dispatch_pkt(rxring, eng, cn->r, buf);
+				copy_packets(eng, cn, (j == 0));
+			}
+			//continue;
+		}		
+		for (j = 0; j < r->count; j++) {
+			cn = (CommNode *)r->destInfo[j];
+			cn->q[dst].ring = rxring;
+			cn->q[dst].slot_idx = src;
+			cn->cur_txq++;
+		}
+	}
+
+	TRACE_NETMAP_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+int32_t
+netmap_callback(void *engptr, Rule *r)
+{
+	TRACE_NETMAP_FUNC_START();
+	int i;
+	engine *eng = (engine *)engptr;
+	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
+	struct nm_desc *local_nmd = (struct nm_desc *)nmc->local_nmd;
+	struct netmap_if *nifp;
+	struct netmap_ring *rxring;
+	Target tgt;
+
+	if (local_nmd == NULL) {
+		TRACE_LOG("netmap context was not properly initialized\n");
+		TRACE_NETMAP_FUNC_END();
+		return -1;
+	}
+
+	tgt = (r == NULL) ? DROP : r->tgt;
+	nifp = local_nmd->nifp;
+	
+	for (i = local_nmd->first_rx_ring;
+	     i <= local_nmd->last_rx_ring;
+	     i++) {
+		rxring = NETMAP_RXRING(nifp, i);
+		__builtin_prefetch(rxring);
+		if (nm_ring_empty(rxring))
+			continue;
+		if (tgt == DROP)
+			drop_packets(rxring, eng);
+		else {
+			__builtin_prefetch(&rxring->slot[rxring->cur]);
+			while (!nm_ring_empty(rxring)) {
+				u_int src, idx;
+				struct netmap_slot *slot;
+				void *buf;
+				
+				src = rxring->cur;
+				slot = &rxring->slot[src];
+				__builtin_prefetch(slot+1);
+				idx = slot->buf_idx;
+				buf = (u_char *)NETMAP_BUF(rxring, idx);
+				if (idx < 2) {
+					TRACE_LOG("%s bogus RX index at offset %d",
+						  nifp->ni_name, src);
+					sleep(NETMAP_LINK_WAIT_TIME);
+				}
+				__builtin_prefetch(buf);
+				dispatch_pkt(rxring, eng, r, buf);				
+				rxring->head = rxring->cur = nm_ring_next(rxring, src);				
+			}
+		}
+	}
+
+	flush_all_cnodes(r);
+		
+	TRACE_NETMAP_FUNC_END();
+	return 0;
+}
+#endif
+/*---------------------------------------------------------------------*/
 int32_t
 netmap_shutdown(void *engptr)
 {
@@ -546,8 +679,6 @@ netmap_delete_all_channels(void *engptr, Rule *r)
 		cn = (CommNode *)r->destInfo[i];
 		if (cn->out_nmd != NULL)
 			nm_close(cn->out_nmd);
-		if (cn->r != NULL)
-			netmap_delete_all_channels(engptr, cn->r);
 		free(cn);
 	}
 

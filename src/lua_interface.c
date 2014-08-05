@@ -190,9 +190,13 @@ static int
 pkteng_new(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
+	itn nargs = lua_gettop(L);
 	const char *ename = luaL_optstring(L, 1, 0);
 	const char *type = luaL_optstring(L, 2, 0);
-	int cpu = luaL_optint(L, 3, 0);
+	int cpu = -1;
+	/* only grab cpu metric if it is mentioned */
+	if (nargs == 3)
+		cpu = luaL_optint(L, 3, 0);
 
 	PktEngine_Intf *pe = push_pkteng(L);
 	pe->eng_name = ename;
@@ -213,6 +217,9 @@ pkteng_link(lua_State *L)
 	Linker_Intf *linker;
 	const char *channel_type = NULL;
 
+	int nargs = lua_gettop(L);
+
+	/* check if args2 is user-data */
 	luaL_checktype(L, 2, LUA_TUSERDATA);
 	
 	/* Retrieve linker data */
@@ -228,8 +235,10 @@ pkteng_link(lua_State *L)
 		luaL_typerror(L, 2, "LoadBalancer");
 
 	pe->ifname = linker->input_link;
-	pe->batch = luaL_checkint(L, 3);
-	pe->qid = luaL_checkint(L, 4);
+	if (nargs >= 3)
+		pe->batch = luaL_checkint(L, 3);
+	if (nargs >= 4)
+		pe->qid = luaL_checkint(L, 4);
 	lua_settop(L, 1);
 
 	TRACE_DEBUG_LOG("Engine info so far...:\n"
@@ -258,6 +267,21 @@ pkteng_link(lua_State *L)
 		if (rc == -1) {
 			TRACE_LOG("Failed to open channel %s\n", 
 				  linker->output_link[i]);
+		}
+	}
+
+	while (linker->next_linker != NULL) {
+		linker = linker->next_linker;
+		for (i = 0; i < linker->output_count; i++) {
+			rc = pktengine_open_channel((uint8_t *)pe->eng_name,
+						    (uint8_t *)linker->input_link,
+						    (uint8_t *)linker->output_link[i],
+						    (uint8_t *)((linker->type == LINKER_LB) ? 
+						     "SHARE" : "COPY"));
+			if (rc == -1) {
+				TRACE_LOG("Failed to open channel %s\n",
+					  linker->output_link[i]);
+			}
 		}
 	}
 
@@ -516,6 +540,7 @@ linker_new(lua_State *L)
 	linker->type = type;
 	linker->hash_split = hash_split;
 	linker->output_count = 0;
+	linker->next_linker = NULL;
 	TRACE_LUA_FUNC_END();
 	return 1;
 }
@@ -559,10 +584,32 @@ linker_output(lua_State *L)
 	return 1;
 }
 /*---------------------------------------------------------------------*/
+static int
+linker_link(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	Linker_Intf *linker, *linker_iter;
+	int nargs = lua_gettop(L);
+	int i;
+
+	linker = check_linker(L, 1);
+	for (i = 2; i <= nargs; i++) {
+		linker_iter = check_linker(L, i);
+		linker_iter->next_linker = linker->next_linker;
+		linker->next_linker = linker_iter;
+	}
+	lua_settop(L, 1);
+
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
 static const luaL_reg linker_methods[] = {
         {"new",           	linker_new},
         {"connect_input",	linker_input},
 	{"connect_output",	linker_output},
+	{"link",		linker_link},
 	{"help",		linker_help},
         {0, 0}
 };

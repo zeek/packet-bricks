@@ -133,9 +133,17 @@ function init()
 
 
 	 local lb = LoadBalancer.new(BI_TUPLED)
-	 --lb = LoadBalancer.new(QUAD_TUPLED)
+	 lb = LoadBalancer.new(QUAD_TUPLED)
          lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth2")
+
+	 --local lb1 = LoadBalancer.new(QUAD_TUPLED)
+         --lb1:connect_input("eth3") 
+         --lb1:connect_output("eth3{0", "eth3{1")
+	 --local lb2 = LoadBalancer.new(QUAD_TUPLED)
+	 --lb2:connect_input("eth3}0")
+	 --lb2:connect_output("eth3{2", "eth3{3")
+	 --lb1:link(lb2)
 
          --local dup = Duplicator.new()
          --dup:connect_input("eth3")
@@ -144,6 +152,7 @@ function init()
 	 -- now link it!
          pe:link(lb, PKT_BATCH, NO_QIDS)
 	 --pe:link(dup, PKT_BATCH, NO_QIDS)
+	 --pe:link(lb1, PKT_BATCH, NO_QIDS)
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__

@@ -5,6 +5,8 @@
 #include <stdint.h>
 /* for engine definition */
 #include "pkt_engine.h"
+/* for pipelined rule insertions */
+#include "rule.h"
 /* for netmap specific decls */
 #define  NETMAP_WITH_LIBS		1
 #include "net/netmap_user.h"
@@ -22,6 +24,10 @@ typedef struct CommNode {
 	char nm_ifname[IFNAMSIZ];		/* name of the node */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
+	struct Rule *r;				/* 
+						 * pointer to the child Rule  
+						 * (in case the caller enables pipelining)
+						 */
 } CommNode;
 
 /**

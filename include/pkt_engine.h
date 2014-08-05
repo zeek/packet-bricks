@@ -50,6 +50,7 @@ typedef struct engine {
 	void *private_context;		/* I/O-related context */
 	pthread_t t;
 	rule_list r_list;		/* the list of rules registered with this engine */
+	Rule *r;			/* replacement for rule list (TODO) */
 
 	/*
 	 * the linked list ptr that will chain together

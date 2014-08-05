@@ -392,12 +392,13 @@ initiate_backend(engine *eng)
 		for (n = 0; n < nfds; n++) {
 			/* process dev work */
 			if (events[n].data.fd == eng->dev_fd) {
+				eng->iom.callback(eng, eng->r);
+#if 0
 				Rule *r;
 				TAILQ_FOREACH(r, &eng->r_list, entry) {
 					eng->iom.callback(eng, r);
-					//printf(".");
 				}
-				//printf("\n");
+#endif
 				/* continue epolling */
 				ev.data.fd = eng->dev_fd;
 				ev.events = EPOLLIN;

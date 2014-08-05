@@ -7,7 +7,6 @@
 /*---------------------------------------------------------------------*/
 /**
  * Decision & Action targets:
- * 	- REDIRECT: 	  for policying bridging/routing
  * 	- MODIFY:	  for updating a packet field and 
  * 			  then forwarding
  *	- DROP: 	  for dropping packet
@@ -24,7 +23,6 @@
  * 			  is reached
  */
 typedef enum {
-	REDIRECT = 1,
 	MODIFY,
 	DROP,
 	SHARE,

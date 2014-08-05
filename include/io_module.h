@@ -48,7 +48,7 @@ typedef struct io_module_funcs {
 			      int8_t qid);
 	void	(*unlink_iface)(const unsigned char *iface, void *engptr);
 	int32_t (*callback)(void *engptr, Rule *r);
-	int32_t (*create_channel)(void *engptr, Rule *r, char *in_name, char *out_name);
+	int32_t (*create_channel)(void *engptr, Rule *r, char *in_name, char *out_name, Target t);
 	int32_t (*set_action)(void *engptr, Rule *r, char *rule_args);
 	void	(*delete_all_channels)(void *engptr, Rule *r);
 	int32_t (*shutdown)(void *engptr);
