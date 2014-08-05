@@ -190,7 +190,7 @@ static int
 pkteng_new(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	itn nargs = lua_gettop(L);
+	int nargs = lua_gettop(L);
 	const char *ename = luaL_optstring(L, 1, 0);
 	const char *type = luaL_optstring(L, 2, 0);
 	int cpu = -1;

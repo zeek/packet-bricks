@@ -125,7 +125,7 @@ function init()
 	 end
 
 	 -- create a global variable pe
-	 local pe = PktEngine.new("e0", "netmap", NO_CPU_AFF)
+	 local pe = PktEngine.new("e0", "netmap")
 
 
 	 -- enable underlying netmap pipe framework
@@ -150,7 +150,7 @@ function init()
          --dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
 
 	 -- now link it!
-         pe:link(lb, PKT_BATCH, NO_QIDS)
+         pe:link(lb)
 	 --pe:link(dup, PKT_BATCH, NO_QIDS)
 	 --pe:link(lb1, PKT_BATCH, NO_QIDS)
 end
