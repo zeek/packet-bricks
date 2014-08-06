@@ -40,7 +40,6 @@ typedef struct engine {
 	uint64_t byte_count;		/* total number of bytes seen by this engine */
 	uint64_t pkt_count;		/* total number of packets seen by this engine */
 	uint64_t pkt_dropped;		/* total number of packets dropped by this engine */
-	uint64_t pkt_intercepted;	/* total number of packets intercepted by this engine */
 	int32_t dev_fd;			/* file desc of the net I/O */
 	int32_t listen_fd;		/* listening socket fd */
 	uint16_t listen_port;		/* listening port */
@@ -49,8 +48,9 @@ typedef struct engine {
 	struct io_module_funcs iom;	/* io_funcs ptrs */
 	void *private_context;		/* I/O-related context */
 	pthread_t t;
-	rule_list r_list;		/* the list of rules registered with this engine */
-	Rule *r;			/* replacement for rule list (TODO) */
+	Rule *r;			/* replacement for rule list */
+	uint8_t mark_for_copy;		/* marking for copy */
+	uint64_t seed;			/* seed for hashing in pipelining mode */
 
 	/*
 	 * the linked list ptr that will chain together

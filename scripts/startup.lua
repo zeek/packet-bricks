@@ -131,28 +131,37 @@ function init()
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
-
 	 local lb = LoadBalancer.new(BI_TUPLED)
-	 lb = LoadBalancer.new(QUAD_TUPLED)
-         lb:connect_input("eth3") 
+	 lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth2")
+	 -- now link it!
+	 pe:link(lb)
 
-	 --local lb1 = LoadBalancer.new(QUAD_TUPLED)
+	 --local dup = Duplicator.new()
+         --dup:connect_input("eth3") 
+         --dup:connect_output("eth3{0", "eth3{1")
+	 --local lb2 = LoadBalancer.new(QUAD_TUPLED)
+	 --lb2:connect_input("eth3}0")
+	 --lb2:connect_output("eth3{2", "eth3{3")
+	 --dup:link(lb2)
+	 -- now link it!
+	 --pe:link(dup)
+
+	 --local lb1 = LoadBalancer.new()
          --lb1:connect_input("eth3") 
          --lb1:connect_output("eth3{0", "eth3{1")
 	 --local lb2 = LoadBalancer.new(QUAD_TUPLED)
 	 --lb2:connect_input("eth3}0")
 	 --lb2:connect_output("eth3{2", "eth3{3")
 	 --lb1:link(lb2)
+	 -- now link it!
+	 --pe:link(lb1)
 
          --local dup = Duplicator.new()
          --dup:connect_input("eth3")
          --dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
-
 	 -- now link it!
-         pe:link(lb)
-	 --pe:link(dup, PKT_BATCH, NO_QIDS)
-	 --pe:link(lb1, PKT_BATCH, NO_QIDS)
+	 --pe:link(dup)
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__

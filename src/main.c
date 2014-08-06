@@ -219,6 +219,27 @@ print_status_file()
 	TRACE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+static void
+export_global_socket()
+{
+	TRACE_FUNC_START();
+	FILE *f;
+	char socket_fname[FILENAME_MAX];
+
+	sprintf(socket_fname, "/var/run/%s.port", PLATFORM_PROMPT);
+	f = fopen(socket_fname, "w+");
+	if (f == NULL) {
+		TRACE_ERR("Failed to create global socket file!\n");
+		TRACE_FUNC_END();
+	}
+	
+	fprintf(f, "%d", PACF_LISTEN_PORT);
+
+	fflush(f);
+	fclose(f);	
+	TRACE_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 /**
  * Main entry point
  */
@@ -295,7 +316,8 @@ main(int argc, char **argv)
 			TRACE_FUNC_END();
 			TRACE_ERR("Can't lock the pid file.\n"
 				  "Is a previous pacf daemon already running??\n");
-		}			
+		}
+		export_global_socket();
 		lua_kickoff((pc_info.daemonize) ? 
 			    LUA_EXE_SCRIPT : LUA_EXE_HOME_SHELL, NULL);
 	}

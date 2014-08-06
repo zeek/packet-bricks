@@ -24,11 +24,13 @@ typedef struct CommNode {
 	char nm_ifname[IFNAMSIZ];		/* name of the node */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
+	Filter *filt;				/* applied filter */
+	uint8_t mark;				/* marking for delivery */
 	struct Rule *r;				/* 
 						 * pointer to the child Rule  
 						 * (in case the caller enables pipelining)
 						 */
-} CommNode;
+} CommNode __attribute__((aligned(__WORDSIZE)));
 
 /**
  * Private per-engine netmap module context. Please see the comments 

@@ -8,6 +8,8 @@
 #include "config.h"
 /* for pktengine defn's */
 #include "pkt_engine.h"
+/* for DEFAULT_BATCH_SIZE */
+#include "main.h"
 /*---------------------------------------------------------------------*/
 extern volatile uint32_t stop_processing;
 #define METATABLE		PLATFORM_NAME" Metatable"
@@ -54,7 +56,7 @@ platform_print_status(lua_State *L)
 static int
 platform_show_stats(lua_State *L)
 {
-	/* this prints the system's current status */
+	/* this prints the system-wide statitics */
 	TRACE_LUA_FUNC_START();
 	pktengines_list_stats(stdout);
 	TRACE_LUA_FUNC_END();
@@ -68,6 +70,7 @@ shutdown_wrap(lua_State *L)
 	/* this shut downs the system */
 	TRACE_LUA_FUNC_START();
 	UNUSED(L);
+	/* assigning this to 1 shuts down the lua shell */
         stop_processing = 1;
         clean_exit(EXIT_SUCCESS);
 	TRACE_LUA_FUNC_END();
@@ -137,6 +140,7 @@ luaopen_platform(lua_State *L)
 static int
 pktengine_help(lua_State *L)
 {
+	/* prints pktengine help sub-menu */
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
@@ -157,6 +161,7 @@ static PktEngine_Intf *
 to_pkteng(lua_State *L, int index)
 {
 	TRACE_LUA_FUNC_START();
+	/* fetches pktengine object param from lua stack */
 	PktEngine_Intf *pe = (PktEngine_Intf *)lua_touserdata(L, index);
 	if (pe == NULL) luaL_typerror(L, index, "PktEngine");
 	TRACE_LUA_FUNC_END();
@@ -167,6 +172,7 @@ static PktEngine_Intf *
 push_pkteng(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
+	/* pushes pktengine object to the lua stack */
 	PktEngine_Intf *pe = (PktEngine_Intf *)lua_newuserdata(L, sizeof(PktEngine_Intf));
 	luaL_getmetatable(L, "PktEngine");
 	lua_setmetatable(L, -2);
@@ -179,6 +185,7 @@ check_pkteng(lua_State *L, int index)
 {
 	TRACE_LUA_FUNC_START();
 	PktEngine_Intf *pe;
+	/* see if the param data type is actually PktEngine */
 	luaL_checktype(L, index, LUA_TUSERDATA);
 	pe = (PktEngine_Intf *)luaL_checkudata(L, index, "PktEngine");
 	if (pe == NULL) luaL_typerror(L, index, "PktEngine");
@@ -198,6 +205,7 @@ pkteng_new(lua_State *L)
 	if (nargs == 3)
 		cpu = luaL_optint(L, 3, 0);
 
+	/* parse and populate the remaining fields */
 	PktEngine_Intf *pe = push_pkteng(L);
 	pe->eng_name = ename;
 	pe->type = type;
@@ -225,6 +233,7 @@ pkteng_link(lua_State *L)
 	/* Retrieve linker data */
 	linker = (Linker_Intf *)luaL_optudata(L, 2);
 	if (linker == NULL) luaL_typerror(L, 2, "LoadBalancer");
+
 	if (linker->type == LINKER_LB) {
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "LoadBalancer");
 		channel_type = "SHARE";
@@ -234,9 +243,15 @@ pkteng_link(lua_State *L)
 	} else
 		luaL_typerror(L, 2, "LoadBalancer");
 
+	/* set values as default */
 	pe->ifname = linker->input_link;
+	pe->batch = DEFAULT_BATCH_SIZE;
+	pe->qid = -1;
+
+	/* if 3rd arg is passed, fill it with batch size */
 	if (nargs >= 3)
 		pe->batch = luaL_checkint(L, 3);
+	/* if 4th arg is passed, fill it with qid */
 	if (nargs >= 4)
 		pe->qid = luaL_checkint(L, 4);
 	lua_settop(L, 1);
@@ -255,10 +270,12 @@ pkteng_link(lua_State *L)
 			pe->batch,
 			pe->qid);
 	
+	/* link the source with the packet engine */
 	pktengine_link_iface((uint8_t *)pe->eng_name, 
 			     (uint8_t *)pe->ifname, 
 			     pe->batch, pe->qid);
 	
+	/* ... and now link all the channels */
 	for (i = 0; i < linker->output_count; i++) {
 		rc = pktengine_open_channel((uint8_t *)pe->eng_name, 
 					    (uint8_t *)pe->ifname,
@@ -270,6 +287,7 @@ pkteng_link(lua_State *L)
 		}
 	}
 
+	/* if there are pipelines, link them as well */
 	while (linker->next_linker != NULL) {
 		linker = linker->next_linker;
 		for (i = 0; i < linker->output_count; i++) {

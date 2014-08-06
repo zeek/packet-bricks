@@ -47,12 +47,5 @@ typedef struct vlanhdr {
  */
 uint32_t
 pkt_hdr_hash(const unsigned char *buffer);
-
-#if 0
-/* DEPRECATED */
-uint32_t 
-master_custom_hash_function(const unsigned char *buffer, 
-			    const uint16_t buffer_len);
-#endif
 /*---------------------------------------------------------------------*/
 #endif /* __PKT_HASH__ */

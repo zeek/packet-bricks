@@ -419,7 +419,6 @@ pmain(lua_State *L) {
 
         struct Smain *s;
         char **argv;
-	int rc;
 
         globalL = L;
         s = (struct Smain *)lua_touserdata(L, 1);
@@ -453,7 +452,7 @@ pmain(lua_State *L) {
 	}
 
 	TRACE_LUA_FUNC_END();
-	UNUSED(rc);
+
         return 0;
 }
 /*---------------------------------------------------------------------*/

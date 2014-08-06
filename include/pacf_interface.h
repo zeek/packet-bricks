@@ -4,6 +4,8 @@
 /* for uint?_* types */
 #include <sys/types.h>
 #include <stdint.h>
+/* for IFNAMSIZ */
+#include <net/if.h>
 /*---------------------------------------------------------------------*/
 /**
  * Decision & Action targets:
@@ -140,35 +142,13 @@ typedef struct Filter {
 } Filter __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
- * Rule-related data structures start here...
- * XXX: The following structs are still being revised...
- */
-
-/*
- * Arguments passed to the Target
- */
-#define MAX_PROCNAME_LEN		4
-typedef struct TargetArgs {
-	pid_t pid;
-	unsigned char proc_name[MAX_PROCNAME_LEN];
-} TargetArgs;
-/*---------------------------------------------------------------------*/
-/**
  * Request block: this struct is passed to the system by the userland
  * application when it makes a certain request.
- * XXX - UNDER CONSTRUCTION AND SERIOUSLY OUTDATED
  */
 typedef struct req_block {
 	/* length of the request */
 	uint32_t len;
-	/* 
-	 * currently _SHARE_ is the only 
-	 * target that is enabled 
-	 */
-	Target t;
-	TargetArgs targs;
-
-	/* currently disabled*/
+	unsigned char ifname[IFNAMSIZ];
 	Filter f;
 
 	unsigned char req_payload[0];
@@ -177,7 +157,6 @@ typedef struct req_block {
 /**
  * Response block: this struct is passed to the userland
  * application when it makes a response back.
- * XXX - UNDER CONSTRUCTION
  */
 typedef struct resp_block {
 	/* length of the response */

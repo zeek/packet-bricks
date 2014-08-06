@@ -12,8 +12,6 @@
 #include "util.h"
 /* for backend */
 #include "backend.h"
-/* for rule insertions */
-#include "rule.h"
 /*---------------------------------------------------------------------*/
 static elist engine_list;
 /*---------------------------------------------------------------------*/
@@ -214,9 +212,6 @@ pktengine_new(const unsigned char *name, const unsigned char *type,
 
 	/* setting the cpu no. on which the engine runs (if reqd.) */
 	eng->cpu = cpu;
-
-	/* initialize the rules table */
-	init_rules_table(eng);
 
 	/* finally add the engine entry in elist */
 	TAILQ_INSERT_TAIL(&engine_list, eng, entry);
@@ -498,29 +493,26 @@ pktengines_list_stats(FILE *f)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
-	uint64_t total_pkts, total_bytes, total_intercepted;
+	uint64_t total_pkts, total_bytes;
 
-	total_pkts = total_bytes = total_intercepted = 0;
+	total_pkts = total_bytes = 0;
 	fprintf(f, "----------------------------------------- ENGINE STATISTICS");
 	fprintf(f, " --------------------------------------------\n");
-	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt \t\t Intercepted \t\t Listen-port\n");
+	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt \t\t Listen-port\n");
 	TAILQ_FOREACH(eng, &engine_list, entry) {
-		fprintf(f, "%s \t\t %10llu \t\t %11llu \t\t %11llu \t\t\t%d\n",
+		fprintf(f, "%s \t\t %10llu \t\t %11llu \t\t\t%d\n",
 			eng->name, 
 			(long long unsigned int)eng->pkt_count, 
 			(long long unsigned int)eng->byte_count,
-			(long long unsigned int)eng->pkt_intercepted,
 			eng->listen_port);
 		total_pkts += eng->pkt_count;
 		total_bytes += eng->byte_count;
-		total_intercepted += eng->pkt_intercepted;
 	}
 	fprintf(f, "====================================================");
 	fprintf(f, "====================================================\n");
-	fprintf(f, "Total \t\t %10llu \t\t %11llu \t\t %11llu\n",
+	fprintf(f, "Total \t\t %10llu \t\t %11llu\n",
 		(long long unsigned int)total_pkts,
-		(long long unsigned int)total_bytes,
-		(long long unsigned int)total_intercepted);
+		(long long unsigned int)total_bytes);
 	fprintf(f, "----------------------------------------------------");
 	fprintf(f, "----------------------------------------------------\n\n\n");
 	

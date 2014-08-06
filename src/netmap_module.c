@@ -22,6 +22,8 @@
 #include <net/if.h>
 /* for hash function */
 #include "pkt_hash.h"
+/* for filter funcs */
+#include "filter.h"
 /*---------------------------------------------------------------------*/
 int32_t
 netmap_init(void **ctxt_ptr, void *engptr)
@@ -122,8 +124,6 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 		nic->global_nmd->req.nr_ringid = qid;
 	} 
 
-	//nic->global_nmd->req.nr_ringid |= NETMAP_NO_TX_POLL;
-
 	/* setting batch size */
 	nmc->batch_size = batchsize;
 	
@@ -207,7 +207,7 @@ drop_packets(struct netmap_ring *ring, engine *eng)
 }
 /*---------------------------------------------------------------------*/
 static int32_t
-share_packets(engine *eng, CommNode *cn)
+share_packets(CommNode *cn)
 {
 	TRACE_NETMAP_FUNC_START();
         u_int dr; 			/* destination ring */
@@ -225,7 +225,7 @@ share_packets(engine *eng, CommNode *cn)
                 return 0;
         }
 
- try_sharing_again:	
+ try_share_again:	
         /* scan all output rings; dr is the destination ring index */
         for (dr = dst->first_tx_ring; i < n && dr <= dst->last_tx_ring; dr++) {
                 struct netmap_ring *ring = NETMAP_TXRING(dst->nifp, dr);
@@ -251,16 +251,12 @@ share_packets(engine *eng, CommNode *cn)
 			src->buf_idx = tmp;
 
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
-			/* updating engine statistics */
-			eng->pkt_intercepted++;
-			eng->byte_count += dst->len;
-			eng->pkt_count++;
                 }
         }
         if (i < n) {
                 if (retry-- > 0) {
                         ioctl(cn->out_nmd->fd, NIOCTXSYNC);
-                        goto try_sharing_again;
+                        goto try_share_again;
                 }
                 TRACE_DEBUG_LOG("%d buffers leftover", n - i);
         }
@@ -271,7 +267,7 @@ share_packets(engine *eng, CommNode *cn)
 }
 /*---------------------------------------------------------------------*/
 static int32_t
-copy_packets(engine *eng, CommNode *cn, unsigned char tally_pkts)
+copy_packets(CommNode *cn)
 {
 	TRACE_NETMAP_FUNC_START();
         u_int dr; 			/* destination ring */
@@ -312,11 +308,6 @@ copy_packets(engine *eng, CommNode *cn, unsigned char tally_pkts)
 			nm_pkt_copy(dstbuf, srcbuf, dst->len); 
 			
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
-			if (tally_pkts == 1) {
-				/* updating engine statistics */
-				eng->byte_count += dst->len;
-				eng->pkt_count++;
-			}
 		}
 	}
 	if (i < n) {
@@ -346,40 +337,114 @@ local_hash(uint32_t a)
 	return a;
 }
 /*------------------------------------------------------------------------*/
-static inline CommNode *
-fetch_cn(Rule *r, uint32_t hash, uint32_t level)
+void
+flush_all_cnodes(Rule *r, engine *eng)
 {
 	TRACE_NETMAP_FUNC_START();
-	uint32_t index = 0;
+	CommNode *cn;
+	uint32_t i;
+	for (i = 0; i < r->count; i++) {
+		cn = (CommNode *)r->destInfo[i];
+		if (cn->r != NULL) {
+			flush_all_cnodes(cn->r, eng);
+		} else { /* cn->r == NULL */
+			if (cn->cur_txq > 0) {
+				(eng->mark_for_copy == 1) ? 
+					copy_packets(cn) :
+					share_packets(cn);
+			}
+		}
+	}
+	TRACE_NETMAP_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+void
+update_cnode_ptrs(struct netmap_ring *rxring, Rule *r, engine *eng, uint src)
+{
+	TRACE_NETMAP_FUNC_START();
+	CommNode *cn;
+	uint32_t i;
+	for (i = 0; i < r->count; i++) {
+		cn = (CommNode *)r->destInfo[i];
+		if (cn->r != NULL) {
+			update_cnode_ptrs(rxring, cn->r, eng, src);
+		} else {
+			uint dst = cn->cur_txq;
+			if (cn->mark == 1) {
+				cn->q[dst].ring = rxring;
+				cn->q[dst].slot_idx = src;
+				cn->cur_txq++;
+				cn->mark = 0;
+			}
+		}
+	}
+	TRACE_NETMAP_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+static inline uint32_t
+myrand(uint64_t *seed)
+{
+	TRACE_NETMAP_FUNC_START();
+	*seed = *seed * 1103515245 + 12345;
+	return (uint32_t)(*seed >> 32);
+	TRACE_NETMAP_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+void
+dispatch_pkt(struct netmap_ring *rxring,
+	     engine *eng,
+	     Rule *r,
+	     uint8_t *buf)
+{
+	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
+	uint j;
 
-	if (level != 0)
-		hash = local_hash(hash + level);
+	if (r->tgt == SHARE) {
+		cn = (CommNode *)r->destInfo[(pkt_hdr_hash(buf) +  
+					      myrand(&eng->seed)) % 
+					     r->count];
+		if (cn->r != NULL) {
+			dispatch_pkt(rxring, eng, cn->r, buf);
+		} else {
+			if (cn->filt == NULL || 
+			    pass_pkt_against_filter(cn->filt, buf))
+				cn->mark = 1;
+		}
+	} else if(r->tgt == COPY) {
+		/* pick any cn as reference */
+		cn = (CommNode *)r->destInfo[0];
 
-	index = hash % r->count;
-	cn = r->destInfo[index];
-
-	if (cn->r != NULL)
-		return fetch_cn(cn->r, hash, ++level);
-	else
-		return cn;
+		for (j = 0; j < r->count; j++) {
+			cn = (CommNode *)r->destInfo[j];
+			if (cn->r != NULL)
+				dispatch_pkt(rxring, eng, cn->r, buf);
+			else {
+				if (cn->filt == NULL || 
+				    pass_pkt_against_filter(cn->filt, buf))
+					cn->mark = 1;
+			}
+		}
+	}
 
 	TRACE_NETMAP_FUNC_END();
 }
-/*------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------*/
 int32_t
 netmap_callback(void *engptr, Rule *r)
 {
 	TRACE_NETMAP_FUNC_START();
 	int i;
-	engine *eng = (engine *)engptr;
-	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
-	struct nm_desc *local_nmd = (struct nm_desc *)nmc->local_nmd;
+	netmap_module_context *nmc;
+	struct nm_desc *local_nmd;
 	struct netmap_if *nifp;
 	struct netmap_ring *rxring;
-	CommNode *cn = NULL;
 	Target tgt;
-	uint32_t j = 0;
+	engine *eng;
+
+	eng = (engine *)engptr;
+	nmc = (netmap_module_context *)eng->private_context;
+	local_nmd = (struct nm_desc *)nmc->local_nmd;
 
 	if (local_nmd == NULL) {
 		TRACE_LOG("netmap context was not properly initialized\n");
@@ -389,77 +454,20 @@ netmap_callback(void *engptr, Rule *r)
 
 	tgt = (r == NULL) ? DROP : r->tgt;
 	nifp = local_nmd->nifp;
-
-	switch (tgt) {
-	case DROP:
-		for (i = local_nmd->first_rx_ring; 
-		     i <= local_nmd->last_rx_ring; 
-		     i++) {
-			rxring = NETMAP_RXRING(nifp, i);
-			if (nm_ring_empty(rxring))
-				continue;
-			
+	
+	for (i = local_nmd->first_rx_ring;
+	     i <= local_nmd->last_rx_ring;
+	     i++) {
+		rxring = NETMAP_RXRING(nifp, i);
+		__builtin_prefetch(rxring);
+		if (nm_ring_empty(rxring))
+			continue;
+		if (tgt == DROP)
 			drop_packets(rxring, eng);
-		}
-		break;
-	case SHARE:
-		for (i = local_nmd->first_rx_ring;
-		     i <= local_nmd->last_rx_ring;
-		     i++) {
-			rxring = NETMAP_RXRING(nifp, i);
-			
-			__builtin_prefetch(rxring);
-			if (nm_ring_empty(rxring))
-				continue;
+		else {
 			__builtin_prefetch(&rxring->slot[rxring->cur]);
 			while (!nm_ring_empty(rxring)) {
-				u_int dst, src, idx;
-				struct netmap_slot *slot;
-				void *buf;
-
-				src = rxring->cur;
-				slot = &rxring->slot[src];
-				__builtin_prefetch(slot+1);
-				idx = slot->buf_idx;
-				buf = (u_char *)NETMAP_BUF(rxring, idx);
-				if (idx < 2) {
-					TRACE_LOG("%s bogus RX index at offset %d",
-						  nifp->ni_name, src);
-					sleep(NETMAP_LINK_WAIT_TIME);
-				}
-				__builtin_prefetch(buf);
-				cn = fetch_cn(r, pkt_hdr_hash(buf), 0);
-				dst = cn->cur_txq;
-				if (dst >= TXQ_MAX) {
-					share_packets(eng, cn);
-					continue;
-				}
-				
-				rxring->head = rxring->cur = nm_ring_next(rxring, src);
-				
-				cn->q[dst].ring = rxring;
-				cn->q[dst].slot_idx = src;
-				cn->cur_txq++;
-				
-			}
-		}
-		if (cn != NULL && cn->cur_txq > 0)
-			share_packets(eng, cn);
-		break;
-	case MODIFY:
-		break;
-	case COPY:
-		for (i = local_nmd->first_rx_ring;
-		     i <= local_nmd->last_rx_ring;
-		     i++) {
-			rxring = NETMAP_RXRING(nifp, i);
-			
-			__builtin_prefetch(rxring);
-			if (nm_ring_empty(rxring))
-				continue;
-			__builtin_prefetch(&rxring->slot[rxring->cur]);
-			while (!nm_ring_empty(rxring)) {
-				u_int dst, src, idx;
+				u_int src, idx;
 				struct netmap_slot *slot;
 				void *buf;
 				
@@ -474,46 +482,17 @@ netmap_callback(void *engptr, Rule *r)
 					sleep(NETMAP_LINK_WAIT_TIME);
 				}
 				__builtin_prefetch(buf);
-				/* pick any cn as reference */
-				cn = (CommNode *)r->destInfo[0];
-				dst = cn->cur_txq;
-				if (dst >= TXQ_MAX) {
-					for (j = 0; j < r->count; j++) {
-						cn = (CommNode *)r->destInfo[j];
-						copy_packets(eng, cn, (j == 0));
-					}
-					continue;
-				}
-				
+				eng->byte_count += slot->len;
+				eng->pkt_count++;
+				eng->seed = 0;
+				dispatch_pkt(rxring, eng, r, buf);
 				rxring->head = rxring->cur = nm_ring_next(rxring, src);
-				
-				for (j = 0; j < r->count; j++) {
-					cn = (CommNode *)r->destInfo[j];
-					cn->q[dst].ring = rxring;
-					cn->q[dst].slot_idx = src;
-					cn->cur_txq++;
-				}
-				
+				update_cnode_ptrs(rxring, r, eng, src);
 			}
 		}
-		if (cn != NULL && cn->cur_txq > 0) {
-			for (j = 0; j < r->count; j++) {
-				cn = (CommNode *)r->destInfo[j];
-				copy_packets(eng, cn, (j == 0));
-			}
-		}
-		break;
-	case LIMIT:
-		break;
-	case PKT_NOTIFY:
-		break;
-	case BYTE_NOTIFY:
-		break;
-	default:
-		/* control will never come here */
-		TRACE_ERR("Something awful must have happened here\n");
-		break;
 	}
+
+	flush_all_cnodes(r, eng);
 		
 	TRACE_NETMAP_FUNC_END();
 	return 0;
@@ -587,8 +566,9 @@ enable_pipeline(Rule *r, const char *ifname, Target t)
 {
 	TRACE_NETMAP_FUNC_START();
 	uint32_t i;
+	CommNode *cn;
 	for (i = 0; i < r->count; i++) {
-		CommNode *cn = r->destInfo[i];
+		cn = r->destInfo[i];
 		if (!strcmp(cn->nm_ifname, ifname)) {
 			/* found the right entry, now fill Rule entry */
 			if (cn->r == NULL) {
@@ -604,7 +584,8 @@ enable_pipeline(Rule *r, const char *ifname, Target t)
 			}
 			if (cn->r->tgt == t) {
 				cn->r->count++;
-				cn->r->destInfo = realloc(cn->r->destInfo, sizeof(void *) * cn->r->count);
+				cn->r->destInfo = realloc(cn->r->destInfo, 
+							  sizeof(void *) * cn->r->count);
 				if (cn->r->destInfo == NULL) {
 					TRACE_LOG("Can't re-allocate to add a new rule!\n");
 					if (cn->r->count == 1) free(cn->r);
@@ -623,19 +604,21 @@ enable_pipeline(Rule *r, const char *ifname, Target t)
 }
 /*---------------------------------------------------------------------*/
 int32_t
-netmap_create_channel(void *engptr, Rule *r, char *in_name, char *out_name, Target t) 
+netmap_create_channel(void *engptr, Rule *r, char *in_name, 
+		      char *out_name, Target t) 
 {
 	TRACE_NETMAP_FUNC_START();
 	char ifname[IFNAMSIZ];
-	int32_t fd = -1;
-	engine *eng = (engine *)engptr;
-	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
+	int32_t fd;
+	engine *eng;
+	netmap_module_context *nmc;
 	CommNode *cn;
 	
+	fd = -1;
+	eng = (engine *)engptr;
+	nmc = (netmap_module_context *)eng->private_context;
 	/* first locate the in_nmd */
-	if (!strcmp((char *)eng->link_name, in_name)) {
-		//r->local_desc = nmc->local_nmd;
-	} else {
+	if (strcmp((char *)eng->link_name, in_name) != 0) {
 		r = enable_pipeline(r, in_name, t);
 		if (r == NULL) {
 			TRACE_LOG("Pipelining failed!! Could not find an appropriate "
@@ -668,7 +651,9 @@ netmap_create_channel(void *engptr, Rule *r, char *in_name, char *out_name, Targ
 	}
 	strcpy_wtih_reverse_pipe(cn->nm_ifname, out_name);
 
-	TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", r->ifname, out_name, 
+	TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", 
+		  r->ifname, 
+		  out_name, 
 		  r->count -1,
 		  (((struct nm_desc *)nmc->local_nmd)->mem == cn->out_nmd->mem) ? 
 		  "enabled\n" : "disabled\n");

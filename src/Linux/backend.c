@@ -24,6 +24,8 @@
 #include "lua_interpreter.h"
 /* for inet_addr */
 #include <arpa/inet.h>
+/* for filter funcs */
+#include "filter.h"
 /*---------------------------------------------------------------------*/
 int
 connect_to_pacf_server(char *rshell_args)
@@ -67,7 +69,7 @@ connect_to_pacf_server(char *rshell_args)
      
 	TRACE_DEBUG_LOG("Connected\n");
 	TRACE_BACKEND_FUNC_END();
-	UNUSED(rshell_args);
+
 	return sock;
 }
 /*---------------------------------------------------------------------*/
@@ -242,10 +244,8 @@ create_listening_socket_for_eng(engine *eng)
 	TRACE_BACKEND_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-#if 0
-/* This function has been disabled... it will be re-enabled in the near future */
 /**
- * XXX - This function needs to be revised..
+ * XXX - This function is being revised
  * Services incoming request from userland applications and takes
  * necessary actions. The actions can be: (i) passing packets to userland
  * apps etc.
@@ -260,7 +260,7 @@ process_request_backend(engine *eng, int epoll_fd)
 	char client_message[2000];
 	struct epoll_event ev;
 	req_block *rb;
-	char channelname[20];
+
 	total_read = read_size = 0;
 
 	/* accept connection from an incoming client */
@@ -284,28 +284,12 @@ process_request_backend(engine *eng, int epoll_fd)
 	
 	/* parse new rule */
 	rb = (req_block *)client_message;
-	TRACE_DEBUG_LOG("Got a new rule\n");
-	TRACE_DEBUG_LOG("Target: %d\n", rb->t);
-	TRACE_DEBUG_LOG("TargetArgs.pid: %d\n", rb->targs.pid);
-	TRACE_DEBUG_LOG("TargetArgs.proc_name: %s\n", rb->targs.proc_name);
+	TRACE_DEBUG_LOG("Got a new request\n");
+	TRACE_DEBUG_LOG("\tLen: %u\n", rb->len);
+	TRACE_DEBUG_LOG("\tInterface name: %s\n", rb->ifname);
 	TRACE_FLUSH();
 
-	//snprintf(channelname, 20, "vale%s%d:s", 
-	//	 rb->targs.proc_name, rb->targs.pid);
-	snprintf(channelname, 20, "%s%d", 
-		 rb->targs.proc_name, rb->targs.pid);
-
-	Rule *r = add_new_rule(eng, NULL, rb->t);
-
-	/* create communication back channel */
-	ev.data.fd = eng->iom.create_channel(eng, r, channelname/*, client_sock*/);
-	ev.events = EPOLLIN | EPOLLOUT;
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
-		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
-			  eng->name, epoll_fd);
-		TRACE_BACKEND_FUNC_END();
-		return;
-	}
+	process_filter_request(rb->ifname, &rb->f);
 
 	/* add client sock to the polling layer */
 	ev.data.fd = client_sock;
@@ -317,6 +301,9 @@ process_request_backend(engine *eng, int epoll_fd)
 		return;
 	}
 	
+	/* for the moment, close the client socket immediately */
+	close(client_sock);
+
 	/* continue listening */
 	ev.data.fd = eng->listen_fd;
 	ev.events = EPOLLIN | EPOLLOUT;
@@ -330,7 +317,6 @@ process_request_backend(engine *eng, int epoll_fd)
 	TRACE_BACKEND_FUNC_END();
 	return;
 }
-#endif
 /*---------------------------------------------------------------------*/
 /**
  * Creates listening socket to serve as a conduit between userland
@@ -393,12 +379,7 @@ initiate_backend(engine *eng)
 			/* process dev work */
 			if (events[n].data.fd == eng->dev_fd) {
 				eng->iom.callback(eng, eng->r);
-#if 0
-				Rule *r;
-				TAILQ_FOREACH(r, &eng->r_list, entry) {
-					eng->iom.callback(eng, r);
-				}
-#endif
+
 				/* continue epolling */
 				ev.data.fd = eng->dev_fd;
 				ev.events = EPOLLIN;
@@ -409,12 +390,18 @@ initiate_backend(engine *eng)
 					return;
 				}				
 			} 
-#if 0
-			/* XXX - temporarily disabled */
+
 			/* process app reqs */
 			else if (events[n].data.fd == eng->listen_fd)
 				process_request_backend(eng, epoll_fd);
-#endif
+			else {/* all other reqs coming from client socks */
+				ev.data.fd = events[n].data.fd;
+				if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, ev.data.fd, &ev) == -1) {
+					TRACE_ERR("Can't delete client sock for epolling!\n");
+					TRACE_BACKEND_FUNC_END();
+				}	
+				close(ev.data.fd);
+			}
 		}
 	}
 
