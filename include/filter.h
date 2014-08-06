@@ -1,7 +1,10 @@
 #ifndef __FILTER_H__
 #define __FILTER_H__
 /*---------------------------------------------------------------------*/
+/* for Filter def'n */
 #include "pacf_interface.h"
+/* for Rule def'n */
+#include "rule.h"
 /*---------------------------------------------------------------------*/
 /**
  * Template file for filter functions
@@ -19,7 +22,7 @@ pass_pkt_against_filter(Filter *f, unsigned char *buf);
 /**
  * Adds a new filter to the registered interface
  */
-void
-process_filter_request(unsigned char *ifname, Filter *f);
+int32_t
+process_filter_request(void *engptr, unsigned char *ifname, Filter *f);
 /*---------------------------------------------------------------------*/
 #endif /* !__FILTER_H__ */

@@ -260,8 +260,10 @@ process_request_backend(engine *eng, int epoll_fd)
 	char client_message[2000];
 	struct epoll_event ev;
 	req_block *rb;
+	resp_block respb;
 
 	total_read = read_size = 0;
+	respb.len = sizeof(resp_block);
 
 	/* accept connection from an incoming client */
 	client_sock = accept(eng->listen_fd, (struct sockaddr *)&client, (socklen_t *)&c);
@@ -289,7 +291,14 @@ process_request_backend(engine *eng, int epoll_fd)
 	TRACE_DEBUG_LOG("\tInterface name: %s\n", rb->ifname);
 	TRACE_FLUSH();
 
-	process_filter_request(rb->ifname, &rb->f);
+	respb.flag = (process_filter_request(eng, rb->ifname, &rb->f) == -1) ?
+		0 : 1;
+	
+	/* write the response back to the app */
+	if (write(client_sock, &respb, sizeof(respb)) == -1) {
+		TRACE_LOG("Write failed due to %s\n", 
+			  strerror(errno));
+	}
 
 	/* add client sock to the polling layer */
 	ev.data.fd = client_sock;

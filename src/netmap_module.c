@@ -665,6 +665,34 @@ netmap_create_channel(void *engptr, Rule *r, char *in_name,
 	return fd;
 }
 /*---------------------------------------------------------------------*/
+int32_t
+netmap_add_filter(Rule *r, Filter *f, unsigned char *ifname)
+{
+	TRACE_NETMAP_FUNC_START();
+	CommNode *cn;
+	uint32_t i;
+	for (i = 0; i < r->count; i++) {
+		cn = (CommNode *)r->destInfo[i];
+		if (cn->r != NULL)
+			netmap_add_filter(cn->r, f, ifname);
+		else if (!strcmp((char *)cn->nm_ifname, (char *)ifname)) {
+			if (cn->filt == NULL) {
+				cn->filt = calloc(1, sizeof(Filter));
+				if (cn->filt == NULL) {
+					TRACE_LOG("Can't allocate mem for "
+						  "filter for ifname %s\n",
+						  ifname);
+					TRACE_NETMAP_FUNC_END();
+					return -1;
+				}
+			}
+			memcpy(cn->filt, f, sizeof(Filter));
+		}
+	}
+	TRACE_NETMAP_FUNC_END();
+	return 1;
+}
+/*---------------------------------------------------------------------*/
 io_module_funcs netmap_module = {
 	.init_context	= 	netmap_init,
 	.link_iface	= 	netmap_link_iface,
@@ -672,6 +700,7 @@ io_module_funcs netmap_module = {
 	.callback	= 	netmap_callback,
 	.create_channel =	netmap_create_channel,
 	.delete_all_channels =	netmap_delete_all_channels,
-	.shutdown	= 	netmap_shutdown
+	.shutdown	= 	netmap_shutdown,
+	.add_filter	=	netmap_add_filter
 };
 /*---------------------------------------------------------------------*/

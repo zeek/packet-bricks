@@ -7,6 +7,8 @@
 #include "pacf_interface.h"
 /* for rule def'n */
 #include "rule.h"
+/* for filter def'n */
+#include "filter.h"
 /*---------------------------------------------------------------------*/
 #define MAX_IFNAMELEN		64
 /*---------------------------------------------------------------------*/
@@ -35,8 +37,10 @@
  *		   delete_all_channels(): Function that tears down all channels
  *					 associated with a particular rule
  *
+ *		   add_filter(): Function that adds filter to the netmap
+ *				 framework
  *
- *		   shutdown(): Used to destroy the private pkt I/O-specifc 
+  *		   shutdown(): Used to destroy the private pkt I/O-specifc 
  *			       context
  */
 /*---------------------------------------------------------------------*/
@@ -50,6 +54,7 @@ typedef struct io_module_funcs {
 	int32_t (*callback)(void *engptr, Rule *r);
 	int32_t (*create_channel)(void *engptr, Rule *r, char *in_name, char *out_name, Target t);
 	int32_t (*set_action)(void *engptr, Rule *r, char *rule_args);
+	int32_t (*add_filter)(Rule *r, Filter *f, unsigned char *ifname);
 	void	(*delete_all_channels)(void *engptr, Rule *r);
 	int32_t (*shutdown)(void *engptr);
 	
