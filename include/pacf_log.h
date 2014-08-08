@@ -114,6 +114,14 @@
 #define TRACE_FILTER_FUNC_END()		(void)0
 #endif /* !DFILTER */
 
+#ifdef DELEM
+#define TRACE_ELEMENT_FUNC_START()	TRACE_FUNC_START()
+#define TRACE_ELEMENT_FUNC_END()	TRACE_FUNC_END()
+#else /* DELEM */
+#define TRACE_ELEMENT_FUNC_START()	(void)0
+#define TRACE_ELEMENT_FUNC_END()	(void)0
+#endif /* !DELEM */
+
 /**
  * Default loggers.
  * Use:

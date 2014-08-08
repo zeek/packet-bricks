@@ -13,15 +13,18 @@ $(OBJDIR)/%.o: %.c
 
 all: $(OBJ)
 	cd $(OSARCH) && $(MAKE)
+	cd elements && $(MAKE)
 
 .PHONY: clean
 
 clean:
 	cd $(OSARCH) && $(MAKE) clean
+	cd elements && $(MAKE) clean
 	$(RM) -rf *~
 	$(RM) -rf $(OBJDIR)
 
 distclean:
 	cd $(OSARCH) && $(MAKE) distclean
+	cd elements && $(MAKE) distclean
 	$(RM) -rf Makefile
 #---------------------------------------------------------------------#

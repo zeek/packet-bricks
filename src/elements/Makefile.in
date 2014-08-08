@@ -1,0 +1,20 @@
+#---------------------------------------------------------------------#
+SRCS := lb.c dup.c merge.c
+
+_OBJ := lb.o dup.o merge.o
+OBJ := $(patsubst %,$(OBJDIR)/%,$(_OBJ))
+
+$(OBJDIR)/%.o: %.c
+	$(MSG) "   CC $<"
+	$(HIDE) $(CC) -c -o $@ $< $(CFLAGS) $(INCLUDE) $(NETMAP_INCLUDE)
+
+all: $(OBJ)
+
+.PHONY: clean
+
+clean:
+	$(RM) -rf *~
+
+distclean:
+	$(RM) -rf Makefile
+#---------------------------------------------------------------------#
