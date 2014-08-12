@@ -5,8 +5,6 @@
 #include <stdint.h>
 /* for engine definition */
 #include "pkt_engine.h"
-/* for pipelined rule insertions */
-#include "rule.h"
 /* for netmap specific decls */
 #define  NETMAP_WITH_LIBS		1
 #include "net/netmap_user.h"

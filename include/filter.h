@@ -3,8 +3,6 @@
 /*---------------------------------------------------------------------*/
 /* for Filter def'n */
 #include "pacf_interface.h"
-/* for Rule def'n */
-#include "rule.h"
 /*---------------------------------------------------------------------*/
 /**
  * Template file for filter functions
