@@ -415,17 +415,6 @@ pktengine_stop(const unsigned char *name)
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-int32_t
-pktengine_add_element(const unsigned char *eng_name,
-		      const unsigned char *source)
-{
-	TRACE_PKTENGINE_FUNC_START();
-	TRACE_PKTENGINE_FUNC_END();
-	UNUSED(eng_name);
-	UNUSED(source);
-	return 0;
-}
-/*---------------------------------------------------------------------*/
 void
 pktengine_dump_stats(const unsigned char *name)
 {

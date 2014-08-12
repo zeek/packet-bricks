@@ -32,7 +32,7 @@ typedef struct PktEngine_Intf {
  * Garbage collection is implemented in LUA...
  */
 #define MAX_OUTLINKS			20
-enum {LINKER_LB=1, LINKER_DUP, LINKER_MERGE};
+enum {LINKER_LB=3, LINKER_DUP, LINKER_MERGE};
 typedef struct Linker_Intf {
 	int type;				/* lb?/dup? */
 	int hash_split;				/* 2-tuple or 4-tuple split? */
@@ -42,7 +42,7 @@ typedef struct Linker_Intf {
 	struct Linker_Intf *next_linker;	/* pointer to next link */
 } Linker_Intf;
 /*---------------------------------------------------------------------*/
-/** 
+/**
  * Register multiple lua modules in this func
  */
 int register_lua_procs(lua_State *L);

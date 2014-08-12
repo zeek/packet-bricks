@@ -50,6 +50,7 @@ typedef struct netmap_iface_context {
 	uint64_t nmd_flags;			/* netmap desc flags */
 } netmap_iface_context __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
+/* try netmap-specific tx this many times */
 #define TX_RETRIES			5
 /* for more buffering */
 #define NM_EXTRA_BUFS			8

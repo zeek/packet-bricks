@@ -24,15 +24,6 @@ dup_init(Element *elem, Linker_Intf *li)
 }
 /*---------------------------------------------------------------------*/
 void
-dup_process(Element *elem, unsigned char *pktbuf)
-{
-	TRACE_ELEMENT_FUNC_START();
-	TRACE_ELEMENT_FUNC_END();
-	UNUSED(elem);
-	UNUSED(pktbuf);
-}
-/*---------------------------------------------------------------------*/
-void
 dup_deinit(Element *elem)
 {
 	TRACE_ELEMENT_FUNC_START();
@@ -102,7 +93,7 @@ dup_link(struct Element *elem, Linker_Intf *linker)
 element_funcs dupfuncs = {
 	.init			= 	dup_init,
 	.link			=	dup_link,
-	.process		= 	dup_process,
+	.process		= 	NULL,
 	.deinit			= 	dup_deinit
 };
 /*---------------------------------------------------------------------*/

@@ -16,36 +16,6 @@
 extern volatile uint32_t stop_processing;
 #define METATABLE		PLATFORM_NAME" Metatable"
 /*---------------------------------------------------------------------*/
-static inline Element *
-createElement(Linker_Intf *linker)
-{
-	TRACE_LUA_FUNC_START();
-	Element *elem = calloc(1, sizeof(Element));
-	if (elem == NULL) {
-		TRACE_ERR("Can't create element: %s\n",
-			  (linker->type == LINKER_LB) ? 
-			  "LoadBalancer" : "Duplicator");
-		TRACE_LUA_FUNC_END();
-		return NULL;
-	}
-	switch (linker->type) {
-	case LINKER_LB:
-		elem->elib = &lbfuncs;
-		break;
-	case LINKER_DUP:
-		elem->elib = &dupfuncs;
-		break;
-	case LINKER_MERGE:
-		elem->elib = &mergefuncs;
-		break;
-	default:
-		TRACE_ERR("Invalid linker type requested!\n");
-		TRACE_LUA_FUNC_END();
-	}
-	TRACE_LUA_FUNC_END();
-	return elem;
-}
-/*---------------------------------------------------------------------*/
 /**
  * PLATFORM LUA INTERFACE 
  */
@@ -303,7 +273,7 @@ pkteng_link(lua_State *L)
 			     (uint8_t *)pe->ifname, 
 			     pe->batch, pe->qid);
 	
-	first_elem = createElement(linker);
+	first_elem = createElement(linker->type);
 	if (first_elem == NULL) {
 		TRACE_LUA_FUNC_END();
 		return 1;

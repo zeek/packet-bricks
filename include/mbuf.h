@@ -9,13 +9,9 @@
 #ifndef _SYS_MBUF_H_
 #define	_SYS_MBUF_H_
 #define	VM_UMA_H // kill this one
-// #include <sys/malloc.h>		/* we use free() */
 /* hopefully queue.h is already included by someone else */
 #include <sys/queue.h>
 #ifdef _KERNEL
-
-/* bzero not present on linux, but this should go in glue.h */
-// #define bzero(s, n) memset(s, 0, n)
 
 /*
  * We implement a very simplified UMA allocator where the backend

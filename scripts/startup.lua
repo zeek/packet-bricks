@@ -105,6 +105,49 @@ end
 -----------------------------------------------------------------------
 -- S I N G L E - T H R E A D E D - S E T U P
 -----------------------------------------------------------------------
+
+--setup_config1	 __sets up a simple load balancing configuration__
+--		 __the engine reads from netmap-enabled eth3 and__
+--		 __evenly splits traffic 5-way.		        __
+function setup_config1(pe)
+	 local lb = LoadBalancer.new(BI_TUPLED)
+	 lb:connect_input("eth3") 
+         lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth2")
+	 -- now link it!
+	 pe:link(lb)
+end
+
+
+--setup_config2	 __sets up a combo configuration of duplication__
+--		 __and load balancing. The engine reads from __
+--		 __netmap-enabled eth3 and first duplicates__
+--		 __traffic and then splits traffic from 1 branch__
+--		 __using a load balancer.		        __
+function setup_config2(pe)
+	 local dup = Duplicator.new()
+         dup:connect_input("eth3") 
+         dup:connect_output("eth3{0", "eth3{1")
+	 local lb2 = LoadBalancer.new(QUAD_TUPLED)
+	 lb2:connect_input("eth3}0")
+	 lb2:connect_output("eth3{2", "eth3{3")
+	 dup:link(lb2)
+	 -- now link it!
+	 pe:link(dup)
+end
+
+
+--setup_config3	 __sets up a simple configuration using a duplicatior__
+--		 __The engine reads from a netmap-enabled eth3 and__
+--		 __duplicates traffic 4-way.		          __
+function setup_config3(pe)
+         local dup = Duplicator.new()
+         dup:connect_input("eth3")
+         dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
+	 -- now link it!
+	 pe:link(dup)
+end
+
+
 --init function  __initializes pkteng thread and links it with a__
 --		 __netmap-enabled interface. collects PKT_BATCH__
 --		 __pkts at a time. "cpu" and "batch" params can remain__
@@ -131,37 +174,14 @@ function init()
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
-	 local lb = LoadBalancer.new(BI_TUPLED)
-	 lb:connect_input("eth3") 
-         lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth2")
-	 -- now link it!
-	 pe:link(lb)
+	 -- setup config1
+	 setup_config1(pe)
 
-	 --local dup = Duplicator.new()
-         --dup:connect_input("eth3") 
-         --dup:connect_output("eth3{0", "eth3{1")
-	 --local lb2 = LoadBalancer.new(QUAD_TUPLED)
-	 --lb2:connect_input("eth3}0")
-	 --lb2:connect_output("eth3{2", "eth3{3")
-	 --dup:link(lb2)
-	 -- now link it!
-	 --pe:link(dup)
+	 -- setup config2
+	 --setup_config2(pe)
 
-	 --local lb1 = LoadBalancer.new(QUAD_TUPLE)
-         --lb1:connect_input("eth3") 
-         --lb1:connect_output("eth3{2", "eth3{0")
-	 --local lb2 = LoadBalancer.new(QUAD_TUPLED)
-	 --lb2:connect_input("eth3}2")
-	 --lb2:connect_output("eth3{1", "eth3{3")
-	 --lb1:link(lb2)
-	 -- now link it!
-	 --pe:link(lb1)
-
-         --local dup = Duplicator.new()
-         --dup:connect_input("eth3")
-         --dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
-	 -- now link it!
-	 --pe:link(dup)
+	 -- setup config3
+	 --setup_config3
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__

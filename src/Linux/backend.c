@@ -24,8 +24,6 @@
 #include "lua_interpreter.h"
 /* for inet_addr */
 #include <arpa/inet.h>
-/* for filter funcs */
-#include "filter.h"
 /*---------------------------------------------------------------------*/
 int
 connect_to_pacf_server(char *rshell_args)

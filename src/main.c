@@ -24,7 +24,9 @@
 #include "config.h"
 /* for file open */
 #include <sys/types.h>
+/* for file open */
 #include <sys/stat.h>
+/* for file open */
 #include <fcntl.h>
 /*---------------------------------------------------------------------*/
 /* program variable for lua */

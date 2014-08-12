@@ -7,8 +7,6 @@
 #include "pacf_interface.h"
 /* for rule def'n */
 #include "element.h"
-/* for filter def'n */
-#include "filter.h"
 /*---------------------------------------------------------------------*/
 #define MAX_IFNAMELEN		64
 /*---------------------------------------------------------------------*/
@@ -31,9 +29,6 @@
  *		   callback(): Function that reads the packets and runs 
  *				appropriate handler
  *
- *		   create_channel(): Function that establishes comm interface
- *				     with userland processes
- *
  *		   delete_all_channels(): Function that tears down all channels
  *					 associated with a particular rule
  *
@@ -55,8 +50,6 @@ typedef struct io_module_funcs {
 			      int8_t qid);
 	void	(*unlink_iface)(const unsigned char *iface, void *engptr);
 	int32_t (*callback)(void *engptr, Element *elem);
-	int32_t (*create_channel)(void *engptr, Element *elem, char *in_name, char *out_name, Target t);
-	int32_t (*set_action)(void *engptr, Element *elem, char *rule_args);
 	int32_t (*add_filter)(Element *elem, Filter *f, unsigned char *ifname);
 	void	(*delete_all_channels)(void *engptr, Element *elem);
 	int32_t (*create_external_link)(Element *elem, char *in_name, char *out_name, Target t);

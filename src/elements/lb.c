@@ -25,15 +25,6 @@ lb_init(Element *elem, Linker_Intf *li)
 }
 /*---------------------------------------------------------------------*/
 void
-lb_process(Element *elem, unsigned char *pktbuf)
-{
-	TRACE_ELEMENT_FUNC_START();
-	TRACE_ELEMENT_FUNC_END();
-	UNUSED(elem);
-	UNUSED(pktbuf);
-}
-/*---------------------------------------------------------------------*/
-void
 lb_deinit(Element *elem)
 {
 	TRACE_ELEMENT_FUNC_START();
@@ -100,7 +91,7 @@ lb_link(struct Element *elem, Linker_Intf *linker)
 element_funcs lbfuncs = {
 	.init			= 	lb_init,
 	.link			=	lb_link,
-	.process		= 	lb_process,
+	.process		= 	NULL,
 	.deinit			= 	lb_deinit
 };
 /*---------------------------------------------------------------------*/

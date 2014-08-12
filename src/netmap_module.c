@@ -22,8 +22,8 @@
 #include <net/if.h>
 /* for hash function */
 #include "pkt_hash.h"
-/* for filter funcs */
-#include "filter.h"
+/* for element def'n */
+#include "element.h"
 /*---------------------------------------------------------------------*/
 int32_t
 netmap_init(void **ctxt_ptr, void *engptr)
@@ -63,7 +63,8 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 	if (nif == NULL) {
 		nic = calloc(1, sizeof(netmap_iface_context));
 		if (nic == NULL) {
-			TRACE_ERR("Can't allocate memory for netmap_iface_context (for %s)\n", iface);
+			TRACE_ERR("Can't allocate memory for "
+				  "netmap_iface_context (for %s)\n", iface);
 			TRACE_NETMAP_FUNC_END();
 			return -1;
 		}
@@ -244,7 +245,7 @@ share_packets(CommNode *cn)
 			dst->len = src->len;
 
 			/* Swap now! */
-			u_int tmp;
+			register u_int tmp;
 			dst->flags = src->flags = NS_BUF_CHANGED;
 			tmp = dst->buf_idx;
 			dst->buf_idx = src->buf_idx;
@@ -323,20 +324,6 @@ copy_packets(CommNode *cn)
         return 0;
 }
 /*------------------------------------------------------------------------*/
-static inline uint32_t
-local_hash(uint32_t a)
-{
-	TRACE_NETMAP_FUNC_START();
-	a = (a ^ 61) ^ (a >> 16);
-	a = a + (a << 3);
-	a = a ^ (a >> 4);
-	a = a * 0x27d4eb2d;
-	a = a ^ (a >> 15);
-	TRACE_NETMAP_FUNC_END();
-
-	return a;
-}
-/*------------------------------------------------------------------------*/
 void
 flush_all_cnodes(Element *elem, engine *eng)
 {
@@ -360,7 +347,8 @@ flush_all_cnodes(Element *elem, engine *eng)
 }
 /*---------------------------------------------------------------------*/
 void
-update_cnode_ptrs(struct netmap_ring *rxring, Element *elem, engine *eng, uint src)
+update_cnode_ptrs(struct netmap_ring *rxring, Element *elem,
+		  engine *eng, uint src)
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn;
@@ -405,28 +393,27 @@ dispatch_pkt(struct netmap_ring *rxring,
 	
 	if (elem->elib == &lbfuncs) {
 		TRACE_DEBUG_LOG("(ifname: %s, seed: %llu, lnd_count: %d\n", 
-				lnd->ifname, (long long unsigned)eng->seed, lnd->count);
+				lnd->ifname, (long long unsigned)eng->seed,
+				lnd->count);
 		cn = (CommNode *)lnd->external_links[(pkt_hdr_hash(buf) +  
 						      myrand(&eng->seed)) % 
 						     lnd->count];
 		if (cn->elem != NULL) {
 			dispatch_pkt(rxring, eng, cn->elem, buf);
-		} else {
-			if (cn->filt == NULL)
-				cn->mark = 1;
+		} else if (cn->filt == NULL) {
+			cn->mark = 1;
 		}
 	} else if(elem->elib == &dupfuncs) {
 		linkdata *lnd = (linkdata *)elem->private_data;
 		/* pick any cn as reference */
-		cn = (CommNode *)lnd->external_links[0];
+		cn = (CommNode *)(*lnd->external_links);
 		
 		for (j = 0; j < lnd->count; j++) {
 			cn = (CommNode *)lnd->external_links[j];
 			if (cn->elem != NULL)
 				dispatch_pkt(rxring, eng, cn->elem, buf);
-			else {
-				if (cn->filt == NULL)
-					cn->mark = 1;
+			else if (cn->filt == NULL) {
+				cn->mark = 1;
 			}
 		}
 	}
@@ -556,7 +543,7 @@ static void
 strcpy_wtih_reverse_pipe(char *to, char *from)
 {
 	TRACE_NETMAP_FUNC_START();
-	volatile int i = 0;
+	register int i = 0;
 	do {
 		switch (from[i]) {
 		case '}':
@@ -586,27 +573,10 @@ enable_pipeline(Element *elem, const char *ifname, Target t)
 		if (!strcmp(cn->nm_ifname, ifname)) {
 			/* found the right entry, now fill Element entry */
 			if (cn->elem == NULL) {
-				cn->elem = calloc(1, sizeof(Element));
-				if (cn->elem == NULL) {
-					TRACE_LOG("Can't allocate mem to add a new element\n");
-					TRACE_NETMAP_FUNC_END();
-					return NULL;
-				}
-				switch (t) {
-				case SHARE:
-					cn->elem->elib = &lbfuncs;
-					break;
-				case COPY:
-					cn->elem->elib = &dupfuncs;
-					elem->eng->mark_for_copy = 1;
-					break;
-				default:
-					TRACE_ERR("Invalid element type\n");
-					TRACE_NETMAP_FUNC_END();
-					return NULL;
-				}
+				cn->elem = createElement(t);
 				if (cn->elem->elib->init(cn->elem, NULL) == -1) {
-					TRACE_LOG("Can't allocate mem to add new element's private context\n");
+					TRACE_LOG("Can't allocate mem to add new "
+						  "element's private context\n");
 					TRACE_NETMAP_FUNC_END();
 					free(cn->elem);
 					return NULL;
@@ -616,7 +586,8 @@ enable_pipeline(Element *elem, const char *ifname, Target t)
 				strcpy((char *)lnd->ifname, (char *)ifname);
 				lnd->count++;
 				lnd->tgt = t;
-				lnd->external_links = realloc(lnd->external_links, sizeof(void *) * lnd->count);
+				lnd->external_links = realloc(lnd->external_links,
+							      sizeof(void *) * lnd->count);
 				if (lnd->external_links == NULL) {
 					TRACE_LOG("Can't re-allocate to add a new element!\n");
 					free(cn->elem->private_data);
@@ -692,14 +663,14 @@ netmap_create_channel(Element *elem, char *in_name,
 	}
 
 	cn = (CommNode *)lnd->external_links[lnd->init_cur_idx];
-	uint64_t flags = NM_OPEN_NO_MMAP | NM_OPEN_ARG3;
-	cn->out_nmd = nm_open(ifname, NULL, flags, nmc->local_nmd); 
+	cn->out_nmd = nm_open(ifname, NULL, NM_OPEN_NO_MMAP | NM_OPEN_ARG3, 
+			      nmc->local_nmd); 
 	if (cn->out_nmd == NULL) {
 		TRACE_ERR("Can't open %p(%s)\n", cn->out_nmd, ifname);
 		TRACE_NETMAP_FUNC_END();
 	}
 	strcpy_wtih_reverse_pipe(cn->nm_ifname, out_name);
-
+	
 	TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", 
 		  eng->link_name, 
 		  out_name, 

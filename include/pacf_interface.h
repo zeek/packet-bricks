@@ -25,7 +25,7 @@
  * 			  is reached
  */
 typedef enum {
-	MODIFY,
+	MODIFY=1,
 	DROP,
 	SHARE,
 	COPY,

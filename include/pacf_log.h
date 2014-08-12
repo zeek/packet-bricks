@@ -98,22 +98,6 @@
 #define TRACE_PKTHASH_FUNC_END()	(void)0
 #endif /* !DPKTHASH */
 
-#ifdef DRULE
-#define TRACE_RULE_FUNC_START()		TRACE_FUNC_START()
-#define TRACE_RULE_FUNC_END()		TRACE_FUNC_END()
-#else /* DRULE */
-#define TRACE_RULE_FUNC_START()		(void)0
-#define TRACE_RULE_FUNC_END()		(void)0
-#endif /* !DRULE */
-
-#ifdef DFILTER
-#define TRACE_FILTER_FUNC_START()	TRACE_FUNC_START()
-#define TRACE_FILTER_FUNC_END()		TRACE_FUNC_END()
-#else /* DFILTER */
-#define TRACE_FILTER_FUNC_START()	(void)0
-#define TRACE_FILTER_FUNC_END()		(void)0
-#endif /* !DFILTER */
-
 #ifdef DELEM
 #define TRACE_ELEMENT_FUNC_START()	TRACE_FUNC_START()
 #define TRACE_ELEMENT_FUNC_END()	TRACE_FUNC_END()
