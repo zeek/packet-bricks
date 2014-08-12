@@ -11,8 +11,8 @@
 #include <pthread.h>
 /* for file I/O */
 #include <stdio.h>
-/* for rule definition list */
-#include "rule.h"
+/* for Element def'n */
+#include "element.h"
 /*---------------------------------------------------------------------*/
 /**
  *  io_type: Right now, we only support IO_NETMAP.
@@ -48,7 +48,8 @@ typedef struct engine {
 	struct io_module_funcs iom;	/* io_funcs ptrs */
 	void *private_context;		/* I/O-related context */
 	pthread_t t;
-	Rule *r;			/* replacement for rule list */
+
+	Element *elem;			/* list of attached elements */
 	uint8_t mark_for_copy;		/* marking for copy */
 	uint64_t seed;			/* seed for hashing in pipelining mode */
 

@@ -16,6 +16,36 @@
 extern volatile uint32_t stop_processing;
 #define METATABLE		PLATFORM_NAME" Metatable"
 /*---------------------------------------------------------------------*/
+static inline Element *
+createElement(Linker_Intf *linker)
+{
+	TRACE_LUA_FUNC_START();
+	Element *elem = calloc(1, sizeof(Element));
+	if (elem == NULL) {
+		TRACE_ERR("Can't create element: %s\n",
+			  (linker->type == LINKER_LB) ? 
+			  "LoadBalancer" : "Duplicator");
+		TRACE_LUA_FUNC_END();
+		return NULL;
+	}
+	switch (linker->type) {
+	case LINKER_LB:
+		elem->elib = &lbfuncs;
+		break;
+	case LINKER_DUP:
+		elem->elib = &dupfuncs;
+		break;
+	case LINKER_MERGE:
+		elem->elib = &mergefuncs;
+		break;
+	default:
+		TRACE_ERR("Invalid linker type requested!\n");
+		TRACE_LUA_FUNC_END();
+	}
+	TRACE_LUA_FUNC_END();
+	return elem;
+}
+/*---------------------------------------------------------------------*/
 /**
  * PLATFORM LUA INTERFACE 
  */
@@ -222,11 +252,9 @@ static int
 pkteng_link(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	int i, rc;
 	PktEngine_Intf *pe = check_pkteng(L, 1);
 	Linker_Intf *linker;
-	const char *channel_type = NULL;
-
+	Element *first_elem;
 	int nargs = lua_gettop(L);
 
 	/* check if args2 is user-data */
@@ -238,10 +266,8 @@ pkteng_link(lua_State *L)
 
 	if (linker->type == LINKER_LB) {
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "LoadBalancer");
-		channel_type = "SHARE";
 	} else if (linker->type == LINKER_DUP) {
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "Duplicator");
-		channel_type = "COPY";
 	} else
 		luaL_typerror(L, 2, "LoadBalancer");
 
@@ -276,57 +302,28 @@ pkteng_link(lua_State *L)
 	pktengine_link_iface((uint8_t *)pe->eng_name, 
 			     (uint8_t *)pe->ifname, 
 			     pe->batch, pe->qid);
-
-	Element *elem = calloc(1, sizeof(Element));
-	if (elem == NULL) {
-		TRACE_ERR("Can't create element: %s\n",
-			  (linker->type == LINKER_LB) ? 
-			  "LoadBalancer" : "Duplicator");
-		TRACE_LUA_FUNC_END();
-	}
-	switch (linker->type) {
-	case LINKER_LB:
-		elem->elib = lbfuncs;
-		break;
-	case LINKER_DUP:
-		elem->elib = dupfuncs;
-		break;
-	case LINKER_MERGE:
-		elem->elib = mergefuncs;
-		break;
-	default:
-		TRACE_ERR("Invalid linker type requested!\n");
-		TRACE_LUA_FUNC_END();
-	}
-
-	elem->elib.init(elem, NULL);
 	
-	/* ... and now link all the channels */
-	for (i = 0; i < linker->output_count; i++) {
-		rc = pktengine_open_channel((uint8_t *)pe->eng_name, 
-					    (uint8_t *)pe->ifname,
-					    (uint8_t *)linker->output_link[i], 
-					    (uint8_t *)channel_type);
-		if (rc == -1) {
-			TRACE_LOG("Failed to open channel %s\n", 
-				  linker->output_link[i]);
-		}
+	first_elem = createElement(linker);
+	if (first_elem == NULL) {
+		TRACE_LUA_FUNC_END();
+		return 1;
 	}
 
+	first_elem->elib->init(first_elem, linker);
+	first_elem->eng = engine_find((unsigned char *)pe->eng_name);
+	if (first_elem->eng == NULL) {
+		TRACE_LOG("Could not find engine with name: %s\n",
+			  pe->eng_name);
+		TRACE_LUA_FUNC_END();
+		free(first_elem);
+		return 1;
+	}
+	first_elem->elib->link(first_elem, linker);
+	
 	/* if there are pipelines, link them as well */
 	while (linker->next_linker != NULL) {
 		linker = linker->next_linker;
-		for (i = 0; i < linker->output_count; i++) {
-			rc = pktengine_open_channel((uint8_t *)pe->eng_name,
-						    (uint8_t *)linker->input_link,
-						    (uint8_t *)linker->output_link[i],
-						    (uint8_t *)((linker->type == LINKER_LB) ? 
-						     "SHARE" : "COPY"));
-			if (rc == -1) {
-				TRACE_LOG("Failed to open channel %s\n",
-					  linker->output_link[i]);
-			}
-		}
+		first_elem->elib->link(first_elem, linker); 
 	}
 
 	TRACE_LUA_FUNC_END();

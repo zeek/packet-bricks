@@ -6,7 +6,7 @@
 /* for target and rule def'ns */
 #include "pacf_interface.h"
 /* for rule def'n */
-#include "rule.h"
+#include "element.h"
 /* for filter def'n */
 #include "filter.h"
 /*---------------------------------------------------------------------*/
@@ -40,7 +40,10 @@
  *		   add_filter(): Function that adds filter to the netmap
  *				 framework
  *
-  *		   shutdown(): Used to destroy the private pkt I/O-specifc 
+ *		   create_external_link(): Function that establishes external
+ *				 	   link with userland processes
+ *
+ *		   shutdown(): Used to destroy the private pkt I/O-specifc 
  *			       context
  */
 /*---------------------------------------------------------------------*/
@@ -51,11 +54,12 @@ typedef struct io_module_funcs {
 			      const uint16_t batchsize,
 			      int8_t qid);
 	void	(*unlink_iface)(const unsigned char *iface, void *engptr);
-	int32_t (*callback)(void *engptr, Rule *r);
-	int32_t (*create_channel)(void *engptr, Rule *r, char *in_name, char *out_name, Target t);
-	int32_t (*set_action)(void *engptr, Rule *r, char *rule_args);
-	int32_t (*add_filter)(Rule *r, Filter *f, unsigned char *ifname);
-	void	(*delete_all_channels)(void *engptr, Rule *r);
+	int32_t (*callback)(void *engptr, Element *elem);
+	int32_t (*create_channel)(void *engptr, Element *elem, char *in_name, char *out_name, Target t);
+	int32_t (*set_action)(void *engptr, Element *elem, char *rule_args);
+	int32_t (*add_filter)(Element *elem, Filter *f, unsigned char *ifname);
+	void	(*delete_all_channels)(void *engptr, Element *elem);
+	int32_t (*create_external_link)(Element *elem, char *in_name, char *out_name, Target t);
 	int32_t (*shutdown)(void *engptr);
 	
 } io_module_funcs __attribute__((aligned(__WORDSIZE)));

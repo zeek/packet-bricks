@@ -147,12 +147,12 @@ function init()
 	 -- now link it!
 	 --pe:link(dup)
 
-	 --local lb1 = LoadBalancer.new()
+	 --local lb1 = LoadBalancer.new(QUAD_TUPLE)
          --lb1:connect_input("eth3") 
-         --lb1:connect_output("eth3{0", "eth3{1")
+         --lb1:connect_output("eth3{2", "eth3{0")
 	 --local lb2 = LoadBalancer.new(QUAD_TUPLED)
-	 --lb2:connect_input("eth3}0")
-	 --lb2:connect_output("eth3{2", "eth3{3")
+	 --lb2:connect_input("eth3}2")
+	 --lb2:connect_output("eth3{1", "eth3{3")
 	 --lb1:link(lb2)
 	 -- now link it!
 	 --pe:link(lb1)

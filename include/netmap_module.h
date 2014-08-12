@@ -26,10 +26,7 @@ typedef struct CommNode {
 	int32_t cur_txq;			/* current index of the tx entry */
 	Filter *filt;				/* applied filter */
 	uint8_t mark;				/* marking for delivery */
-	struct Rule *r;				/* 
-						 * pointer to the child Rule  
-						 * (in case the caller enables pipelining)
-						 */
+	struct Element *elem;			/* ptrs to child elements */
 } CommNode __attribute__((aligned(__WORDSIZE)));
 
 /**

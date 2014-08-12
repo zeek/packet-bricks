@@ -291,8 +291,13 @@ process_request_backend(engine *eng, int epoll_fd)
 	TRACE_DEBUG_LOG("\tInterface name: %s\n", rb->ifname);
 	TRACE_FLUSH();
 
+#if 0
 	respb.flag = (process_filter_request(eng, rb->ifname, &rb->f) == -1) ?
 		0 : 1;
+#else
+	(void)rb;
+	respb.flag = 1;
+#endif
 	
 	/* write the response back to the app */
 	if (write(client_sock, &respb, sizeof(respb)) == -1) {
@@ -387,7 +392,7 @@ initiate_backend(engine *eng)
 		for (n = 0; n < nfds; n++) {
 			/* process dev work */
 			if (events[n].data.fd == eng->dev_fd) {
-				eng->iom.callback(eng, eng->r);
+				eng->iom.callback(eng, eng->elem);
 
 				/* continue epolling */
 				ev.data.fd = eng->dev_fd;

@@ -242,9 +242,9 @@ pktengine_delete(const unsigned char *name)
 		return;
 	}
 
-	/* delete all sampling rules for now */
-	delete_all_rules(eng);
-
+	/* delete all channels for now */
+	eng->iom.delete_all_channels(eng, eng->elem);
+	
 	/* check if ifaces have been unlinked */
 	eng->iom.unlink_iface((const unsigned char *)"all", eng);
 
@@ -271,10 +271,11 @@ pktengine_delete(const unsigned char *name)
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-void pktengine_link_iface(const unsigned char *name, 
-			  const unsigned char *iface,
-			  const int16_t batch_size,
-			  const int8_t queue)
+void
+pktengine_link_iface(const unsigned char *name, 
+		     const unsigned char *iface,
+		     const int16_t batch_size,
+		     const int8_t queue)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
@@ -309,9 +310,9 @@ void pktengine_link_iface(const unsigned char *name,
 			  iface, eng->name);
 	}
 	eng->dev_fd = eng->iom.link_iface(eng->private_context, iface, 
-					    (batch_size == -1) ? 
-					    pc_info.batch_size : batch_size,
-					    queue);
+					  (batch_size == -1) ? 
+					  pc_info.batch_size : batch_size,
+					  queue);
 	if (eng->dev_fd == -1) 
 		TRACE_LOG("Could not link!!!\n");
 	
@@ -412,58 +413,6 @@ pktengine_stop(const unsigned char *name)
 	}
 	
 	TRACE_PKTENGINE_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-int32_t
-pktengine_open_channel(const unsigned char *eng_name, 
-		       const unsigned char *from_channel_name,
-		       const unsigned char *to_channel_name,
-		       const unsigned char *action)
-{
-	TRACE_PKTENGINE_FUNC_START();
-	engine *eng;
-	Rule *r = NULL;
-	Target t = 0;
-		
-	eng = engine_find(eng_name);
-	if (eng == NULL) {
-		TRACE_LOG("Can't find engine with name: %s\n",
-			  eng_name);
-		TRACE_PKTENGINE_FUNC_END();
-		return -1;
-	}
-	
-	if (eng->run == 1) {
-		TRACE_LOG("Can't open channel for %s as "
-			  "engine %s is already running\n",
-			  action, eng_name);
-		TRACE_PKTENGINE_FUNC_END();
-		return -1;
-	}
-	
-	/* add the rule for channel */
-	if (!strcmp((char *)action, "SHARE")) {
-		t = SHARE;
-		r = add_new_rule(eng, from_channel_name, NULL, t);
-	} else if (!strcmp((char *)action, "COPY")) {
-		t = COPY;
-		r = add_new_rule(eng, from_channel_name, NULL, COPY);
-	} else {
-		TRACE_LOG("Unrecognized action inserted: <%s>\n",
-			  (char *)action);
-		TRACE_PKTENGINE_FUNC_END();
-		return -1;
-	}
-	
-	/* create communication back channel */
-	eng->iom.create_channel(eng,
-				r,
-				(char *)from_channel_name,
-				(char *)to_channel_name,
-				t);
-	
-	TRACE_PKTENGINE_FUNC_END();
-	return 0;
 }
 /*---------------------------------------------------------------------*/
 int32_t

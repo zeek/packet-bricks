@@ -1,10 +1,10 @@
 #---------------------------------------------------------------------#
 SRCS := lua_interpreter.c main.c lua_interface.c \
 	pkt_engine.c netmap_module.c \
-	network_interface.c rule.c filter.c
+	network_interface.c
 
 _OBJ := lua_interpreter.o main.o lua_interface.o pkt_engine.o \
-	netmap_module.o network_interface.o rule.o filter.o
+	netmap_module.o network_interface.o
 OBJ := $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 $(OBJDIR)/%.o: %.c
