@@ -238,11 +238,13 @@ pkteng_link(lua_State *L)
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "LoadBalancer");
 	} else if (linker->type == LINKER_DUP) {
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "Duplicator");
+	} else if (linker->type == LINKER_MERGE) {
+		linker = (Linker_Intf *)luaL_checkudata(L, 2, "Merge");
 	} else
 		luaL_typerror(L, 2, "LoadBalancer");
 
 	/* set values as default */
-	pe->ifname = linker->input_link;
+	pe->ifname = linker->input_link[0];
 	pe->batch = DEFAULT_BATCH_SIZE;
 	pe->qid = -1;
 
@@ -507,7 +509,21 @@ push_linker(lua_State *L, int type)
 {
 	TRACE_LUA_FUNC_START();
 	Linker_Intf *linker = (Linker_Intf *)lua_newuserdata(L, sizeof(Linker_Intf));
-	luaL_getmetatable(L, (type == LINKER_LB) ? "LoadBalancer": "Duplicator");
+	char *table;
+	switch (type) {
+	case LINKER_LB:
+		table = "LoadBalancer";
+		break;
+	case LINKER_DUP:
+		table = "Duplicator";
+		break;
+	case LINKER_MERGE:
+		table = "Merge";
+		break;
+	default:
+		TRACE_ERR("Invalid table type\n");
+	}
+	luaL_getmetatable(L, table);
 	lua_setmetatable(L, -2);
 	TRACE_LUA_FUNC_END();
 	return linker;
@@ -528,9 +544,11 @@ check_linker(lua_State *L, int index)
 		linker = (Linker_Intf *)luaL_checkudata(L, index, "LoadBalancer");
 	else if (linker->type == LINKER_DUP)
 		linker = (Linker_Intf *)luaL_checkudata(L, index, "Duplicator");
+	else if (linker->type == LINKER_MERGE)
+		linker = (Linker_Intf *)luaL_checkudata(L, index, "Merge");
 	else
 		luaL_typerror(L, index, "LoadBalancer");
-
+	
 	TRACE_LUA_FUNC_END();
 	return linker;
 }
@@ -542,15 +560,19 @@ linker_new(lua_State *L)
 	int type = LINKER_DUP;
 	int hash_split = -1;
 	int nargs = lua_gettop(L);
-	
+
 	if (nargs == 1) {
-		type = LINKER_LB;
 		hash_split = luaL_optint(L, 1, 0);
+		if (hash_split == -1)
+			type = LINKER_MERGE;
+		else
+			type = LINKER_LB;
 	}
 	Linker_Intf *linker = push_linker(L, type);
 	linker->type = type;
 	linker->hash_split = hash_split;
 	linker->output_count = 0;
+	linker->input_count = 0;
 	linker->next_linker = NULL;
 	TRACE_LUA_FUNC_END();
 	return 1;
@@ -561,12 +583,23 @@ linker_input(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 	Linker_Intf *linker;
-	const char *input;
+	int i;
+	int nargs = lua_gettop(L);
 
 	linker = check_linker(L, 1);
-	input = luaL_optstring(L, 2, 0);	
+	/* pick as many input sources as possible */
+	if (linker->type == LINKER_MERGE) {
+		for (i = 2; i <= nargs; i++) {
+			linker->input_link[linker->input_count] = 
+				luaL_optstring(L, i, 0);
+			linker->input_count++;
+		}
+	} else { /* pick only 1 input */
+		linker->input_link[0] = 
+			luaL_optstring(L, 2, 0);
+		linker->input_count = 1;
+	}
 
-	linker->input_link = input;
 	lua_settop(L, 1);
 
 	TRACE_LUA_FUNC_END();
@@ -583,10 +616,16 @@ linker_output(lua_State *L)
 	int i;
 
 	linker = check_linker(L, 1);
-	for (i = 2; i <= nargs; i++) {
-		linker->output_link[linker->output_count] = 
-			luaL_optstring(L, i, 0);
-		linker->output_count++;
+	if (linker->type == LINKER_MERGE) {
+		linker->output_link[0] =
+			luaL_optstring(L, 2, 0);
+		linker->output_count = 1;
+	} else { /* for LINKER_LB or LINKER_DUP */
+		for (i = 2; i <= nargs; i++) {
+			linker->output_link[linker->output_count] = 
+				luaL_optstring(L, i, 0);
+			linker->output_count++;
+		}
 	}
 	lua_settop(L, 1);
 
@@ -647,11 +686,25 @@ linker_tostring(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	char buff[LUA_MAXINPUT];
 	Linker_Intf *linker;
+	char *type;
 	fprintf(stderr, "Calling %s\n", __FUNCTION__);
 	linker = to_linker(L, 1);
-	sprintf(buff, (linker->type == 1) ? "LoadBalancer" : "Duplicator"
-		":\n\tSource: %s\n",
-		linker->input_link);
+	switch (linker->type) {
+	case LINKER_LB:
+		type = "LoadBalancer";
+		break;
+	case LINKER_DUP:
+		type = "Duplicator";
+		break;
+	case LINKER_MERGE:
+		type = "Merge";
+		break;
+	default:
+		TRACE_ERR("Invalid type!\n");
+	}
+	sprintf(buff, "%s%s%s\n", type,
+		":\n\tSource: ",
+		linker->input_link[0]);
 	lua_pushfstring(L, "%s", buff);
 
 	TRACE_LUA_FUNC_END();
@@ -672,6 +725,32 @@ loadbalancer_register(lua_State *L)
 	luaL_openlib(L, "LoadBalancer", linker_methods, 0);
 	/* create metatable for LoadBalancer, & add it to the Lua registry */
 	luaL_newmetatable(L, "LoadBalancer");
+	/* fill metatable */
+	luaL_openlib(L, 0, linker_meta, 0);
+	lua_pushliteral(L, "__index");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* metatable.__index = methods */
+	lua_rawset(L, -3);
+	lua_pushliteral(L, "__metatable");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* hide metatable: metatable.__metatable = methods */
+	lua_rawset(L, -3);
+	/* drop metatable */
+	lua_pop(L, 1);
+	TRACE_LUA_FUNC_END();
+	return 1; /* return methods on the stack */
+}
+/*---------------------------------------------------------------------*/
+int
+merge_register(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* create methods table, add it to the globals */
+	luaL_openlib(L, "Merge", linker_methods, 0);
+	/* create metatable for Merge, & add it to the Lua registry */
+	luaL_newmetatable(L, "Merge");
 	/* fill metatable */
 	luaL_openlib(L, 0, linker_meta, 0);
 	lua_pushliteral(L, "__index");
@@ -724,6 +803,7 @@ luaopen_linker(lua_State *L)
 
 	loadbalancer_register(L);
 	duplicator_register(L);
+	merge_register(L);
 
 	TRACE_LUA_FUNC_END();
         return 1;

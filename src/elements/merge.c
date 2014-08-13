@@ -9,19 +9,16 @@ int32_t
 merge_init(Element *elem, Linker_Intf *li)
 {
 	TRACE_ELEMENT_FUNC_START();
+	elem->private_data = calloc(1, sizeof(linkdata));
+	if (elem->private_data == NULL) {
+		TRACE_LOG("Can't create private context "
+			  "for merge\n");
+		TRACE_ELEMENT_FUNC_END();
+		return -1;
+	}
 	TRACE_ELEMENT_FUNC_END();
-	UNUSED(elem);
 	UNUSED(li);
 	return 1;
-}
-/*---------------------------------------------------------------------*/
-void
-merge_process(Element *elem, unsigned char *pktbuf)
-{
-	TRACE_ELEMENT_FUNC_START();
-	TRACE_ELEMENT_FUNC_END();
-	UNUSED(elem);
-	UNUSED(pktbuf);
 }
 /*---------------------------------------------------------------------*/
 void
@@ -36,24 +33,16 @@ void
 merge_link(struct Element *from, Linker_Intf *li)
 {
 	TRACE_ELEMENT_FUNC_START();
+	/* XXX - to be filled */
 	TRACE_ELEMENT_FUNC_END();
 	UNUSED(from);
-	UNUSED(li);
-}
-/*---------------------------------------------------------------------*/
-void
-merge_link_eng(struct Element *elem, Linker_Intf *li)
-{
-	TRACE_ELEMENT_FUNC_START();
-	TRACE_ELEMENT_FUNC_END();
-	UNUSED(elem);
 	UNUSED(li);
 }
 /*---------------------------------------------------------------------*/
 element_funcs mergefuncs = {
 	.init			= 	merge_init,
 	.link			=	merge_link,
-	.process		= 	merge_process,
+	.process		= 	NULL,
 	.deinit			= 	merge_deinit
 };
 /*---------------------------------------------------------------------*/

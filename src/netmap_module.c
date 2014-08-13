@@ -647,7 +647,6 @@ netmap_create_channel(Element *elem, char *in_name,
 		}
 	}
 	
-
 	lnd = (linkdata *)elem->private_data;
 	TRACE_LOG("elem: %p, local_desc: %p\n", elem, nmc->local_nmd);
 	/* setting the name */

@@ -148,6 +148,23 @@ function setup_config3(pe)
 end
 
 
+--setup_config5	 __sets up a combo of load balancing and merge__
+--		 __configuration. The engine reads from netmap-__
+--		 __enabled eth3, then splits traffic and finally__
+--		 __ merge packets into a netmap pipe.		__
+function setup_config5(pe)
+	 local lb = LoadBalancer.new(QUAD_TUPLED)
+         lb:connect_input("eth3") 
+         lb:connect_output("eth3{0", "eth3{1")
+	 local mrg = Merge.new(-1)
+	 mrg:connect_input("eth3}1", "eth3}0")
+	 mrg:connect_output("eth3{3")
+	 lb:link(mrg)
+	 -- now link it!
+	 pe:link(lb)
+end
+
+
 --init function  __initializes pkteng thread and links it with a__
 --		 __netmap-enabled interface. collects PKT_BATCH__
 --		 __pkts at a time. "cpu" and "batch" params can remain__
@@ -181,7 +198,10 @@ function init()
 	 --setup_config2(pe)
 
 	 -- setup config3
-	 --setup_config3
+	 --setup_config3(pe)
+	 
+	 -- setup config5
+	 --setup_config5(pe)
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
@@ -227,6 +247,17 @@ end
 -----------------------------------------------------------------------
 -- 4 - T H R E A D S - S E T U P
 -----------------------------------------------------------------------
+--setup_config4	 __sets up a simple load balancing configuration__
+--		 __the engine reads from netmap-enabled eth3 and__
+--		 __forwards packets to a netmap pipe.	        __
+function setup_config4(pe)
+	  local lb = LoadBalancer.new(QUAD_TUPLED)
+	  lb:connect_input("eth3")
+	  lb:connect_output("eth3{" .. cnt)
+	  pe:link(lb, PKT_BATCH, cnt)
+end
+
+
 --init4 function __initializes 4 pkteng threads and links it with a__
 --		 __netmap-enabled interface. collects PKT_BATCH    __
 --		 __pkts at a time. "cpu", "batch" & "qid" params   __
@@ -259,16 +290,9 @@ function init4()
 
 	 for cnt = 0, 3 do
 	 	 local pe = PktEngine.new("e" .. cnt, "netmap", cnt)
-		 local lb = LoadBalancer.new(QUAD_TUPLED)
-		
-		 lb:connect_input("eth3")
-		 lb:connect_output("eth3{" .. cnt)
-		 pe:link(lb, PKT_BATCH, cnt)
-
-		 --local dup = Duplicator.new()
-		 --dup:connect_input("eth3")
-		 --dup:connect_output("eth3{" .. cnt)
-		 --pe:link(dup, PKT_BATCH, cnt)
+		 
+		 --setup with config 4
+		 setup_config4(pe)		 
 	 end
 end
 -----------------------------------------------------------------------
