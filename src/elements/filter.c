@@ -4,37 +4,35 @@
 #include "pacf_log.h"
 /* for engine declaration */
 #include "pkt_engine.h"
-/* for strcmp */
+/* for string functions */
 #include <string.h>
 /*---------------------------------------------------------------------*/
 int32_t
-lb_init(Element *elem, Linker_Intf *li)
+filter_init(Element *elem, Linker_Intf *li)
 {
 	TRACE_ELEMENT_FUNC_START();
 	elem->private_data = calloc(1, sizeof(linkdata));
 	if (elem->private_data == NULL) {
 		TRACE_LOG("Can't create private context "
-			  "for load balancer\n");
+			  "for filter\n");
 		TRACE_ELEMENT_FUNC_END();
 		return -1;
 	}
 	TRACE_ELEMENT_FUNC_END();
 	UNUSED(li);
-
 	return 1;
 }
 /*---------------------------------------------------------------------*/
 void
-lb_deinit(Element *elem)
+filter_deinit(Element *elem)
 {
 	TRACE_ELEMENT_FUNC_START();
-	free(elem->private_data);
-	free(elem);
 	TRACE_ELEMENT_FUNC_END();
+	UNUSED(elem);
 }
 /*---------------------------------------------------------------------*/
 void
-lb_link(struct Element *elem, Linker_Intf *linker)
+filter_link(struct Element *from, Linker_Intf *linker)
 {
 	TRACE_ELEMENT_FUNC_START();
 	int i, j, rc;
@@ -42,12 +40,12 @@ lb_link(struct Element *elem, Linker_Intf *linker)
 	linkdata *lbd;
 	int div_type = (linker->type == LINKER_DUP) ? COPY : SHARE;
 	
-	lbd = (linkdata *)elem->private_data;
-	eng = engine_find(elem->eng->name);
+	lbd = (linkdata *)from->private_data;
+	eng = engine_find(from->eng->name);
 	/* sanity engine check */
 	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
-			  elem->eng->name);
+			  from->eng->name);
 		TRACE_ELEMENT_FUNC_END();
 		return;
 	}
@@ -63,7 +61,7 @@ lb_link(struct Element *elem, Linker_Intf *linker)
 	if (eng->elem == NULL) {
 		strcpy(lbd->ifname, (char *)linker->input_link[0]);
 		lbd->count = linker->output_count;
-		eng->elem = elem;
+		eng->elem = from;
 		lbd->external_links = calloc(lbd->count,
 						sizeof(void *));
 		if (lbd->external_links == NULL) {
@@ -76,7 +74,7 @@ lb_link(struct Element *elem, Linker_Intf *linker)
 
 	for (j = 0; j < linker->input_count; j++) {
 		for (i = 0; i < linker->output_count; i++) {
-			rc = eng->iom.create_external_link(elem,
+			rc = eng->iom.create_external_link(from,
 							   (char *)linker->input_link[j],
 							   (char *)linker->output_link[i],
 							   div_type);
@@ -86,14 +84,14 @@ lb_link(struct Element *elem, Linker_Intf *linker)
 				return;
 			}
 		}
-	}
+	}      
 	TRACE_ELEMENT_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-element_funcs lbfuncs = {
-	.init			= 	lb_init,
-	.link			=	lb_link,
+element_funcs filterfuncs = {
+	.init			= 	filter_init,
+	.link			=	filter_link,
 	.process		= 	NULL,
-	.deinit			= 	lb_deinit
+	.deinit			= 	filter_deinit
 };
 /*---------------------------------------------------------------------*/

@@ -157,7 +157,7 @@ function setup_config5(pe)
          lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1")
 	 local mrg = Merge.new(-1)
-	 mrg:connect_input("eth3}1", "eth3}0")
+	 mrg:connect_input("eth3}0", "eth3}1")
 	 mrg:connect_output("eth3{3")
 	 lb:link(mrg)
 	 -- now link it!

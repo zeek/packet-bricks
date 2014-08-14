@@ -308,11 +308,16 @@ pktengine_retrieve(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	const char *ename = luaL_optstring(L, 1, 0);
 	engine *e = engine_find((unsigned char *)ename);
+	linkdata *lnd = NULL;
 	if (e != NULL) {
 		PktEngine_Intf *pe = push_pkteng(L);
 		pe->eng_name = ename;
 		pe->cpu = e->cpu;
-		pe->ifname = (char *)e->link_name;
+		lnd = (linkdata *)e->elem->private_data;
+		if (lnd != NULL && lnd->ifname != NULL)
+			pe->ifname = (char *)lnd->ifname;
+		else
+			pe->ifname = NULL;
 	}
 	
 	TRACE_LUA_FUNC_END();

@@ -43,7 +43,6 @@ typedef struct engine {
 	int32_t dev_fd;			/* file desc of the net I/O */
 	int32_t listen_fd;		/* listening socket fd */
 	uint16_t listen_port;		/* listening port */
-	uint8_t *link_name;		/* the source link name of the engine */
 
 	struct io_module_funcs iom;	/* io_funcs ptrs */
 	void *private_context;		/* I/O-related context */

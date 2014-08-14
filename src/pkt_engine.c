@@ -254,11 +254,6 @@ pktengine_delete(const unsigned char *name)
 	/* now delete it */
 	free(eng->name);
 
-	/* free engine link name, if possible */
-	if (eng->link_name) {
-		free(eng->link_name);
-		eng->link_name = NULL;
-	}
 	/* free the private context as well */
 	if (eng->private_context != NULL) {
 		free(eng->private_context);
@@ -304,11 +299,6 @@ pktengine_link_iface(const unsigned char *name,
 	 * If the queue is negative, use the interface
 	 * without queues.
 	 */
-	eng->link_name = (uint8_t *)strdup((char *)iface);
-	if (eng->link_name == NULL) {
-		TRACE_LOG("Could not strdup link_name while linking %s to engine %s\n",
-			  iface, eng->name);
-	}
 	eng->dev_fd = eng->iom.link_iface(eng->private_context, iface, 
 					  (batch_size == -1) ? 
 					  pc_info.batch_size : batch_size,
@@ -346,10 +336,6 @@ pktengine_unlink_iface(const unsigned char *name,
 	/* unlink */
 	eng->iom.unlink_iface(iface, eng);
 	
-	/* free up the link_name */
-	free(eng->link_name);
-	eng->link_name = NULL;
-
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

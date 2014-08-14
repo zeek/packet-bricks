@@ -61,8 +61,8 @@ dup_link(struct Element *elem, Linker_Intf *linker)
 		return;	      
 	}
 
-	if (!strcmp((char *)eng->link_name, (char *)linker->input_link[0])) {
-		strcpy(dupdata->ifname, (char *)eng->link_name);
+	if (eng->elem == NULL) {
+		strcpy(dupdata->ifname, (char *)linker->input_link[0]);
 		dupdata->count = linker->output_count;
 		eng->elem = elem;
 		eng->mark_for_copy = 1;
@@ -85,6 +85,7 @@ dup_link(struct Element *elem, Linker_Intf *linker)
 			if (rc == -1) {
 				TRACE_LOG("Failed to open channel %s\n",
 					  linker->output_link[i]);
+				TRACE_ELEMENT_FUNC_END();
 				return;
 			}
 		}

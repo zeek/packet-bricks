@@ -1,7 +1,7 @@
 #---------------------------------------------------------------------#
-SRCS := lb.c dup.c merge.c
+SRCS := lb.c dup.c merge.c filter.c
 
-_OBJ := lb.o dup.o merge.o
+_OBJ := lb.o dup.o merge.o filter.o
 OBJ := $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 $(OBJDIR)/%.o: %.c

@@ -613,8 +613,10 @@ enable_pipeline(Element *elem, const char *ifname, Target t)
 					return NULL;
 			}
 		}
-		if (cn->elem != NULL)
-			return enable_pipeline(cn->elem, ifname, t);
+		if (cn->elem != NULL) {
+			Element *rc = enable_pipeline(cn->elem, ifname, t);
+			if (rc != NULL) return rc;
+		}
 	}
 	TRACE_NETMAP_FUNC_END();
 	return NULL;
@@ -636,8 +638,9 @@ netmap_create_channel(Element *elem, char *in_name,
 	eng = (engine *)elem->eng;
 	nmc = (netmap_module_context *)eng->private_context;
 
+	lnd = (linkdata *)elem->private_data;
 	/* first locate the in_nmd */
-	if (strcmp((char *)eng->link_name, in_name) != 0) {
+	if (strcmp((char *)lnd->ifname, in_name) != 0) {
 		elem = enable_pipeline(elem, in_name, t);
 		if (elem == NULL) {
 			TRACE_LOG("Pipelining failed!! Could not find an appropriate "
@@ -647,6 +650,7 @@ netmap_create_channel(Element *elem, char *in_name,
 		}
 	}
 	
+	/* reinitialize lnd if elem is reset */
 	lnd = (linkdata *)elem->private_data;
 	TRACE_LOG("elem: %p, local_desc: %p\n", elem, nmc->local_nmd);
 	/* setting the name */
@@ -671,7 +675,7 @@ netmap_create_channel(Element *elem, char *in_name,
 	strcpy_wtih_reverse_pipe(cn->nm_ifname, out_name);
 	
 	TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", 
-		  eng->link_name, 
+		  lnd->ifname, 
 		  out_name, 
 		  lnd->init_cur_idx,
 		  (((struct nm_desc *)nmc->local_nmd)->mem == cn->out_nmd->mem) ? 
