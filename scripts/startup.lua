@@ -15,8 +15,10 @@ NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
 NETMAP_PIPES=64
 NO_CPU_AFF=-1
 NO_QIDS=-1
-BI_TUPLED=2
-QUAD_TUPLED=4
+BI_TUPLED=-2
+QUAD_TUPLED=-4
+
+
 
 --see if the directory exists
 
@@ -160,6 +162,24 @@ function setup_config5(pe)
 	 mrg:connect_input("eth3}0", "eth3}1")
 	 mrg:connect_output("eth3{3")
 	 lb:link(mrg)
+	 -- now link it!
+	 pe:link(lb)
+end
+
+
+--setup_config6	 __sets up a configuration of filter element__
+--		 __The engine reads from netmap-enabled eth3__
+--		 __and then splits traffic based on the filtering__
+--		 __decisions between the output links.		__
+function setup_config6(pe)
+	 local lb = LoadBalancer.new(QUAD_TUPLED)
+         lb:connect_input("eth3") 
+         lb:connect_output("eth3{0", "eth3{1")
+	 f = Filter.new(2)
+	 f:connect_input("eth3}0")
+	 f:connect_output("eth3{2", "tcp");
+	 f:connect_output("eth3{3", "others");
+	 lb:link(f)
 	 -- now link it!
 	 pe:link(lb)
 end

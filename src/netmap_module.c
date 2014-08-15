@@ -20,8 +20,6 @@
 #include "mbuf.h"
 /* for IFNAMSIZ */
 #include <net/if.h>
-/* for hash function */
-#include "pkt_hash.h"
 /* for element def'n */
 #include "element.h"
 /*---------------------------------------------------------------------*/
@@ -371,15 +369,6 @@ update_cnode_ptrs(struct netmap_ring *rxring, Element *elem,
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-static inline uint32_t
-myrand(uint64_t *seed)
-{
-	TRACE_NETMAP_FUNC_START();
-	*seed = *seed * 1103515245 + 12345;
-	return (uint32_t)(*seed >> 32);
-	TRACE_NETMAP_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
 void
 dispatch_pkt(struct netmap_ring *rxring,
 	     engine *eng,
@@ -395,9 +384,8 @@ dispatch_pkt(struct netmap_ring *rxring,
 		TRACE_DEBUG_LOG("(ifname: %s, seed: %llu, lnd_count: %d\n", 
 				lnd->ifname, (long long unsigned)eng->seed,
 				lnd->count);
-		cn = (CommNode *)lnd->external_links[(pkt_hdr_hash(buf) +  
-						      myrand(&eng->seed)) % 
-						     lnd->count];
+
+		cn = (CommNode *)lnd->external_links[elem->elib->process(elem, buf)];
 		if (cn->elem != NULL) {
 			dispatch_pkt(rxring, eng, cn->elem, buf);
 		} else if (cn->filt == NULL) {

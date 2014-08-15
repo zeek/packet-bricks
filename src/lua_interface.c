@@ -234,14 +234,23 @@ pkteng_link(lua_State *L)
 	linker = (Linker_Intf *)luaL_optudata(L, 2);
 	if (linker == NULL) luaL_typerror(L, 2, "LoadBalancer");
 
-	if (linker->type == LINKER_LB) {
+	switch (linker->type) {
+	case LINKER_LB:
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "LoadBalancer");
-	} else if (linker->type == LINKER_DUP) {
+		break;
+	case LINKER_DUP:
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "Duplicator");
-	} else if (linker->type == LINKER_MERGE) {
+		break;
+	case LINKER_MERGE:
 		linker = (Linker_Intf *)luaL_checkudata(L, 2, "Merge");
-	} else
-		luaL_typerror(L, 2, "LoadBalancer");
+		break;
+	case LINKER_FILTER:
+		linker = (Linker_Intf *)luaL_checkudata(L, 2, "Filter");
+		break;
+	default:
+		TRACE_ERR("Invalid linker!\n");
+		TRACE_LUA_FUNC_END();
+	}
 
 	/* set values as default */
 	pe->ifname = linker->input_link[0];
@@ -525,6 +534,9 @@ push_linker(lua_State *L, int type)
 	case LINKER_MERGE:
 		table = "Merge";
 		break;
+	case LINKER_FILTER:
+		table = "Filter";
+		break;
 	default:
 		TRACE_ERR("Invalid table type\n");
 	}
@@ -545,37 +557,53 @@ check_linker(lua_State *L, int index)
 	linker = (Linker_Intf *)luaL_optudata(L, index);
 	
 	if (linker == NULL) luaL_typerror(L, index, "LoadBalancer");
-	if (linker->type == LINKER_LB)
+	switch (linker->type) {
+	case LINKER_LB:
 		linker = (Linker_Intf *)luaL_checkudata(L, index, "LoadBalancer");
-	else if (linker->type == LINKER_DUP)
+		break;
+	case LINKER_DUP:
 		linker = (Linker_Intf *)luaL_checkudata(L, index, "Duplicator");
-	else if (linker->type == LINKER_MERGE)
+		break;
+	case LINKER_MERGE:
 		linker = (Linker_Intf *)luaL_checkudata(L, index, "Merge");
-	else
-		luaL_typerror(L, index, "LoadBalancer");
-	
+		break;
+	case LINKER_FILTER:
+		linker = (Linker_Intf *)luaL_checkudata(L, index, "Filter");
+		break;
+	default:
+		TRACE_ERR("Invalid linker!\n");
+		TRACE_LUA_FUNC_END();		
+	}
 	TRACE_LUA_FUNC_END();
 	return linker;
 }
 /*---------------------------------------------------------------------*/
+/**
+ * XXX - This function needs to be improved...
+ */
 static int
 linker_new(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 	int type = LINKER_DUP;
-	int hash_split = -1;
+	int arg = -1;
 	int nargs = lua_gettop(L);
 
 	if (nargs == 1) {
-		hash_split = luaL_optint(L, 1, 0);
-		if (hash_split == -1)
+		arg = luaL_optint(L, 1, 0);
+		if (arg == -1)
 			type = LINKER_MERGE;
-		else
+		else if (arg == -2 || arg == -4) {
 			type = LINKER_LB;
+			
+		} else {
+			type = LINKER_FILTER;
+		}
 	}
+
 	Linker_Intf *linker = push_linker(L, type);
 	linker->type = type;
-	linker->hash_split = hash_split;
+	linker->hash_split = -arg;
 	linker->output_count = 0;
 	linker->input_count = 0;
 	linker->next_linker = NULL;
@@ -599,7 +627,7 @@ linker_input(lua_State *L)
 				luaL_optstring(L, i, 0);
 			linker->input_count++;
 		}
-	} else { /* pick only 1 input */
+	} else { /* for LINKER_LB or LINKER_DUP or LINKER_FILTER */
 		linker->input_link[0] = 
 			luaL_optstring(L, 2, 0);
 		linker->input_count = 1;
@@ -625,11 +653,15 @@ linker_output(lua_State *L)
 		linker->output_link[0] =
 			luaL_optstring(L, 2, 0);
 		linker->output_count = 1;
-	} else { /* for LINKER_LB or LINKER_DUP */
-		for (i = 2; i <= nargs; i++) {
-			linker->output_link[linker->output_count] = 
-				luaL_optstring(L, i, 0);
-			linker->output_count++;
+	} else { /* for LINKER_LB or LINKER_DUP or LINKER_FILTER */
+		if (linker->type == LINKER_FILTER) {
+			
+		} else {
+			for (i = 2; i <= nargs; i++) {
+				linker->output_link[linker->output_count] = 
+					luaL_optstring(L, i, 0);
+				linker->output_count++;
+			}
 		}
 	}
 	lua_settop(L, 1);
@@ -704,6 +736,9 @@ linker_tostring(lua_State *L)
 	case LINKER_MERGE:
 		type = "Merge";
 		break;
+	case LINKER_FILTER:
+		type = "Filter";
+		break;
 	default:
 		TRACE_ERR("Invalid type!\n");
 	}
@@ -775,6 +810,32 @@ merge_register(lua_State *L)
 }
 /*---------------------------------------------------------------------*/
 int
+filter_register(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	/* create methods table, add it to the globals */
+	luaL_openlib(L, "Filter", linker_methods, 0);
+	/* create metatable for Filter, & add it to the Lua registry */
+	luaL_newmetatable(L, "Filter");
+	/* fill metatable */
+	luaL_openlib(L, 0, linker_meta, 0);
+	lua_pushliteral(L, "__index");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* metatable.__index = methods */
+	lua_rawset(L, -3);
+	lua_pushliteral(L, "__metatable");
+	/* dup methods table*/
+	lua_pushvalue(L, -3);
+	/* hide metatable: metatable.__metatable = methods */
+	lua_rawset(L, -3);
+	/* drop metatable */
+	lua_pop(L, 1);
+	TRACE_LUA_FUNC_END();
+	return 1; /* return methods on the stack */
+}
+/*---------------------------------------------------------------------*/
+int
 duplicator_register(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
@@ -809,6 +870,7 @@ luaopen_linker(lua_State *L)
 	loadbalancer_register(L);
 	duplicator_register(L);
 	merge_register(L);
+	filter_register(L);
 
 	TRACE_LUA_FUNC_END();
         return 1;

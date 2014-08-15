@@ -31,9 +31,14 @@ typedef struct PktEngine_Intf {
  *
  * Garbage collection is implemented in LUA...
  */
-#define MAX_OUTLINKS			20
-#define MAX_INLINKS			MAX_OUTLINKS
-enum {LINKER_LB=3, LINKER_DUP, LINKER_MERGE};
+#define MAX_INLINKS			20
+#define MAX_OUTLINKS			MAX_INLINKS
+enum {LINKER_LB = 3, 
+      LINKER_DUP,
+      LINKER_MERGE,
+      LINKER_FILTER,
+      TOTAL_LINKERS};
+
 typedef struct Linker_Intf {
 	int type;				/* lb?/dup? */
 	int hash_split;				/* 2-tuple or 4-tuple split? */

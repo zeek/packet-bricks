@@ -6,6 +6,8 @@
 #include "pkt_engine.h"
 /* for strcmp */
 #include <string.h>
+/* for hash function */
+#include "pkt_hash.h"
 /*---------------------------------------------------------------------*/
 int32_t
 lb_init(Element *elem, Linker_Intf *li)
@@ -22,6 +24,27 @@ lb_init(Element *elem, Linker_Intf *li)
 	UNUSED(li);
 
 	return 1;
+}
+/*---------------------------------------------------------------------*/
+static inline uint32_t
+myrand(uint64_t *seed)
+{
+	TRACE_NETMAP_FUNC_START();
+	*seed = *seed * 1103515245 + 12345;
+	return (uint32_t)(*seed >> 32);
+	TRACE_NETMAP_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+int32_t
+lb_process(Element *elem, unsigned char *buf)
+{
+	TRACE_ELEMENT_FUNC_START();
+	linkdata *lnd = elem->private_data;
+
+	return (pkt_hdr_hash(buf) + myrand(&elem->eng->seed)) % 
+		lnd->count;
+
+	TRACE_ELEMENT_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 void
@@ -93,7 +116,7 @@ lb_link(struct Element *elem, Linker_Intf *linker)
 element_funcs lbfuncs = {
 	.init			= 	lb_init,
 	.link			=	lb_link,
-	.process		= 	NULL,
+	.process		= 	lb_process,
 	.deinit			= 	lb_deinit
 };
 /*---------------------------------------------------------------------*/

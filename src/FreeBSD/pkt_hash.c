@@ -327,64 +327,27 @@ pkt_hdr_hash(const unsigned char *buffer)
 }
 /*---------------------------------------------------------------------*/
 #if 0
-/* DEPRECATED */
-uint32_t 
-master_custom_hash_function(const unsigned char *buffer, 
-			    const uint16_t buffer_len)
+uint8_t isTCP(unsigned char *buf)
 {
 	TRACE_PKTHASH_FUNC_START();
-        uint32_t l3_offset = sizeof(struct ether_header);
-        uint16_t eth_type;
-	
-        eth_type = (buffer[12] << 8) + buffer[13];
-	
-        while (eth_type == 0x8100 /* VLAN */) {
-		l3_offset += 4;
-		eth_type = (buffer[l3_offset - 2] << 8) + buffer[l3_offset - 1];
-	}
-	
-        switch (eth_type) {
-	case 0x0800:
-		{
-			/* IPv4 */
-			struct ip *iph;
-			if (unlikely(buffer_len < l3_offset + sizeof(struct ip))) {
-				TRACE_PKTHASH_FUNC_END();
-				return 0;
-			}
-			iph = (struct ip *) &buffer[l3_offset];
-			TRACE_PKTHASH_FUNC_END();
-			/* 
-			 * this can be optimized by avoiding calls
-			 * to ntohl(), but it can lead to balancing 
-			 * issues 
-			 */
-			return ntohl(iph->ip_src.s_addr) + ntohl(iph->ip_dst.s_addr); 
-		}
+	uint8_t rc = 0;
+	struct ethhdr *ethh = (struct ethhdr *)buf;
+
+	switch (NTOHS(ethh->h_proto)) {
+	case ETH_P_IP:
+		rc = decode_ip_n_hash((struct iphdr *)(ethh + 1));
 		break;
-	case 0x86DD:
-		{
-			/* IPv6 */
-			struct ip6_hdr *ipv6h;
-			u_int32_t *s, *d;
-			
-			if (unlikely(buffer_len < l3_offset + sizeof(struct ip6_hdr))) {
-				TRACE_PKTHASH_FUNC_END();
-				return 0;
-			}
-			
-			ipv6h = (struct ip6_hdr *) &buffer[l3_offset];
-			s = (u_int32_t *) &ipv6h->ip6_src, d = (u_int32_t *) &ipv6h->ip6_dst;
-			TRACE_PKTHASH_FUNC_END();
-			return(s[0] + s[1] + s[2] + s[3] + d[0] + d[1] + d[2] + d[3]);
-		}
+	case ETH_P_IPV6:
+		rc = decode_ipv6_n_hash((struct ipv6hdr *)(ethh + 1));
+		break;
+	case ETH_P_8021Q:
+		rc = decode_vlan_n_hash(ethh);
 		break;
 	default:
-		break; /* Unknown protocol */
-	}
+		break;
+	}	
 	TRACE_PKTHASH_FUNC_END();
-	return 0;
+	return rc;
 }
 #endif
 /*---------------------------------------------------------------------*/
-

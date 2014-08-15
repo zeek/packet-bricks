@@ -23,6 +23,17 @@ filter_init(Element *elem, Linker_Intf *li)
 	return 1;
 }
 /*---------------------------------------------------------------------*/
+static int32_t
+isTCP(Element *elem, unsigned char *buf)
+{
+	TRACE_ELEMENT_FUNC_START();
+	
+	TRACE_ELEMENT_FUNC_END();
+	UNUSED(elem);
+	UNUSED(buf);
+	return 1;
+}
+/*---------------------------------------------------------------------*/
 void
 filter_deinit(Element *elem)
 {
@@ -91,7 +102,7 @@ filter_link(struct Element *from, Linker_Intf *linker)
 element_funcs filterfuncs = {
 	.init			= 	filter_init,
 	.link			=	filter_link,
-	.process		= 	NULL,
+	.process		= 	isTCP,
 	.deinit			= 	filter_deinit
 };
 /*---------------------------------------------------------------------*/

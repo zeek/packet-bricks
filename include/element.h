@@ -46,7 +46,7 @@ struct Element;
 typedef struct element_funcs {		/* element funcs ptrs */
 	int32_t (*init)(struct Element *elem, Linker_Intf *li);
 	void (*link)(struct Element *elem, Linker_Intf *li);
-	void (*process)(struct Element *elem, unsigned char *pktbuf);
+	int32_t (*process)(struct Element *elem, unsigned char *pktbuf);
 	void (*deinit)(struct Element *elem);
 } element_funcs __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
