@@ -45,7 +45,7 @@ typedef struct engine {
 	uint16_t listen_port;		/* listening port */
 
 	struct io_module_funcs iom;	/* io_funcs ptrs */
-	void *private_context;		/* I/O-related context */
+	void *private_context;		/* I/O-related contexts */
 	pthread_t t;
 
 	Element *elem;			/* list of attached elements */

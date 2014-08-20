@@ -1,8 +1,10 @@
 AC_INIT(config, version-0.1)
 
+# Check for cc
 AC_PROG_CC
 AC_LANG(C)
 AC_DISABLE_OPTION_CHECKING
+# Check for scheduling
 AC_CHECK_HEADER(linux/sched.h,,,) 
 AC_CHECK_HEADER(pthread.h,,,) 
 AC_CHECK_LIB(m, cos)

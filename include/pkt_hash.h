@@ -46,6 +46,6 @@ typedef struct vlanhdr {
  * hash function.
  */
 uint32_t
-pkt_hdr_hash(const unsigned char *buffer);
+pkt_hdr_hash(const unsigned char *buffer, uint8_t seed);
 /*---------------------------------------------------------------------*/
 #endif /* __PKT_HASH__ */

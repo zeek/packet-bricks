@@ -180,14 +180,14 @@ drop_packets(struct netmap_ring *ring, engine *eng)
 {
 	TRACE_NETMAP_FUNC_START();
 	uint32_t cur, rx, n;
-	netmap_module_context *ctxt = 
+	netmap_module_context *nmc = 
 		(netmap_module_context *) eng->private_context;
 	char *p;
 	struct netmap_slot *slot;
 
 	cur = ring->cur;
 	n = nm_ring_space(ring);
-	n = MIN(ctxt->batch_size, n);
+	n = MIN(nmc->batch_size, n);
 
 	for (rx = 0; rx < n; rx++) {
 		slot = &ring->slot[cur];
@@ -373,37 +373,33 @@ void
 dispatch_pkt(struct netmap_ring *rxring,
 	     engine *eng,
 	     Element *elem,
-	     uint8_t *buf)
+	     uint8_t *buf,
+	     unsigned char level)
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
 	uint j;
 	linkdata *lnd = (linkdata *)elem->private_data;
-	
-	if (elem->elib == &lbfuncs) {
-		TRACE_DEBUG_LOG("(ifname: %s, seed: %llu, lnd_count: %d\n", 
-				lnd->ifname, (long long unsigned)eng->seed,
-				lnd->count);
+	BITMAP b;
 
-		cn = (CommNode *)lnd->external_links[elem->elib->process(elem, buf)];
-		if (cn->elem != NULL) {
-			dispatch_pkt(rxring, eng, cn->elem, buf);
-		} else if (cn->filt == NULL) {
-			cn->mark = 1;
-		}
-	} else if(elem->elib == &dupfuncs) {
-		linkdata *lnd = (linkdata *)elem->private_data;
-		/* pick any cn as reference */
-		cn = (CommNode *)(*lnd->external_links);
-		
-		for (j = 0; j < lnd->count; j++) {
+	TRACE_DEBUG_LOG("(ifname: %s, seed: %llu, lnd_count: %d\n", 
+			lnd->ifname, (long long unsigned)eng->seed,
+			lnd->count);
+	/* increment the per-element nested level */
+	lnd->level = level + 1;
+	b = elem->elib->process(elem, buf);
+	for (j = 0; b != 0; j++) {
+		if (CHECK_BIT(b, j)) {
 			cn = (CommNode *)lnd->external_links[j];
-			if (cn->elem != NULL)
-				dispatch_pkt(rxring, eng, cn->elem, buf);
-			else if (cn->filt == NULL) {
+			if (cn->elem != NULL) {
+				dispatch_pkt(rxring, eng, 
+					     cn->elem, buf, 
+					     lnd->level);
+			} else if (cn->filt == NULL) {
 				cn->mark = 1;
 			}
 		}
+		CLR_BIT(b, j);
 	}
 
 	TRACE_NETMAP_FUNC_END();
@@ -462,7 +458,7 @@ netmap_callback(void *engptr, Element *elem)
 				eng->byte_count += slot->len;
 				eng->pkt_count++;
 				//eng->seed = 0;
-				dispatch_pkt(rxring, eng, elem, buf);
+				dispatch_pkt(rxring, eng, elem, buf, 0);
 				rxring->head = rxring->cur = nm_ring_next(rxring, src);
 				update_cnode_ptrs(rxring, elem, eng, src);
 			}

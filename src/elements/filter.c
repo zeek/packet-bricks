@@ -23,7 +23,7 @@ filter_init(Element *elem, Linker_Intf *li)
 	return 1;
 }
 /*---------------------------------------------------------------------*/
-static int32_t
+static BITMAP
 isTCP(Element *elem, unsigned char *buf)
 {
 	TRACE_ELEMENT_FUNC_START();

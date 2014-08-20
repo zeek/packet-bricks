@@ -36,17 +36,20 @@
  *		      - link(): link connecting elements to their parents.
  *
  *		      - process(): run the Element's action function that
- *				  processes incoming packet.
+ *				  processes incoming packet. Returns a
+ *				  a bitmap of output links the packet needs
+ *				  to be forwarded to.
  *
  *		      - deinit(): frees up resources previously allocated
  *				 by the element.
  */
 /*---------------------------------------------------------------------*/
 struct Element;
+#define BITMAP			uint32_t
 typedef struct element_funcs {		/* element funcs ptrs */
 	int32_t (*init)(struct Element *elem, Linker_Intf *li);
 	void (*link)(struct Element *elem, Linker_Intf *li);
-	int32_t (*process)(struct Element *elem, unsigned char *pktbuf);
+	BITMAP (*process)(struct Element *elem, unsigned char *pktbuf);
 	void (*deinit)(struct Element *elem);
 } element_funcs __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
@@ -75,6 +78,7 @@ typedef struct linkdata {
 	void **external_links;	/* pointers to external link contexts */
 	char ifname[IFNAMSIZ];	/* name of (virtual) source */
 	Target tgt;		/* type */	
+	unsigned char level;	/* the nested level used during dispatch_pkt() */
 } linkdata __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
@@ -87,5 +91,36 @@ extern element_funcs mergefuncs;
 /* creates an Element and initializes the element based on target */
 Element *
 createElement(Target t);
+
+
+/*---------------------------------------------------------------------*/
+/**
+ * BITMAP-related routines..
+ */
+/*---------------------------------------------------------------------*/
+/**
+ * Initializes the bitmap
+ */
+#define INIT_BITMAP(x)		x = 0;
+
+/**
+ * Set bitmap at a given position
+ */
+#define SET_BIT(x, val)		x |= (1 << (val))
+
+/**
+ * Clear bitmap at a given position
+ */
+#define CLR_BIT(x, val)		x &= ~(1 << (val))
+
+/**
+ * Toggle a bit in a bitmap
+ */
+#define TOGGLE_BIT(x, val)	x ^= (1 << (val))
+
+/**
+ * Check if a given position is set
+ */
+#define CHECK_BIT(x, val)	(x >> (val)) & 1
 /*---------------------------------------------------------------------*/
 #endif /* !__ELEMENT_H__ */

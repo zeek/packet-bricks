@@ -107,7 +107,7 @@ sym_hash_fn(uint32_t sip, uint32_t dip, uint16_t sp, uint32_t dp)
  * Parser + hash function for the IPv4 packet
  */
 static uint32_t
-decode_ip_n_hash(struct ip *iph)
+decode_ip_n_hash(struct ip *iph, uint8_t seed)
 {
 	TRACE_PKTHASH_FUNC_START();
 	uint32_t rc = 0;
@@ -115,8 +115,8 @@ decode_ip_n_hash(struct ip *iph)
 #ifdef TRIVIAL_HASH_FUNCTION
 	rc = sym_hash_fn(ntohl(iph->ip_src.s_addr),
 			 ntohl(iph->ip_dst.s_addr),
-			 ntohs(0xFFFD),
-			 ntohs(0xFFFE));
+			 ntohs(0xFFFD) + seed,
+			 ntohs(0xFFFE) + seed);
 #else
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
@@ -126,19 +126,20 @@ decode_ip_n_hash(struct ip *iph)
 		tcph = (struct tcphdr *)((uint8_t *)iph + (iph->ip_hl<<2));
 		rc = sym_hash_fn(ntohl(iph->ip_src.s_addr), 
 				 ntohl(iph->ip_dst.s_addr), 
-				 ntohs(tcph->th_sport), 
-				 ntohs(tcph->th_dport));
+				 ntohs(tcph->th_sport) + seed, 
+				 ntohs(tcph->th_dport) + seed);
 		break;
 	case IPPROTO_UDP:
 		udph = (struct udphdr *)((uint8_t *)iph + (iph->ip_hl<<2));
 		rc = sym_hash_fn(ntohl(iph->ip_src.s_addr),
 				 ntohl(iph->ip_dst.s_addr),
-				 ntohs(udph->uh_sport),
-				 ntohs(udph->uh_dport));
+				 ntohs(udph->uh_sport) + seed,
+				 ntohs(udph->uh_dport) + seed);
 		break;
 	case IPPROTO_IPIP:
 		/* tunneling */
-		rc = decode_ip_n_hash((struct ip *)((uint8_t *)iph + (iph->ip_hl<<2)));
+		rc = decode_ip_n_hash((struct ip *)((uint8_t *)iph + (iph->ip_hl<<2))
+				      , seed);
 		break;
 	default:
 		/* 
@@ -147,8 +148,8 @@ decode_ip_n_hash(struct ip *iph)
 		 */
 		rc = sym_hash_fn(ntohl(iph->ip_src.s_addr),
 				 ntohl(iph->ip_dst.s_addr),
-				 ntohs(0xFFFD),
-				 ntohs(0xFFFE));
+				 ntohs(0xFFFD) + seed,
+				 ntohs(0xFFFE) + seed);
 		break;
 	}
 #endif	/* !TRIVIAL_HASH_FUNCTION */
@@ -160,7 +161,7 @@ decode_ip_n_hash(struct ip *iph)
  * Parser + hash function for the IPv6 packet
  */
 static uint32_t
-decode_ipv6_n_hash(struct ip6_hdr *ipv6h)
+decode_ipv6_n_hash(struct ip6_hdr *ipv6h, uint8_t seed)
 {
 	TRACE_PKTHASH_FUNC_START();
 	uint32_t saddr, daddr;
@@ -179,8 +180,8 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h)
 #ifdef TRIVIAL_HASH_FUNCTION
 	rc = sym_hash_fn(ntohl(saddr),
 		ntohl(daddr),
-		ntohs(0xFFFD),
-		ntohs(0xFFFE));
+		ntohs(0xFFFD) + seed,
+		ntohs(0xFFFE) + seed);
 #else
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
@@ -190,23 +191,23 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h)
 		tcph = (struct tcphdr *)(ipv6h + 1);
 		rc = sym_hash_fn(ntohl(saddr), 
 				 ntohl(daddr), 
-				 ntohs(tcph->th_sport), 
-				 ntohs(tcph->th_dport));	       
+				 ntohs(tcph->th_sport) + seed, 
+				 ntohs(tcph->th_dport) + seed);	       
 		break;
 	case IPPROTO_UDP:
 		udph = (struct udphdr *)(ipv6h + 1);
 		rc = sym_hash_fn(ntohl(saddr),
 				 ntohl(daddr),
-				 ntohs(udph->uh_sport),
-				 ntohs(udph->uh_dport));		
+				 ntohs(udph->uh_sport) + seed,
+				 ntohs(udph->uh_dport) + seed);		
 		break;
 	case IPPROTO_IPIP:
 		/* tunneling */
-		rc = decode_ip_n_hash((struct ip *)(ipv6h + 1));
+		rc = decode_ip_n_hash((struct ip *)(ipv6h + 1), seed);
 		break;
 	case IPPROTO_IPV6:
 		/* tunneling */
-		rc = decode_ipv6_n_hash((struct ip6_hdr *)(ipv6h + 1));
+		rc = decode_ipv6_n_hash((struct ip6_hdr *)(ipv6h + 1), seed);
 		break;
 	case IPPROTO_ICMP:
 	case IPPROTO_GRE:
@@ -220,8 +221,8 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h)
 		 */
 		rc = sym_hash_fn(ntohl(saddr),
 				 ntohl(daddr),
-				 ntohs(0xFFFD),
-				 ntohs(0xFFFE));
+				 ntohs(0xFFFD) + seed,
+				 ntohs(0xFFFE) + seed);
 	}
 #endif /* !TRIVIAL_HASH_FUNCTION */	
 	TRACE_PKTHASH_FUNC_END();
@@ -233,7 +234,7 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h)
  * (See decode_vlan_n_hash & pkt_hdr_hash functions).
  */
 static uint32_t
-decode_others_n_hash(struct ether_header *ethh)
+decode_others_n_hash(struct ether_header *ethh, uint8_t seed)
 {
 	TRACE_PKTHASH_FUNC_START();
 	uint32_t saddr, daddr, rc;
@@ -249,8 +250,8 @@ decode_others_n_hash(struct ether_header *ethh)
 	
 	rc = sym_hash_fn(ntohl(saddr),
 			 ntohl(daddr),
-			 ntohs(0xFFFD),
-			 ntohs(0xFFFE));
+			 ntohs(0xFFFD) + seed,
+			 ntohs(0xFFFE) + seed);
 
 	TRACE_PKTHASH_FUNC_END();
 	return rc;
@@ -260,7 +261,7 @@ decode_others_n_hash(struct ether_header *ethh)
  * Parser + hash function for VLAN packet
  */
 static inline uint32_t
-decode_vlan_n_hash(struct ether_header *ethh)
+decode_vlan_n_hash(struct ether_header *ethh, uint8_t seed)
 {
 	TRACE_PKTHASH_FUNC_START();
 	uint32_t rc = 0;
@@ -268,10 +269,10 @@ decode_vlan_n_hash(struct ether_header *ethh)
 	
 	switch (ntohs(vhdr->proto)) {
 	case ETHERTYPE_IP:
-		rc = decode_ip_n_hash((struct ip *)(vhdr + 1));
+		rc = decode_ip_n_hash((struct ip *)(vhdr + 1), seed);
 		break;
 	case ETHERTYPE_IPV6:
-		rc = decode_ipv6_n_hash((struct ip6_hdr *)(vhdr + 1));
+		rc = decode_ipv6_n_hash((struct ip6_hdr *)(vhdr + 1), seed);
 		break;
 	case ETHERTYPE_PPPOEDISC:
 	case ETHERTYPE_PPPOE:
@@ -282,7 +283,7 @@ decode_vlan_n_hash(struct ether_header *ethh)
 	case ETHERTYPE_ARP:
 	default:
 		/* others */
-		rc = decode_others_n_hash(ethh);
+		rc = decode_others_n_hash(ethh, seed);
 		break;
 	}
 	TRACE_PKTHASH_FUNC_END();
@@ -293,7 +294,7 @@ decode_vlan_n_hash(struct ether_header *ethh)
  * General parser + hash function...
  */
 uint32_t
-pkt_hdr_hash(const unsigned char *buffer)
+pkt_hdr_hash(const unsigned char *buffer, uint8_t seed)
 {
 	TRACE_PKTHASH_FUNC_START();
 	int rc = 0;
@@ -301,13 +302,13 @@ pkt_hdr_hash(const unsigned char *buffer)
 	
 	switch (ntohs(ethh->ether_type)) {
 	case ETHERTYPE_IP:
-		rc = decode_ip_n_hash((struct ip *)(ethh + 1));
+		rc = decode_ip_n_hash((struct ip *)(ethh + 1), seed);
 		break;
 	case ETHERTYPE_IPV6:
-		rc = decode_ipv6_n_hash((struct ip6_hdr *)(ethh + 1));
+		rc = decode_ipv6_n_hash((struct ip6_hdr *)(ethh + 1), seed);
 		break;
 	case ETHERTYPE_VLAN:
-		rc = decode_vlan_n_hash(ethh);
+		rc = decode_vlan_n_hash(ethh, seed);
 		break;
 	case ETHERTYPE_PPPOEDISC:
 	case ETHERTYPE_PPPOE:
@@ -318,7 +319,7 @@ pkt_hdr_hash(const unsigned char *buffer)
 	case ETHERTYPE_ARP:
 	default:
 		/* others */
-		rc = decode_others_n_hash(ethh);
+		rc = decode_others_n_hash(ethh, seed);
 		break;
 	}
 	TRACE_PKTHASH_FUNC_END();

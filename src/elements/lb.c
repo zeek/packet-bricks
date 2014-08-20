@@ -35,16 +35,24 @@ myrand(uint64_t *seed)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-int32_t
+BITMAP
 lb_process(Element *elem, unsigned char *buf)
 {
 	TRACE_ELEMENT_FUNC_START();
 	linkdata *lnd = elem->private_data;
+	BITMAP b;
 
-	return (pkt_hdr_hash(buf) + myrand(&elem->eng->seed)) % 
+	INIT_BITMAP(b);
+#if 0
+	uint key = ((pkt_hdr_hash(buf) +
+		     myrand(&elem->eng->seed)) %
+		    lnd->count);
+#endif
+	uint key = pkt_hdr_hash(buf, lnd->level) % 
 		lnd->count;
-
+	SET_BIT(b, key);
 	TRACE_ELEMENT_FUNC_END();
+	return b;
 }
 /*---------------------------------------------------------------------*/
 void

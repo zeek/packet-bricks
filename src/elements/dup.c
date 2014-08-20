@@ -23,6 +23,24 @@ dup_init(Element *elem, Linker_Intf *li)
 	return 1;
 }
 /*---------------------------------------------------------------------*/
+BITMAP
+dup_process(Element *elem, unsigned char *buf)
+{
+	TRACE_ELEMENT_FUNC_START();
+	linkdata *lnd = elem->private_data;
+	BITMAP b;
+	int i;
+
+	INIT_BITMAP(b);
+	for (i = 0; i < lnd->count; i++) {
+		SET_BIT(b, i);
+	}
+	
+	TRACE_ELEMENT_FUNC_END();
+	UNUSED(buf);
+	return b;
+}
+/*---------------------------------------------------------------------*/
 void
 dup_deinit(Element *elem)
 {
@@ -97,7 +115,7 @@ dup_link(struct Element *elem, Linker_Intf *linker)
 element_funcs dupfuncs = {
 	.init			= 	dup_init,
 	.link			=	dup_link,
-	.process		= 	NULL,
+	.process		= 	dup_process,
 	.deinit			= 	dup_deinit
 };
 /*---------------------------------------------------------------------*/
