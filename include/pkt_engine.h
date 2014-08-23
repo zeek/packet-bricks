@@ -23,6 +23,9 @@ typedef enum io_type {
 /* the default is set to IO_NETMAP */
 #define IO_DEFAULT		IO_NETMAP
 /*---------------------------------------------------------------------*/
+/* Declaring struct source for engine_src */
+struct engine_src;
+/*---------------------------------------------------------------------*/
 /**
  *
  * PACKET ENGINE INTERFACE
@@ -40,17 +43,15 @@ typedef struct engine {
 	uint64_t byte_count;		/* total number of bytes seen by this engine */
 	uint64_t pkt_count;		/* total number of packets seen by this engine */
 	uint64_t pkt_dropped;		/* total number of packets dropped by this engine */
-	int32_t dev_fd;			/* file desc of the net I/O */
 	int32_t listen_fd;		/* listening socket fd */
 	uint16_t listen_port;		/* listening port */
 
 	struct io_module_funcs iom;	/* io_funcs ptrs */
-	void *private_context;		/* I/O-related contexts */
 	pthread_t t;
-
-	Element *elem;			/* list of attached elements */
+	struct engine_src **esrc;	/* list of sources connected to the engine */
+	uint no_of_sources;		/* no. of engine sources */
 	uint8_t mark_for_copy;		/* marking for copy */
-	uint64_t seed;			/* seed for hashing in pipelining mode */
+	int32_t buffer_sz;		/* buffer sizes in between each element */
 
 	/*
 	 * the linked list ptr that will chain together
@@ -68,12 +69,25 @@ typedef struct engine {
 typedef TAILQ_HEAD(elist, engine) elist;
 /*---------------------------------------------------------------------*/
 /**
+ *
+ * PACKET ENGINE SOURCE
+ *
+ * Basic context of sources through which the engine talks to the
+ * netmap I/O framework...
+ */
+typedef struct engine_src {
+	int32_t dev_fd;			/* file desc of the net I/O */
+	Element *elem;			/* list of attached elements */
+	void *private_context;		/* I/O-related contexts */
+} engine_src;
+/*---------------------------------------------------------------------*/
+/**
  * Creates a new pkt_engine for packet sniffing
  *
  */
 void
 pktengine_new(const unsigned char *name, const unsigned char *type, 
-		      const int8_t cpu);
+	      const int32_t buffer_sz, const int8_t cpu);
 
 /**
  * Deletes the pkt_engine
@@ -91,14 +105,6 @@ pktengine_link_iface(const unsigned char *name,
 		     const unsigned char *iface,
 		     const int16_t batch_size,
 		     const int8_t queue);
-
-/**
- * Unregister the iface from the pkt engine
- *
- */
-void
-pktengine_unlink_iface(const unsigned char *name,
-		       const unsigned char *iface);
 
 /**
  * Start the engine

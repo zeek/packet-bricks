@@ -79,6 +79,7 @@ typedef struct linkdata {
 	char ifname[IFNAMSIZ];	/* name of (virtual) source */
 	Target tgt;		/* type */	
 	unsigned char level;	/* the nested level used during dispatch_pkt() */
+	uint8_t hash_split;	/* hash split version if the element is load balancer */
 } linkdata __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
@@ -92,6 +93,7 @@ extern element_funcs mergefuncs;
 Element *
 createElement(Target t);
 
+#define FIRST_ELEM(x)		x[0]
 
 /*---------------------------------------------------------------------*/
 /**

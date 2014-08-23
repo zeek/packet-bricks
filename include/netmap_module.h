@@ -10,7 +10,7 @@
 #include "net/netmap_user.h"
 /*---------------------------------------------------------------------*/
 /* Macros related to TXQ entry */
-#define TXQ_MAX				2048
+#define TXQ_MAX				16
 /*---------------------------------------------------------------------*/
 struct txq_entry {
         void *ring;

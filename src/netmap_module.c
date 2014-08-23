@@ -153,21 +153,23 @@ netmap_link_iface(void *ctxt, const unsigned char *iface,
 }
 /*---------------------------------------------------------------------*/
 void
-netmap_unlink_iface(const unsigned char *iface, void *engptr)
+netmap_unlink_ifaces(void *engptr)
 {
 	TRACE_NETMAP_FUNC_START();
 	engine *eng = (engine *)engptr;
-	netmap_module_context *nmc = (netmap_module_context *)eng->private_context;
-	/* if local netmap desc is not closed, close it */
-	if (nmc->local_nmd != NULL)
-		nm_close(nmc->local_nmd);
-	nmc->local_nmd = NULL;
-	
-	if (!strcmp("all", (char *)iface))
-		unregister_all_interfaces(eng);
-	else
-		unregister_interface_entry(iface, eng);
+	netmap_module_context *nmc;
+	uint i;
 
+	for (i = 0; i < eng->no_of_sources; i++) { 
+		nmc = (netmap_module_context *)eng->esrc[i]->private_context;
+		/* if local netmap desc is not closed, close it */
+		if (nmc->local_nmd != NULL)
+			nm_close(nmc->local_nmd);
+		nmc->local_nmd = NULL;
+	}
+	
+	unregister_all_interfaces(eng);
+	
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
@@ -176,12 +178,12 @@ netmap_unlink_iface(const unsigned char *iface, void *engptr)
  * Will get back to this function again..
  */
 static void
-drop_packets(struct netmap_ring *ring, engine *eng)
+drop_packets(struct netmap_ring *ring, engine *eng, engine_src *esrcptr)
 {
 	TRACE_NETMAP_FUNC_START();
 	uint32_t cur, rx, n;
 	netmap_module_context *nmc = 
-		(netmap_module_context *) eng->private_context;
+		(netmap_module_context *) esrcptr->private_context;
 	char *p;
 	struct netmap_slot *slot;
 
@@ -334,7 +336,7 @@ flush_all_cnodes(Element *elem, engine *eng)
 		if (cn->elem != NULL) {
 			flush_all_cnodes(cn->elem, eng);
 		} else { /* cn->elem == NULL */
-			if (cn->cur_txq > 0) {
+			if (cn->cur_txq > TXQ_MAX) {
 				(eng->mark_for_copy == 1) ? 
 					copy_packets(cn) :
 					share_packets(cn);
@@ -382,9 +384,8 @@ dispatch_pkt(struct netmap_ring *rxring,
 	linkdata *lnd = (linkdata *)elem->private_data;
 	BITMAP b;
 
-	TRACE_DEBUG_LOG("(ifname: %s, seed: %llu, lnd_count: %d\n", 
-			lnd->ifname, (long long unsigned)eng->seed,
-			lnd->count);
+	TRACE_DEBUG_LOG("(ifname: %s, lnd_count: %d\n", 
+			lnd->ifname, lnd->count);
 	/* increment the per-element nested level */
 	lnd->level = level + 1;
 	b = elem->elib->process(elem, buf);
@@ -406,7 +407,7 @@ dispatch_pkt(struct netmap_ring *rxring,
 }
 /*---------------------------------------------------------------------*/
 int32_t
-netmap_callback(void *engptr, Element *elem)
+netmap_callback(void *engsrcptr)
 {
 	TRACE_NETMAP_FUNC_START();
 	int i;
@@ -415,9 +416,13 @@ netmap_callback(void *engptr, Element *elem)
 	struct netmap_if *nifp;
 	struct netmap_ring *rxring;
 	engine *eng;
+	engine_src *engsrc;
+	Element *elem;
 
-	eng = (engine *)engptr;
-	nmc = (netmap_module_context *)eng->private_context;
+	engsrc = (engine_src *)engsrcptr;
+	elem = engsrc->elem;
+	eng = (engine *)elem->eng;
+	nmc = (netmap_module_context *)engsrc->private_context;
 	local_nmd = (struct nm_desc *)nmc->local_nmd;
 
 	if (local_nmd == NULL) {
@@ -436,7 +441,7 @@ netmap_callback(void *engptr, Element *elem)
 		if (nm_ring_empty(rxring))
 			continue;
 		if (elem == NULL)
-			drop_packets(rxring, eng);
+			drop_packets(rxring, eng, engsrc);
 		else {
 			__builtin_prefetch(&rxring->slot[rxring->cur]);
 			while (!nm_ring_empty(rxring)) {
@@ -457,7 +462,6 @@ netmap_callback(void *engptr, Element *elem)
 				__builtin_prefetch(buf);
 				eng->byte_count += slot->len;
 				eng->pkt_count++;
-				//eng->seed = 0;
 				dispatch_pkt(rxring, eng, elem, buf, 0);
 				rxring->head = rxring->cur = nm_ring_next(rxring, src);
 				update_cnode_ptrs(rxring, elem, eng, src);
@@ -488,7 +492,7 @@ netmap_shutdown(void *engptr)
 }
 /*---------------------------------------------------------------------*/
 void
-netmap_delete_all_channels(void *engptr, Element *elem) 
+netmap_delete_all_channels(Element *elem) 
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
@@ -499,24 +503,23 @@ netmap_delete_all_channels(void *engptr, Element *elem)
 		cn = (CommNode *)lnd->external_links[i];
 		if (cn->out_nmd != NULL)
 			nm_close(cn->out_nmd);
-		if (cn->elem != NULL)
-			netmap_delete_all_channels(engptr, cn->elem);
+		if (cn->elem != NULL) {
+			netmap_delete_all_channels(cn->elem);
 		
-#if 0
-		if (cn->elem->private_data != NULL)
-			free(cn->elem->private_data);
-#endif
-		free(cn->elem);
+			if (cn->elem->private_data != NULL)
+				free(cn->elem->private_data);
+			free(cn->elem);
+			cn->elem = NULL;
+		}
 		free(cn);
 	}
-#if 0
+
 	if (elem->private_data)
 		free(elem->private_data);
-#endif
+
 	free(elem);
 	TRACE_NETMAP_FUNC_END();
 	/* not used for the moment */
-	UNUSED(engptr);
 }
 /*---------------------------------------------------------------------*/
 /**
@@ -607,8 +610,8 @@ enable_pipeline(Element *elem, const char *ifname, Target t)
 }
 /*---------------------------------------------------------------------*/
 int32_t
-netmap_create_channel(Element *elem, char *in_name, 
-		      char *out_name, Target t) 
+netmap_create_channel(char *in_name, char *out_name,
+		      Target t, void *esrcptr) 
 {
 	TRACE_NETMAP_FUNC_START();
 	char ifname[IFNAMSIZ];
@@ -617,10 +620,15 @@ netmap_create_channel(Element *elem, char *in_name,
 	netmap_module_context *nmc;
 	CommNode *cn;
 	linkdata *lnd;
+	engine_src *esrc;
+	Element *elem;
 	
 	fd = -1;
+	esrc = (engine_src *)esrcptr;
+	elem = esrc->elem;
 	eng = (engine *)elem->eng;
-	nmc = (netmap_module_context *)eng->private_context;
+
+	nmc = (netmap_module_context *)esrc->private_context;
 
 	lnd = (linkdata *)elem->private_data;
 	/* first locate the in_nmd */
@@ -705,7 +713,7 @@ netmap_add_filter(Element *elem, Filter *f, unsigned char *ifname)
 io_module_funcs netmap_module = {
 	.init_context  		= 	netmap_init,
 	.link_iface		= 	netmap_link_iface,
-	.unlink_iface		= 	netmap_unlink_iface,
+	.unlink_ifaces		= 	netmap_unlink_ifaces,
 	.callback		= 	netmap_callback,
 	.create_external_link 	=	netmap_create_channel,
 	.delete_all_channels 	=	netmap_delete_all_channels,

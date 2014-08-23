@@ -69,10 +69,10 @@ filter_link(struct Element *from, Linker_Intf *linker)
 		return;	      
 	}
 
-	if (eng->elem == NULL) {
+	if (eng->FIRST_ELEM(esrc)->elem == NULL) {
 		strcpy(lbd->ifname, (char *)linker->input_link[0]);
 		lbd->count = linker->output_count;
-		eng->elem = from;
+		eng->FIRST_ELEM(esrc)->elem = from;
 		lbd->external_links = calloc(lbd->count,
 						sizeof(void *));
 		if (lbd->external_links == NULL) {
@@ -85,10 +85,9 @@ filter_link(struct Element *from, Linker_Intf *linker)
 
 	for (j = 0; j < linker->input_count; j++) {
 		for (i = 0; i < linker->output_count; i++) {
-			rc = eng->iom.create_external_link(from,
-							   (char *)linker->input_link[j],
+			rc = eng->iom.create_external_link((char *)linker->input_link[j],
 							   (char *)linker->output_link[i],
-							   div_type);
+							   div_type, eng->FIRST_ELEM(esrc));
 			if (rc == -1) {
 				TRACE_LOG("Failed to open channel %s\n",
 					  linker->output_link[i]);

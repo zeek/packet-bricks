@@ -149,7 +149,6 @@ pktengine_help(lua_State *L)
 		"    new(<ioengine_name>, <io_type>, <cpu number>)\n"
 		"    delete()\n"
 		"    link(<linker>, <chunk_size>, <qid>)\n"
-		"    unlink()\n"
 		"    start()\n"
 		"    stop()\n"
 		"    show_stats()\n"
@@ -203,17 +202,22 @@ pkteng_new(lua_State *L)
 	const char *ename = luaL_optstring(L, 1, 0);
 	const char *type = luaL_optstring(L, 2, 0);
 	int cpu = -1;
+	int buffer_sz = 512;
 	/* only grab cpu metric if it is mentioned */
-	if (nargs == 3)
-		cpu = luaL_optint(L, 3, 0);
-
+	if (nargs >= 3)
+		buffer_sz = luaL_optint(L, 3, 0);
+	if (nargs == 4)
+		cpu = luaL_optint(L, 4, 0);
+	
 	/* parse and populate the remaining fields */
 	PktEngine_Intf *pe = push_pkteng(L);
 	pe->eng_name = ename;
 	pe->type = type;
 	pe->cpu = cpu;
+	pe->buffer_sz = buffer_sz;
 
-	pktengine_new((uint8_t *)pe->eng_name, (uint8_t *)pe->type, pe->cpu);
+	pktengine_new((uint8_t *)pe->eng_name, (uint8_t *)pe->type,
+		      pe->buffer_sz, pe->cpu);
 	TRACE_LUA_FUNC_END();
 	return 1;
 }
@@ -226,6 +230,7 @@ pkteng_link(lua_State *L)
 	Linker_Intf *linker;
 	Element *first_elem;
 	int nargs = lua_gettop(L);
+	int i;
 
 	/* check if args2 is user-data */
 	luaL_checktype(L, 2, LUA_TUSERDATA);
@@ -253,7 +258,6 @@ pkteng_link(lua_State *L)
 	}
 
 	/* set values as default */
-	pe->ifname = linker->input_link[0];
 	pe->batch = DEFAULT_BATCH_SIZE;
 	pe->qid = -1;
 
@@ -267,31 +271,32 @@ pkteng_link(lua_State *L)
 
 	TRACE_DEBUG_LOG("Engine info so far...:\n"
 			"\tName: %s\n"
-			"\tIfname: %s\n"
 			"\tType: %s\n"
 			"\tCpu: %d\n"
 			"\tBatch: %d\n"
 			"\tQid: %d\n",
 			pe->eng_name,
-			pe->ifname,
 			pe->type,
 			pe->cpu,
 			pe->batch,
 			pe->qid);
 	
-	/* link the source with the packet engine */
-	pktengine_link_iface((uint8_t *)pe->eng_name, 
-			     (uint8_t *)pe->ifname, 
-			     pe->batch, pe->qid);
-	
+	for (i = 0; i < linker->input_count; i++) {
+		/* link the source(s) with the packet engine */
+		pktengine_link_iface((uint8_t *)pe->eng_name, 
+				     (uint8_t *)linker->input_link[i], 
+				     pe->batch, pe->qid);
+		TRACE_LOG("Linking %s with link %s with batch size: %d and qid: %d\n",
+			  pe->eng_name, linker->input_link[i], pe->batch, pe->qid);
+	}
 	first_elem = createElement(linker->type);
 	if (first_elem == NULL) {
 		TRACE_LUA_FUNC_END();
 		return 1;
 	}
 
-	first_elem->elib->init(first_elem, linker);
 	first_elem->eng = engine_find((unsigned char *)pe->eng_name);
+	first_elem->elib->init(first_elem, linker);
 	if (first_elem->eng == NULL) {
 		TRACE_LOG("Could not find engine with name: %s\n",
 			  pe->eng_name);
@@ -317,16 +322,11 @@ pktengine_retrieve(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	const char *ename = luaL_optstring(L, 1, 0);
 	engine *e = engine_find((unsigned char *)ename);
-	linkdata *lnd = NULL;
+
 	if (e != NULL) {
 		PktEngine_Intf *pe = push_pkteng(L);
 		pe->eng_name = ename;
 		pe->cpu = e->cpu;
-		lnd = (linkdata *)e->elem->private_data;
-		if (lnd != NULL && lnd->ifname != NULL)
-			pe->ifname = (char *)lnd->ifname;
-		else
-			pe->ifname = NULL;
 	}
 	
 	TRACE_LUA_FUNC_END();
@@ -373,21 +373,6 @@ pkteng_delete(lua_State *L)
 }
 /*---------------------------------------------------------------------*/
 static int
-pkteng_unlink(lua_State *L)
-{
-	TRACE_LUA_FUNC_START();
-	PktEngine_Intf *pe = check_pkteng(L, 1);
-	lua_settop(L, 1);
-
-	pktengine_unlink_iface((uint8_t *)pe->eng_name, 
-			       (uint8_t *)pe->ifname);	
-
-	TRACE_LUA_FUNC_END();
-
-	return 1;
-}
-/*---------------------------------------------------------------------*/
-static int
 pkteng_stop(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
@@ -406,7 +391,6 @@ static const luaL_reg pkteng_methods[] = {
         {"start",         pkteng_start},
 	{"show_stats",	  pkteng_show_stats},
         {"delete",	  pkteng_delete},
-        {"unlink",        pkteng_unlink},
         {"stop",          pkteng_stop},
 	{"help",	  pktengine_help},
 	{"retrieve",	  pktengine_retrieve},

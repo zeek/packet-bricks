@@ -35,7 +35,7 @@ void
 merge_link(struct Element *from, Linker_Intf *linker)
 {
 	TRACE_ELEMENT_FUNC_START();
-	int i, j, rc;
+	int i, j, k, rc;
 	engine *eng;
 	linkdata *lbd;
 	int div_type = (linker->type == LINKER_DUP) ? COPY : SHARE;
@@ -58,10 +58,11 @@ merge_link(struct Element *from, Linker_Intf *linker)
 		return;	      
 	}
 
-	if (eng->elem == NULL) {
+	if (eng->FIRST_ELEM(esrc)->elem == NULL) {
 		strcpy(lbd->ifname, (char *)linker->input_link[0]);
 		lbd->count = linker->output_count;
-		eng->elem = from;
+		for (k = 0; k < (int)eng->no_of_sources; k++)
+			eng->esrc[k]->elem = from;
 		lbd->external_links = calloc(lbd->count,
 						sizeof(void *));
 		if (lbd->external_links == NULL) {
@@ -74,14 +75,15 @@ merge_link(struct Element *from, Linker_Intf *linker)
 
 	for (j = 0; j < linker->input_count; j++) {
 		for (i = 0; i < linker->output_count; i++) {
-			rc = eng->iom.create_external_link(from,
-							   (char *)linker->input_link[j],
-							   (char *)linker->output_link[i],
-							   div_type);
-			if (rc == -1) {
-				TRACE_LOG("Failed to open channel %s\n",
-					  linker->output_link[i]);
-				return;
+			for (k = 0; k < (int)eng->no_of_sources; k++) {
+				rc = eng->iom.create_external_link((char *)linker->input_link[j],
+								   (char *)linker->output_link[i],
+								   div_type, eng->esrc[k]);
+				if (rc == -1) {
+					TRACE_LOG("Failed to open channel %s\n",
+						  linker->output_link[i]);
+					return;
+				}
 			}
 		}
 	}      

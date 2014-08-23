@@ -17,11 +17,11 @@
  */
 typedef struct PktEngine_Intf {
 	const char *eng_name;			/* engine name */
-	const char *ifname;			/* ingress interface name */
 	const char *type;			/* netmap */
 	int cpu;				/* engine runs on this thread */
 	int batch;				/* batch size */
 	int qid;				/* queue id */
+	int buffer_sz;				/* buffer size */
 } PktEngine_Intf;
 
 /**

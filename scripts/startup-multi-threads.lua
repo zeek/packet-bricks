@@ -15,6 +15,11 @@ NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
 NETMAP_PIPES=64
 NO_CPU_AFF=-1
 NO_QIDS=-1
+BI_TUPLED=-2
+QUAD_TUPLED=-4
+ENABLE_MERGE=-1
+BUFFER_SZ=1024
+
 
 --see if the directory exists
 
@@ -100,128 +105,6 @@ end
 
 
 
------------------------------------------------------------------------
--- S I N G L E - T H R E A D E D - S E T U P
------------------------------------------------------------------------
---init function  __initializes pkteng thread and links it with a__
---		 __netmap-enabled interface. collects PKT_BATCH__
---		 __pkts at a time. "cpu" and "batch" params can remain__
---		 __unspecified by passing '-1'. Next creates 4 netmap__
---		 __pipe channels to forward packets to userland apps__
-
-function init()
-	 -- check if netmap module is loaded
-	 if netmap_loaded() == false then
-	    print 'Netmap module does not exist'
-	    os.exit(-1)
-	 end
-
-	 -- check if you are root
-	 if check_superuser() == false then
-	    print 'You have to be superuser to run this function'
-	    os.exit(-1)
-	 end
-
-	 -- create a global variable pe
-	 local pe = PktEngine.new("e0", "netmap", NO_CPU_AFF)
-
-	 -- create ingress interface
-	 local intf_in = Interface.new("eth3")
-
-	 -- now link it!
-	 pe:link(intf_in, PKT_BATCH, NO_QIDS)
-
-
-	 -- egress interfaces
-	 local intf0 = Interface.new("eth3{0")
-	 local intf1 = Interface.new("eth3{1")
-	 --local intf2 = Interface.new("eth3{2")
-	 --local intf3 = Interface.new("eth3{3")
-	 local intf_out = Interface.new("eth2")
-
-
-	 -- enable underlying netmap pipe framework
-	 enable_nmpipes()
-
-
-	 -- Use this line to load balance traffic across interfaces
-	 intf_in:connect_loadbal(pe, intf0, intf1, intf_out)
-	 
-	 -- Use this line to split traffic across interfaces (incl. egress iface)
-	 --intf_in:connect_loadbal(pe, intf0, intf1, intf2, intf3, intf_out)
-
-         
-	 --lb0 = LoadBalance.new("2-tuple")
-         --brolb0 = LoadBalance.new("2-tuple")
-	 --lb0:connect_input(intf_in) 
-         --lb0:connect_output(intf0, intf1)
-
-         --dup0 = Duplicator.new()
-         --dup0:connect_input(intf_in)
-         --dup0:connect_output(brolb0)
-         --dup0:connect_output(snortlb0)
-         --dup0:connect_output(tcpdump_if)
-
-
-         -- i0 <-> dup0 <-> filter0(name="blocker") <-> i1
-         --         |
-         --       filter1(name="shunter")
-         --         |
-         --        lb0 -> bro, snort, etc 
-
-         --pe.add(lb0)
-         --pe.add(dup0)
-
-
-         --lb0:balance_as("4-tuple")
-
-	 --intf_in:connect_loadbal(pe, intf0, intf1)
-	 --intf0:connect_loadbal(pe, intf2, intf3)
-
-	 -- Use this line to duplicate traffic across interfaces
-	 --intf_in:connect_dup(pe, intf0, intf1, intf2, intf3)
-	 --intf_in:connect_dup(pe, intf0, intf1, intf2, intf3, intf_out)
-
-	 -- Use this line to forward packets to a different Ethernet port
-	 --intf_in:connect_loadbal(pe, intf_out)
-end
------------------------------------------------------------------------
---start function  __starts pkteng and prints overall per sec__
---		  __stats for STATS_PRINT_CYCLE_DEFAULT secs__
-
-function start()
-	 -- start reading pkts from the interface
-	 local pe = PktEngine.retrieve("e0")
-	 pe:start()
-
-	 local i = 0
-	 repeat
-	     sleep(SLEEP_TIMEOUT)
-	     --pe:show_stats()
-	     PACF.show_stats()
-	     i = i + 1
-	 until i > STATS_PRINT_CYCLE_DEFAULT
-end
------------------------------------------------------------------------
---stop function  __stops the pkteng before printing the final stats.__
---		 __it then unlinks the interface from the engine and__
---		 __finally frees the engine context from the system__
-function stop()
-	 local pe = PktEngine.retrieve("e0")
-	 --pe:show_stats()
-	 PACF.show_stats()
-
-	 pe:stop()
-	 sleep(SLEEP_TIMEOUT)
-
-	 pe:unlink()
-	 sleep(SLEEP_TIMEOUT)
-
-	 pe:delete()
-	 --PACF.shutdown()
-end
------------------------------------------------------------------------
-
 
 
 
@@ -229,6 +112,17 @@ end
 -----------------------------------------------------------------------
 -- 4 - T H R E A D S - S E T U P
 -----------------------------------------------------------------------
+--setup_config4	 __sets up a simple load balancing configuration__
+--		 __the engine reads from netmap-enabled eth3 and__
+--		 __forwards packets to a netmap pipe.	        __
+function setup_config4(pe, cnt)
+	  local lb = LoadBalancer.new(QUAD_TUPLED)
+	  lb:connect_input("eth3")
+	  lb:connect_output("eth3{" .. cnt)
+	  pe:link(lb, PKT_BATCH, cnt)
+end
+
+
 --init4 function __initializes 4 pkteng threads and links it with a__
 --		 __netmap-enabled interface. collects PKT_BATCH    __
 --		 __pkts at a time. "cpu", "batch" & "qid" params   __
@@ -259,31 +153,11 @@ function init4()
 	 -- enable underlying netmap pipe framework
 	 enable_nmpipes()
 
-	 -- create a global variable of table type to create 4 engines
-	 local pes = {}
-	 -- create a global ingress interface variable
-	 local intf_in = Interface.new("eth3")
-
-	 -- egress interfaces
-	 local intf_out = Interface.new("eth2")
-
-
-	 -- enable underlying netmap pipe framework
-	 enable_nmpipes()
-
 	 for cnt = 0, 3 do
-	 	 pes["pe" .. cnt] = PktEngine.new("e" .. cnt, "netmap", cnt)
-	 	 pes["pe" .. cnt]:link(intf_in, PKT_BATCH, cnt)
+	 	 local pe = PktEngine.new("e" .. cnt, "netmap", BUFFER_SZ, cnt)
 		 
-		 local intf = Interface.new("eth3{" .. cnt)
-		 -- Use this line to load balance traffic across interfaces
-	 	 intf_in:connect_loadbal(pes["pe" .. cnt], intf)
-
-	 	 -- Use this line to duplicate traffic across interfaces
-	 	 --intf_in:connect_dup(pes["pe" .. cnt], intf)
-
-	 	 -- Use this line to forward packets to a different Ethernet port
-	 	 --intf_in:connect_loadbal(pes["pe" .. cnt], intf_out)
+		 --setup with config 4
+		 setup_config4(pe, cnt)		 
 	 end
 end
 -----------------------------------------------------------------------
@@ -312,13 +186,6 @@ function stop4()
 	 for cnt = 0, 3 do
 	     	 local pe = PktEngine.retrieve("e" .. cnt)
 		 pe:stop()
-	 end
-
-	 sleep(SLEEP_TIMEOUT)
-
-	 for cnt = 0, 3 do
-	     	 local pe = PktEngine.retrieve("e" .. cnt)
-	 	 pe:unlink()
 	 end
 
 	 sleep(SLEEP_TIMEOUT)

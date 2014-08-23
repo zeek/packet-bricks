@@ -140,7 +140,7 @@ pktengine_init()
 /*---------------------------------------------------------------------*/
 void
 pktengine_new(const unsigned char *name, const unsigned char *type, 
-	      const int8_t cpu)
+	      const int32_t buffer_sz, const int8_t cpu)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
@@ -197,21 +197,11 @@ pktengine_new(const unsigned char *name, const unsigned char *type,
 	/* load the right I/O module */
 	load_io_module(eng);
 
-	/* initialize type-specific private context */
-	if (eng->iom.init_context(&eng->private_context, eng) == -1) {
-		/* if init fails, free up everything */
-		if (eng->private_context != NULL)
-			free(eng->private_context);
-		free(eng->name);
-		free(eng);
-		TRACE_ERR("Can't create private context for engine: %s\n", 
-			  name);
-		TRACE_PKTENGINE_FUNC_END();
-		return;
-	}
-
 	/* setting the cpu no. on which the engine runs (if reqd.) */
 	eng->cpu = cpu;
+
+	/* setting the buffer size */
+	eng->buffer_sz = buffer_sz;
 
 	/* finally add the engine entry in elist */
 	TAILQ_INSERT_TAIL(&engine_list, eng, entry);
@@ -225,6 +215,7 @@ pktengine_delete(const unsigned char *name)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
+	uint i;
 
 	eng = engine_find(name);
 	if (eng == NULL) {
@@ -243,10 +234,11 @@ pktengine_delete(const unsigned char *name)
 	}
 
 	/* delete all channels for now */
-	eng->iom.delete_all_channels(eng, eng->elem);
+	for (i = 0; i < eng->no_of_sources; i++)
+		eng->iom.delete_all_channels(eng->esrc[i]->elem);
 	
 	/* check if ifaces have been unlinked */
-	eng->iom.unlink_iface((const unsigned char *)"all", eng);
+	eng->iom.unlink_ifaces(eng);
 
 	/* remove the entry from the engine list */
 	engine_remove(eng->name);
@@ -255,10 +247,13 @@ pktengine_delete(const unsigned char *name)
 	free(eng->name);
 
 	/* free the private context as well */
-	if (eng->private_context != NULL) {
-		free(eng->private_context);
-		eng->private_context = NULL;
+	for (i = 0; i < eng->no_of_sources; i++) {
+		if (eng->esrc[i]->private_context != NULL) {
+			free(eng->esrc[i]->private_context);
+			eng->esrc[i]->private_context = NULL;
+		}
 	}
+	free(eng->esrc);
 	free(eng);
 	TRACE_DEBUG_LOG("Engine %s has successfully been deleted\n",
 			name);
@@ -292,6 +287,35 @@ pktengine_link_iface(const unsigned char *name,
 		return;
 	}
 
+	eng->no_of_sources++;
+	eng->esrc = realloc(eng->esrc, 
+			    sizeof(struct engine_src *) * 
+			    eng->no_of_sources);
+	if (eng->esrc == NULL) {
+		TRACE_ERR("Can't allocate memory for engine sources\n");
+		TRACE_PKTENGINE_FUNC_END();
+	}
+	/* allocate memory for eng->esrc[eng->no_of_sources - 1] */
+	eng->esrc[eng->no_of_sources - 1] = calloc(1, sizeof(struct engine_src));
+	if (eng->esrc[eng->no_of_sources - 1] == NULL) {
+		TRACE_ERR("Can't allocate memory for engine sources\n");
+		TRACE_PKTENGINE_FUNC_END();
+	}
+	
+	/* initialize type-specific private context */
+	if (eng->iom.init_context(&eng->esrc[eng->no_of_sources - 1]->private_context, 
+				  eng) == -1) {
+		/* if init fails, free up everything */
+		if (eng->esrc[eng->no_of_sources - 1]->private_context != NULL)
+			free(eng->esrc[eng->no_of_sources - 1]->private_context);
+		free(eng->name);
+		free(eng);
+		TRACE_ERR("Can't create private context for engine: %s\n", 
+			  name);
+		TRACE_PKTENGINE_FUNC_END();
+		return;
+	}
+
 	/* 
 	 * Link the interface now...
 	 * If the batch size is not given, then use
@@ -299,42 +323,14 @@ pktengine_link_iface(const unsigned char *name,
 	 * If the queue is negative, use the interface
 	 * without queues.
 	 */
-	eng->dev_fd = eng->iom.link_iface(eng->private_context, iface, 
-					  (batch_size == -1) ? 
-					  pc_info.batch_size : batch_size,
-					  queue);
-	if (eng->dev_fd == -1) 
+	eng->esrc[eng->no_of_sources - 1]->dev_fd = 
+		eng->iom.link_iface(eng->esrc[eng->no_of_sources - 1]->private_context,
+				    iface,
+				    (batch_size == -1) ? 
+				    pc_info.batch_size : batch_size,
+				    queue);
+	if (eng->esrc[eng->no_of_sources - 1]->dev_fd == -1) 
 		TRACE_LOG("Could not link!!!\n");
-	
-	TRACE_PKTENGINE_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-void
-pktengine_unlink_iface(const unsigned char *name,
-		       const unsigned char *iface)
-{
-	TRACE_PKTENGINE_FUNC_START();
-	engine *eng;
-	
-	eng = engine_find(name);
-	if (eng == NULL) {
-		TRACE_LOG("Can't find engine with name: %s\n",
-			  name);
-		TRACE_PKTENGINE_FUNC_END();
-		return;
-	}
-
-	/* check if the engine is already running */
-	if (eng->run != 0) {
-		TRACE_LOG("Can't unlink interface %s." 
-			  " Engine %s is already running.\n",
-			  iface, name);
-		TRACE_PKTENGINE_FUNC_END();
-		return;
-	}
-
-	/* unlink */
-	eng->iom.unlink_iface(iface, eng);
 	
 	TRACE_PKTENGINE_FUNC_END();
 }

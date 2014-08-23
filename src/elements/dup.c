@@ -79,10 +79,10 @@ dup_link(struct Element *elem, Linker_Intf *linker)
 		return;	      
 	}
 
-	if (eng->elem == NULL) {
+	if (eng->FIRST_ELEM(esrc)->elem == NULL) {
 		strcpy(dupdata->ifname, (char *)linker->input_link[0]);
 		dupdata->count = linker->output_count;
-		eng->elem = elem;
+		eng->FIRST_ELEM(esrc)->elem = elem;
 		eng->mark_for_copy = 1;
 		dupdata->external_links = calloc(dupdata->count,
 						 sizeof(void *));
@@ -96,10 +96,9 @@ dup_link(struct Element *elem, Linker_Intf *linker)
 
 	for (j = 0; j < linker->input_count; j++) { 
 		for (i = 0; i < linker->output_count; i++) {
-			rc = eng->iom.create_external_link(elem,
-							   (char *)linker->input_link[j],
+			rc = eng->iom.create_external_link((char *)linker->input_link[j],
 							   (char *)linker->output_link[i],
-							   div_type);
+							   div_type, eng->FIRST_ELEM(esrc));
 			if (rc == -1) {
 				TRACE_LOG("Failed to open channel %s\n",
 					  linker->output_link[i]);

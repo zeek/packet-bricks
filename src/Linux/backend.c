@@ -215,7 +215,7 @@ create_listening_socket_for_eng(engine *eng)
 	/* set the address to any interface */                
 	serv.sin_addr.s_addr = htonl(INADDR_ANY); 
 	/* set the server port number */    
-	serv.sin_port = htons(PKTENGINE_LISTEN_PORT + eng->dev_fd);
+	serv.sin_port = htons(PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd);
  
 	eng->listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (eng->listen_fd == -1) {
@@ -227,17 +227,17 @@ create_listening_socket_for_eng(engine *eng)
 	/* bind serv information to mysocket */
 	if (bind(eng->listen_fd, (struct sockaddr *)&serv, sizeof(struct sockaddr)) == -1) {
 		TRACE_ERR("Failed to bind listening socket to port %d of engine %s\n",
-			  PKTENGINE_LISTEN_PORT + eng->dev_fd, eng->name);
+			  PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd, eng->name);
 		TRACE_BACKEND_FUNC_END();
 	}
 	
 	/* start listening, allowing a queue of up to 1 pending connection */
 	if (listen(eng->listen_fd, LISTEN_BACKLOG) == -1) {
 		TRACE_ERR("Failed to start listen on port %d (engine %s)\n",
-			  PKTENGINE_LISTEN_PORT + eng->dev_fd, eng->name);
+			  PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd, eng->name);
 		TRACE_BACKEND_FUNC_END();
 	}
-	eng->listen_port = PKTENGINE_LISTEN_PORT + eng->dev_fd;
+	eng->listen_port = PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd;
 	
 	TRACE_BACKEND_FUNC_END();
 }
@@ -341,7 +341,9 @@ initiate_backend(engine *eng)
 	TRACE_BACKEND_FUNC_START();
 	struct epoll_event ev, events[EPOLL_MAX_EVENTS];
 	int epoll_fd, nfds, n;
+	uint i, dev_flag;
 
+	dev_flag = 0;
 	/* set up the epolling structure */
 	epoll_fd = epoll_create(EPOLL_MAX_EVENTS);
 	if (epoll_fd == -1) {
@@ -368,14 +370,16 @@ initiate_backend(engine *eng)
 		  eng->name, eng->listen_port);
 
 	/* register iom socket */
-	ev.events = EPOLLIN;
-	ev.data.fd = eng->dev_fd;
-	
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, eng->dev_fd, &ev) == -1) {
-		TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
-			  eng->name, epoll_fd);
-		TRACE_BACKEND_FUNC_END();
-		return;
+	for (i = 0; i < eng->no_of_sources; i++) {
+		ev.events = EPOLLIN;
+		ev.data.fd = eng->esrc[i]->dev_fd;
+		
+		if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, eng->esrc[i]->dev_fd, &ev) == -1) {
+			TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
+				  eng->name, epoll_fd);
+			TRACE_BACKEND_FUNC_END();
+			return;
+		}
 	}
 
 
@@ -388,23 +392,27 @@ initiate_backend(engine *eng)
 			TRACE_BACKEND_FUNC_END();
 		}
 		for (n = 0; n < nfds; n++) {
-			/* process dev work */
-			if (events[n].data.fd == eng->dev_fd) {
-				eng->iom.callback(eng, eng->elem);
+			/* process dev work (check for all devs) */
+			for (i = 0; i < eng->no_of_sources; i++) {
+				if (events[n].data.fd == eng->esrc[i]->dev_fd) {
+					eng->iom.callback(eng->esrc[i]);
+					
+					/* continue epolling */
+					ev.data.fd = eng->esrc[i]->dev_fd;
+					ev.events = EPOLLIN;
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
+						TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
+							  eng->name, epoll_fd);
+						TRACE_BACKEND_FUNC_END();
+						return;
+					}
+					dev_flag = 1;
+				} 
+			}
 
-				/* continue epolling */
-				ev.data.fd = eng->dev_fd;
-				ev.events = EPOLLIN;
-				if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
-					TRACE_LOG("Engine %s failed to exe epoll_ctl for fd: %d\n",
-						  eng->name, epoll_fd);
-					TRACE_BACKEND_FUNC_END();
-					return;
-				}				
-			} 
-
+			if (dev_flag == 1) continue;
 			/* process app reqs */
-			else if (events[n].data.fd == eng->listen_fd)
+			if (events[n].data.fd == eng->listen_fd)
 				process_request_backend(eng, epoll_fd);
 			else {/* all other reqs coming from client socks */
 				ev.data.fd = events[n].data.fd;

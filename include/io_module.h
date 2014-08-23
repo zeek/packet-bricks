@@ -23,7 +23,7 @@
  *				 Some pkt I/O libraries can pass more than
  *				 iface to one engine (e.g. PSIO)
  *
- *		   unlink_iface(): Used to remove interface from the engine.
+ *		   unlink_ifaces(): Used to remove interface(s) from the engine.
  *				  Call it only when the engine is not running
  *
  *		   callback(): Function that reads the packets and runs 
@@ -48,11 +48,12 @@ typedef struct io_module_funcs {
 			      const unsigned char *iface, 
 			      const uint16_t batchsize,
 			      int8_t qid);
-	void	(*unlink_iface)(const unsigned char *iface, void *engptr);
-	int32_t (*callback)(void *engptr, Element *elem);
+	void	(*unlink_ifaces)(void *engptr);
+	int32_t (*callback)(void *engsrcptr);
 	int32_t (*add_filter)(Element *elem, Filter *f, unsigned char *ifname);
-	void	(*delete_all_channels)(void *engptr, Element *elem);
-	int32_t (*create_external_link)(Element *elem, char *in_name, char *out_name, Target t);
+	void	(*delete_all_channels)(Element *elem);
+	int32_t (*create_external_link)(char *in_name, char *out_name, 
+					Target t, void *esrcptr);
 	int32_t (*shutdown)(void *engptr);
 	
 } io_module_funcs __attribute__((aligned(__WORDSIZE)));

@@ -17,7 +17,8 @@ NO_CPU_AFF=-1
 NO_QIDS=-1
 BI_TUPLED=-2
 QUAD_TUPLED=-4
-
+ENABLE_MERGE=-1
+BUFFER_SZ=1024
 
 
 --see if the directory exists
@@ -158,7 +159,7 @@ function setup_config5(pe)
 	 local lb = LoadBalancer.new(QUAD_TUPLED)
          lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1")
-	 local mrg = Merge.new(-1)
+	 local mrg = Merge.new(ENABLE_MERGE)
 	 mrg:connect_input("eth3}0", "eth3}1")
 	 mrg:connect_output("eth3{3")
 	 lb:link(mrg)
@@ -171,18 +172,19 @@ end
 --		 __The engine reads from netmap-enabled eth3__
 --		 __and then splits traffic based on the filtering__
 --		 __decisions between the output links.		__
-function setup_config6(pe)
-	 local lb = LoadBalancer.new(QUAD_TUPLED)
-         lb:connect_input("eth3") 
-         lb:connect_output("eth3{0", "eth3{1")
-	 f = Filter.new(2)
-	 f:connect_input("eth3}0")
-	 f:connect_output("eth3{2", "tcp");
-	 f:connect_output("eth3{3", "others");
-	 lb:link(f)
-	 -- now link it!
-	 pe:link(lb)
-end
+--function setup_config6(pe)
+--	 local lb = LoadBalancer.new(QUAD_TUPLED)
+--       lb:connect_input("eth3") 
+--       lb:connect_output("eth3{0", "eth3{1")
+--	 f = Filter.new(2)
+--	 f:connect_input("eth3}0")
+--	 f:connect_output("eth3{2", "tcp");
+--	 f:connect_output("eth3{3", "others");
+--	 lb:link(f)
+--	 -- now link it!
+--	 pe:link(lb)
+--end
+
 
 
 --init function  __initializes pkteng thread and links it with a__
@@ -205,7 +207,7 @@ function init()
 	 end
 
 	 -- create a global variable pe
-	 local pe = PktEngine.new("e0", "netmap")
+	 local pe = PktEngine.new("e0", "netmap", BUFFER_SZ)
 
 
 	 -- enable underlying netmap pipe framework
@@ -252,9 +254,6 @@ function stop()
 	 pe:stop()
 	 sleep(SLEEP_TIMEOUT)
 
-	 pe:unlink()
-	 sleep(SLEEP_TIMEOUT)
-
 	 pe:delete()
 	 --PACF.shutdown()
 end
@@ -264,102 +263,7 @@ end
 
 
 
------------------------------------------------------------------------
--- 4 - T H R E A D S - S E T U P
------------------------------------------------------------------------
---setup_config4	 __sets up a simple load balancing configuration__
---		 __the engine reads from netmap-enabled eth3 and__
---		 __forwards packets to a netmap pipe.	        __
-function setup_config4(pe)
-	  local lb = LoadBalancer.new(QUAD_TUPLED)
-	  lb:connect_input("eth3")
-	  lb:connect_output("eth3{" .. cnt)
-	  pe:link(lb, PKT_BATCH, cnt)
-end
 
-
---init4 function __initializes 4 pkteng threads and links it with a__
---		 __netmap-enabled interface. collects PKT_BATCH    __
---		 __pkts at a time. "cpu", "batch" & "qid" params   __
---		 __can remain unspecified by passing '-1'	   __
---		 __						   __
---		 ++_____________HOW TO USE H.W QUEUES______________++
---		 ++Please make sure that the driver is initialized ++
---		 ++with the right no. of h/w queues. In this setup,++
---		 ++ cpu_thread=0 is registered with H/W queue 0    ++
---		 ++ cpu_thread=1 is registered with H/W queue 1	   ++
---		 ++ cpu_thread=2 is registered with H/W queue 2	   ++
---		 ++ cpu_thread=3 is registered with H/W queue 3	   ++
---		 ++________________________________________________++
-
-function init4()
-	 -- check if netmap module is loaded
-	 if netmap_loaded() == false then
-	    print 'Netmap module does not exist'
-	    os.exit(-1)
-	 end
-
-	 -- check if you are root
-	 if check_superuser() == false then
-	    print 'You have to be superuser to run this function'
-	    os.exit(-1)
-	 end
-
-	 -- enable underlying netmap pipe framework
-	 enable_nmpipes()
-
-	 for cnt = 0, 3 do
-	 	 local pe = PktEngine.new("e" .. cnt, "netmap", cnt)
-		 
-		 --setup with config 4
-		 setup_config4(pe)		 
-	 end
-end
------------------------------------------------------------------------
---start4 function __starts all 4 pktengs and prints overall per sec__
---		  __stats for STATS_PRINT_CYCLE_DEFAULT secs__
-
-function start4()
-	 for cnt = 0, 3 do
-	     	 local pe = PktEngine.retrieve("e" .. cnt)
-	 	 pe:start()
-	 end
-
-	 local i = 0
-	 repeat
-	     sleep(SLEEP_TIMEOUT)
-	     PACF.show_stats()
-	     i = i + 1
-	 until i > STATS_PRINT_CYCLE_DEFAULT
-end
------------------------------------------------------------------------
---stop4 function __stops the pktengs before printing the final stats.__
---		 __it then unlinks the interface from the engine and__
---		 __finally frees the engine context from the system__
-function stop4()
-	 PACF.show_stats()
-	 for cnt = 0, 3 do
-	     	 local pe = PktEngine.retrieve("e" .. cnt)
-		 pe:stop()
-	 end
-
-	 sleep(SLEEP_TIMEOUT)
-
-	 for cnt = 0, 3 do
-	     	 local pe = PktEngine.retrieve("e" .. cnt)
-	 	 pe:unlink()
-	 end
-
-	 sleep(SLEEP_TIMEOUT)
-
-	 for cnt = 0, 3 do
-	     	 local pe = PktEngine.retrieve("e" .. cnt)
-	 	 pe:delete()
-	 end
-
-	 --PACF.shutdown()
-end
------------------------------------------------------------------------
 
 
 
