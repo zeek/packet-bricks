@@ -11,6 +11,7 @@ LUA devel version 6 is installed.
 Ubuntu requires the following debian packages:
 1- liblua5.1-dev	(Ubuntu Debian Package)
 2- lua5.1		(Ubuntu Debian Package)
+3- libpcap-dev		(Ubuntu Debian Package)
 
 This program would work better if jemalloc library is installed.
 3- libjemalloc		(Ubuntu Debian Package)
