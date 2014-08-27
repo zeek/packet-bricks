@@ -1,7 +1,7 @@
 /* for stdio and stdlib */
-#include "pacf_log.h"
+#include "bricks_log.h"
 /* for filter interface */
-#include "pacf_interface.h"
+#include "bricks_interface.h"
 /* for pc_info definition */
 #include "main.h"
 /* for errno */
@@ -14,8 +14,8 @@
 #include "pkt_engine.h"
 /* for init'ing the network interface list */
 #include "network_interface.h"
-/* for pacf interface funcs (start_listening_reqs()) */
-#include "pacf_interface.h"
+/* for bricks interface funcs (start_listening_reqs()) */
+#include "bricks_interface.h"
 /* for lua variables access */
 #include "lua_interpreter.h"
 /* for signal handling */
@@ -35,7 +35,7 @@ extern progvars_t pv;
 volatile uint32_t stop_processing = 0;
 
 /* global variable definitions */
-PacfInfo pc_info = {
+BricksInfo pc_info = {
 	.batch_size 		= DEFAULT_BATCH_SIZE,
 	.lua_startup_file 	= NULL,
 	.daemonize		= 0,
@@ -235,7 +235,7 @@ export_global_socket()
 		TRACE_FUNC_END();
 	}
 	
-	fprintf(f, "%d", PACF_LISTEN_PORT);
+	fprintf(f, "%d", BRICKS_LISTEN_PORT);
 
 	fflush(f);
 	fclose(f);	
@@ -306,7 +306,7 @@ main(int argc, char **argv)
 	if (pc_info.rshell) {
 		if (pc_info.rshell_args == NULL)
 			fprintf(stdout, "Using localhost and port %d by default\n",
-				PACF_LISTEN_PORT);
+				BRICKS_LISTEN_PORT);
 		lua_kickoff(LUA_EXE_REMOTE_SHELL, pc_info.rshell_args);
 		return EXIT_SUCCESS;
 	}
@@ -317,7 +317,7 @@ main(int argc, char **argv)
 		if (mark_pid_file(pv.pid_file) != 0) {
 			TRACE_FUNC_END();
 			TRACE_ERR("Can't lock the pid file.\n"
-				  "Is a previous pacf daemon already running??\n");
+				  "Is a previous bricks daemon already running??\n");
 		}
 		export_global_socket();
 		lua_kickoff((pc_info.daemonize) ? 

@@ -8,8 +8,8 @@
 #include <sys/poll.h>
 /* for io_module struct defn */
 #include "io_module.h"
-/* for pacf logging */
-#include "pacf_log.h"
+/* for bricks logging */
+#include "bricks_log.h"
 /* for netmap structs */
 #include "netmap_module.h"
 /* for netmap initialization */
@@ -208,6 +208,36 @@ drop_packets(struct netmap_ring *ring, engine *eng, engine_src *esrcptr)
 }
 /*---------------------------------------------------------------------*/
 static int32_t
+write_packets(CommNode *cn)
+{
+	TRACE_NETMAP_FUNC_START();
+	uint32_t rx, n;
+	char *p;
+	struct pcap_pkthdr phdr;
+        struct txq_entry *x = cn->q;
+
+	n = cn->cur_txq;
+	gettimeofday(&phdr.ts, NULL);
+
+
+	for (rx = 0; rx < n; rx++) {
+		struct netmap_slot *src;
+		struct netmap_ring *sr = x[rx].ring;
+		src = &sr->slot[x[rx].slot_idx];
+		p = NETMAP_BUF(sr, src->buf_idx);
+		
+		phdr.caplen = phdr.len = 
+			src->len;
+		pcap_dump((u_char *)cn->pdumper, &phdr, (u_char *)p);
+		TRACE_DEBUG_LOG("Got one!\n");
+	}
+	
+	cn->cur_txq = 0;
+	TRACE_NETMAP_FUNC_END();
+	return 0;
+}
+/*---------------------------------------------------------------------*/
+static int32_t
 share_packets(CommNode *cn)
 {
 	TRACE_NETMAP_FUNC_START();
@@ -217,6 +247,13 @@ share_packets(CommNode *cn)
         struct txq_entry *x = cn->q;
         int retry = TX_RETRIES;		/* max retries */
         struct nm_desc *dst = cn->out_nmd;
+
+	/* if dst is NULL, then this has to be pcap write request */
+	if (dst == NULL) {
+		write_packets(cn);
+		TRACE_NETMAP_FUNC_END();
+		return 0;
+	}
 
 	/* if queued pkts are zero.... skip! */
         if (n == 0) {
@@ -278,6 +315,13 @@ copy_packets(CommNode *cn)
         struct nm_desc *dst = cn->out_nmd;
         struct txq_entry *x = cn->q;
 	
+	/* if dst is NULL, then this has to be pcap write request */
+	if (dst == NULL) {
+		write_packets(cn);
+		TRACE_NETMAP_FUNC_END();
+		return 0;
+	}
+
 	/* if queued pkts are zero.... skip! */
         if (n == 0) {
                 TRACE_DEBUG_LOG("Nothing to forward to pipe nmd: %p\n",
@@ -336,7 +380,7 @@ flush_all_cnodes(Element *elem, engine *eng)
 		if (cn->elem != NULL) {
 			flush_all_cnodes(cn->elem, eng);
 		} else { /* cn->elem == NULL */
-			if (cn->cur_txq > TXQ_MAX) {
+			if (cn->cur_txq > 0) {
 				(eng->mark_for_copy == 1) ? 
 					copy_packets(cn) :
 					share_packets(cn);
@@ -503,21 +547,21 @@ netmap_delete_all_channels(Element *elem)
 		cn = (CommNode *)lnd->external_links[i];
 		if (cn->out_nmd != NULL)
 			nm_close(cn->out_nmd);
+		if (cn->pd != NULL || cn->pdumper) {
+			pcap_close(cn->pd);
+			pcap_dump_close(cn->pdumper);
+			cn->pd = NULL;
+			cn->pdumper = NULL;				
+		}
 		if (cn->elem != NULL) {
 			netmap_delete_all_channels(cn->elem);
-		
-			if (cn->elem->private_data != NULL)
-				free(cn->elem->private_data);
-			free(cn->elem);
+			elem->elib->deinit(cn->elem);
 			cn->elem = NULL;
 		}
 		free(cn);
 	}
 
-	if (elem->private_data)
-		free(elem->private_data);
-
-	free(elem);
+	elem->elib->deinit(elem);
 	TRACE_NETMAP_FUNC_END();
 	/* not used for the moment */
 }
@@ -577,8 +621,7 @@ enable_pipeline(Element *elem, const char *ifname, Target t)
 							      sizeof(void *) * lnd->count);
 				if (lnd->external_links == NULL) {
 					TRACE_LOG("Can't re-allocate to add a new element!\n");
-					free(cn->elem->private_data);
-					free(cn->elem);
+					elem->elib->deinit(cn->elem);
 					TRACE_NETMAP_FUNC_END();
 					return NULL;
 				}
@@ -645,8 +688,6 @@ netmap_create_channel(char *in_name, char *out_name,
 	/* reinitialize lnd if elem is reset */
 	lnd = (linkdata *)elem->private_data;
 	TRACE_LOG("elem: %p, local_desc: %p\n", elem, nmc->local_nmd);
-	/* setting the name */
-	snprintf(ifname, IFNAMSIZ, "netmap:%s", out_name);
 
 	/* create a comm. interface */	
 	lnd->external_links[lnd->init_cur_idx] = calloc(1, sizeof(CommNode));
@@ -658,21 +699,30 @@ netmap_create_channel(char *in_name, char *out_name,
 	}
 
 	cn = (CommNode *)lnd->external_links[lnd->init_cur_idx];
-	cn->out_nmd = nm_open(ifname, NULL, NM_OPEN_NO_MMAP | NM_OPEN_ARG3, 
-			      nmc->local_nmd); 
-	if (cn->out_nmd == NULL) {
-		TRACE_ERR("Can't open %p(%s)\n", cn->out_nmd, ifname);
-		TRACE_NETMAP_FUNC_END();
-	}
-	strcpy_wtih_reverse_pipe(cn->nm_ifname, out_name);
+
+	if (out_name[0] == '>') {
+		cn->pd = pcap_open_dead(DLT_EN10MB, ETH_FRAME_LEN);
+		cn->pdumper = pcap_dump_open(cn->pd, &out_name[1]);
+		fd = 0;
+	} else {		
+		/* setting the name */
+		snprintf(ifname, IFNAMSIZ, "netmap:%s", out_name);
+		cn->out_nmd = nm_open(ifname, NULL, NM_OPEN_NO_MMAP | NM_OPEN_ARG3, 
+				      nmc->local_nmd); 
+		if (cn->out_nmd == NULL) {
+			TRACE_ERR("Can't open %p(%s)\n", cn->out_nmd, ifname);
+			TRACE_NETMAP_FUNC_END();
+		}
+		strcpy_wtih_reverse_pipe(cn->nm_ifname, out_name);
 	
-	TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", 
-		  lnd->ifname, 
-		  out_name, 
-		  lnd->init_cur_idx,
-		  (((struct nm_desc *)nmc->local_nmd)->mem == cn->out_nmd->mem) ? 
-		  "enabled\n" : "disabled\n");
-	fd = cn->out_nmd->fd;
+		TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", 
+			  lnd->ifname, 
+			  out_name, 
+			  lnd->init_cur_idx,
+			  (((struct nm_desc *)nmc->local_nmd)->mem == cn->out_nmd->mem) ? 
+			  "enabled\n" : "disabled\n");
+		fd = cn->out_nmd->fd;
+	}
 
 	lnd->init_cur_idx++;
 	TRACE_LOG("Created %s interface\n", ifname);

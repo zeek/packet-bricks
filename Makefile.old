@@ -1,6 +1,6 @@
 #---------------------------------------------------------------------#
 BINDIR := $(shell pwd)/bin
-BIN := $(BINDIR)/pacf
+BIN := $(BINDIR)/bricks
 OSARCH := $(shell uname)
 OSARCH := $(findstring $(OSARCH),FreeBSD Linux Darwin)
 DEBUG_CFLAGS := -g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
@@ -30,7 +30,7 @@ else
 	-fno-builtin-free -fno-builtin-posix_memalign -ljemalloc
 endif
 #---------------------------------------------------------------------#
-all: pacf
+all: bricks
 
 objs:
 	mkdir -p $(OBJDIR)
@@ -41,18 +41,18 @@ objs-dbg:
 	mkdir -p $(OBJDIR)
 	cd src && $(MAKE)
 
-pacf: objs
+bricks: objs
 	mkdir -p $(BINDIR)
 	$(MSG) "   LD $@"
 	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)
 	strip $(BIN)
 
-run: pacf
+run: bricks
 	$(BIN) -f scripts/startup.lua
 #---------------------------------------------------------------------#
-debug: pacf-debug
+debug: bricks-debug
 
-pacf-debug: objs-dbg
+bricks-debug: objs-dbg
 	mkdir -p $(BINDIR)
 	$(MSG) "   LD $@-debug"
 	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)

@@ -1,7 +1,7 @@
 /* for Element def'n */
 #include "element.h"
 /* for logging */
-#include "pacf_log.h"
+#include "bricks_log.h"
 /*---------------------------------------------------------------------*/
 /**
  * See element.h for comments. Initializes the element given

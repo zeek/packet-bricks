@@ -8,9 +8,9 @@
 /* for IFNAMSIZ */
 #include <net/if.h>
 /* for Target */
-#include "pacf_interface.h"
+#include "bricks_interface.h"
 /* for logging */
-#include "pacf_log.h"
+#include "bricks_log.h"
 /*---------------------------------------------------------------------*/
 /**
  *
@@ -68,7 +68,7 @@ typedef struct Element
  *
  * This struct is used to declare private contexts for
  * special linker elements (e.g. LoadBalancers and Duplicators) that
- * lays down the topology of PACF system...
+ * lays down the topology of BRICKS system...
  * 
  */
 /*---------------------------------------------------------------------*/

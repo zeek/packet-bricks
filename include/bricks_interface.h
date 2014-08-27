@@ -1,5 +1,5 @@
-#ifndef __PACF_INTERFACE_H__
-#define __PACF_INTERFACE_H__
+#ifndef __BRICKS_INTERFACE_H__
+#define __BRICKS_INTERFACE_H__
 /*---------------------------------------------------------------------*/
 /* for uint?_* types */
 #include <sys/types.h>
@@ -89,40 +89,40 @@ typedef struct {
 /**
  * MACROS for filter_type_flag
  */
-#define PACF_CONNECTION_FILTER		 1
-#define PACF_TCPSPORT_FILTER		 2
-#define PACF_TCPDPORT_FILTER		 3
-#define PACF_UDPSPORT_FILTER		 4
-#define PACF_UDPDPORT_FILTER		 5
-#define PACF_TCPPROT_FILTER		 6
-#define PACF_UDPPROT_FILTER		 7
-#define PACF_SRCIP4ADDR_FILTER		 8
-#define PACF_DSTIP4ADDR_FILTER		 9
-#define PACF_SRCIP6ADDR_FILTER		10
-#define PACF_DSTIP6ADDR_FILTER		11
-#define PACF_IPPROT_FILTER		12
-#define PACF_ARPPROT_FILTER		13
-#define PACF_ICMPPROT_FILTER		14
-#define PACF_SRCETH_FILTER		15
-#define PACF_DSTETH_FILTER		16
-#define PACF_TOTAL_FILTERS		PACF_DSTETH_FILTER
+#define BRICKS_CONNECTION_FILTER		 1
+#define BRICKS_TCPSPORT_FILTER		 2
+#define BRICKS_TCPDPORT_FILTER		 3
+#define BRICKS_UDPSPORT_FILTER		 4
+#define BRICKS_UDPDPORT_FILTER		 5
+#define BRICKS_TCPPROT_FILTER		 6
+#define BRICKS_UDPPROT_FILTER		 7
+#define BRICKS_SRCIP4ADDR_FILTER		 8
+#define BRICKS_DSTIP4ADDR_FILTER		 9
+#define BRICKS_SRCIP6ADDR_FILTER		10
+#define BRICKS_DSTIP6ADDR_FILTER		11
+#define BRICKS_IPPROT_FILTER		12
+#define BRICKS_ARPPROT_FILTER		13
+#define BRICKS_ICMPPROT_FILTER		14
+#define BRICKS_SRCETH_FILTER		15
+#define BRICKS_DSTETH_FILTER		16
+#define BRICKS_TOTAL_FILTERS		BRICKS_DSTETH_FILTER
 /*...*/
-#define PACF_UNUSED1_FILTER		17
-#define PACF_UNUSED2_FILTER		18
-#define PACF_UNUSED3_FILTER		19
-#define PACF_UNUSED4_FILTER		20
-#define PACF_UNUSED5_FILTER	        21
-#define PACF_UNUSED6_FILTER		22
-#define PACF_UNUSED7_FILTER		23
-#define PACF_UNUSED8_FILTER		24
-#define PACF_UNUSED9_FILTER		25
-#define PACF_UNUSED10_FILTER		26
-#define PACF_UNUSED11_FILTER		27
-#define PACF_UNUSED12_FILTER		28
-#define PACF_UNUSED13_FILTER		29
-#define PACF_UNUSED14_FILTER		30
-#define PACF_UNUSED15_FILTER		31
-#define PACF_UNUSED16_FILTER		32
+#define BRICKS_UNUSED1_FILTER		17
+#define BRICKS_UNUSED2_FILTER		18
+#define BRICKS_UNUSED3_FILTER		19
+#define BRICKS_UNUSED4_FILTER		20
+#define BRICKS_UNUSED5_FILTER	        21
+#define BRICKS_UNUSED6_FILTER		22
+#define BRICKS_UNUSED7_FILTER		23
+#define BRICKS_UNUSED8_FILTER		24
+#define BRICKS_UNUSED9_FILTER		25
+#define BRICKS_UNUSED10_FILTER		26
+#define BRICKS_UNUSED11_FILTER		27
+#define BRICKS_UNUSED12_FILTER		28
+#define BRICKS_UNUSED13_FILTER		29
+#define BRICKS_UNUSED14_FILTER		30
+#define BRICKS_UNUSED15_FILTER		31
+#define BRICKS_UNUSED16_FILTER		32
 /*---------------------------------------------------------------------*/
 /**
  * Filter: This will become part of the rule 
@@ -130,7 +130,7 @@ typedef struct {
  * 	   XXX: More comments later...
  */
 typedef struct Filter {
-	uint32_t filter_type_flag: PACF_TOTAL_FILTERS;
+	uint32_t filter_type_flag: BRICKS_TOTAL_FILTERS;
 	union {
 		EthAddress *ethaddr;
 		IP4Address *ip4addr;
@@ -170,12 +170,12 @@ typedef struct resp_block {
 	unsigned char resp_payload[0];
 } resp_block __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
-#define PACF_LISTEN_PORT		1111
+#define BRICKS_LISTEN_PORT		1111
 /**
- * PACF interface that accepts incoming requests from pacf shell and
+ * BRICKS interface that accepts incoming requests from bricks shell and
  * userland apps...
  */
 void
 start_listening_reqs();
 /*---------------------------------------------------------------------*/
-#endif /* !__PACF_INTERFACE_H__ */
+#endif /* !__BRICKS_INTERFACE_H__ */

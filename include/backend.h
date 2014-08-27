@@ -6,7 +6,7 @@
 /*---------------------------------------------------------------------*/
 /**
  *
- * NETWORK BACKEND OF PACF
+ * NETWORK BACKEND OF BRICKS
  *
  * This module handles the network communications of the system.
  * meaning... it handles NIC I/O as well as apps I/O
@@ -37,11 +37,11 @@ void
 initiate_backend(engine *eng);
 
 /**
- * Connects to a pacf server for remote shell commands
+ * Connects to a bricks server for remote shell commands
  * rshell_args contains either NULL (use default) or
  * string "ipaddr:port"
  */
 int
-connect_to_pacf_server(char *rshell_args);
+connect_to_bricks_server(char *rshell_args);
 /*---------------------------------------------------------------------*/
 #endif /* __BACKEND_H__ */

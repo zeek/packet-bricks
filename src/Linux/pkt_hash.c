@@ -1,7 +1,7 @@
 /* for func prototypes */
 #include "pkt_hash.h"
-/* for pacf logging */
-#include "pacf_log.h"
+/* for bricks logging */
+#include "bricks_log.h"
 /* iphdr */
 #include <linux/ip.h>
 /* ipv6hdr */

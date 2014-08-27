@@ -1,7 +1,7 @@
 /* for Element struct */
 #include "element.h"
-/* for pacf logging */
-#include "pacf_log.h"
+/* for bricks logging */
+#include "bricks_log.h"
 /* for engine declaration */
 #include "pkt_engine.h"
 /* for string functions */
@@ -27,8 +27,12 @@ void
 merge_deinit(Element *elem)
 {
 	TRACE_ELEMENT_FUNC_START();
+	if (elem->private_data != NULL) {
+		free(elem->private_data);
+		elem->private_data = NULL;
+	}
+	free(elem);
 	TRACE_ELEMENT_FUNC_END();
-	UNUSED(elem);
 }
 /*---------------------------------------------------------------------*/
 void

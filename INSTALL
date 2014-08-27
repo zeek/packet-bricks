@@ -4,8 +4,8 @@ This program builds on the netmap packet I/O framework. Please
 download and install the netmap library before installing this
 module.
 
-Host-pacf requires LUA development libraries 5.1. The current
-version of host-pacf program would show compilation issues if 
+Packet-Bricks requires LUA development libraries 5.1. The current
+version of packet-bricks program would show compilation issues if 
 LUA devel version 6 is installed.
 
 Ubuntu requires the following debian packages:

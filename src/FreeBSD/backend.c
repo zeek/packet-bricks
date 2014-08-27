@@ -1,5 +1,5 @@
 /* for prints etc */
-#include "pacf_log.h"
+#include "bricks_log.h"
 /* for string functions */
 #include <string.h>
 /* for io modules */
@@ -17,12 +17,12 @@
 /* for sockaddr_in */
 #include <netinet/in.h>
 /* for requests/responses */
-#include "pacf_interface.h"
+#include "bricks_interface.h"
 /* for errno */
 #include <errno.h>
 /*---------------------------------------------------------------------*/
 int
-connect_to_pacf_server(char *rshell_args)
+connect_to_bricks_server(char *rshell_args)
 {
 	TRACE_BACKEND_FUNC_START();
 	int sock;
@@ -37,7 +37,7 @@ connect_to_pacf_server(char *rshell_args)
 		ip_addr = strtok(rshell_args, ":");
 		port_str = strtok(NULL, ":");
 	}
-	port = (port_str == NULL) ? PACF_LISTEN_PORT : atoi(port_str);
+	port = (port_str == NULL) ? BRICKS_LISTEN_PORT : atoi(port_str);
 
 	/* Create socket */
 	sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -84,26 +84,26 @@ start_listening_reqs()
 	/* set the address to any interface */                
 	serv.sin_addr.s_addr = htonl(INADDR_ANY); 
 	/* set the server port number */    
-	serv.sin_port = htons(PACF_LISTEN_PORT);
+	serv.sin_port = htons(BRICKS_LISTEN_PORT);
 
-	/* create pacf socket for listening remote shell requests */
+	/* create bricks socket for listening remote shell requests */
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_fd == -1) {
-		TRACE_ERR("Failed to create listening socket for pacf\n");
+		TRACE_ERR("Failed to create listening socket for bricks\n");
 		TRACE_BACKEND_FUNC_END();
 	}
 	
 	/* bind serv information to mysocket */
 	if (bind(listen_fd, (struct sockaddr *)&serv, sizeof(struct sockaddr)) == -1) {
-		TRACE_ERR("Failed to bind listening socket to port %d for pacf\n",
-			  PACF_LISTEN_PORT);
+		TRACE_ERR("Failed to bind listening socket to port %d for bricks\n",
+			  BRICKS_LISTEN_PORT);
 		TRACE_BACKEND_FUNC_END();
 	}
 	
 	/* start listening, allowing a queue of up to 1 pending connection */
 	if (listen(listen_fd, LISTEN_BACKLOG) == -1) {
-		TRACE_ERR("Failed to start listen on port %d (for pacf)\n",
-			  PACF_LISTEN_PORT);
+		TRACE_ERR("Failed to start listen on port %d (for bricks)\n",
+			  BRICKS_LISTEN_PORT);
 		TRACE_BACKEND_FUNC_END();
 	}
 
@@ -112,7 +112,7 @@ start_listening_reqs()
 	/* set up the epolling structure */
 	epoll_fd = epoll_create(EPOLL_MAX_EVENTS);
 	if (epoll_fd == -1) {
-		TRACE_ERR("PACF failed to create an epoll fd!\n");
+		TRACE_ERR("BRICKS failed to create an epoll fd!\n");
 		TRACE_BACKEND_FUNC_END();
 		return;
 	}
@@ -122,7 +122,7 @@ start_listening_reqs()
 	ev.events = EPOLLIN | EPOLLOUT;
 	ev.data.fd = listen_fd;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &ev) == -1) {
-		TRACE_LOG("PACF failed to exe epoll_ctl for fd: %d\n",
+		TRACE_LOG("BRICKS failed to exe epoll_ctl for fd: %d\n",
 			  epoll_fd);
 		TRACE_BACKEND_FUNC_END();
 		return;
@@ -141,7 +141,7 @@ start_listening_reqs()
 		nfds = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, -1);
 		if (nfds == -1) {
 			if (errno == EINTR) continue;
-			TRACE_ERR("PACF poll error: %s\n", strerror(errno));
+			TRACE_ERR("BRICKS poll error: %s\n", strerror(errno));
 			TRACE_BACKEND_FUNC_END();
 		}
 		/* got some request... now process each one of them */

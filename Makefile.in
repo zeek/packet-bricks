@@ -7,7 +7,7 @@ CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
 USEREADLINE := @USEREADLINE@
 BINDIR := $(shell pwd)/bin
-BINNAME := pacf
+BINNAME := bricks
 BIN := $(BINDIR)/$(BINNAME)
 OSARCH := $(shell uname)
 OSARCH := $(findstring $(OSARCH),FreeBSD Linux Darwin)
@@ -34,11 +34,11 @@ export NETMAP_INCLUDE := -I$(shell pwd)/include/netmap
 
 ifeq ($(OSARCH),FreeBSD)
 	export INCLUDE := -I$(shell pwd)/include -I$(LUAINCPATH)/ -Isys/sys/
-	export LIBS := -L$(LUALIBPATH)/ -llua-5.1 -lpthread
+	export LIBS := -L$(LUALIBPATH)/ -llua-5.1 -lpthread -lpcap
 	export LDFLAGS += $(LIBS)
 else
 	export INCLUDE := -I$(shell pwd)/include -I$(LUAINCPATH)/
-	export LIBS := -L$(LUALIBPATH)/ -llua5.1 -lpthread
+	export LIBS := -L$(LUALIBPATH)/ -llua5.1 -lpthread -lpcap
 
 	ifneq ($(strip $(JEINCPATH)),)
 		export INCLUDE += -I$(JEINCPATH)

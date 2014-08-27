@@ -1,7 +1,7 @@
 /* for network interface function prototypes */
 #include "network_interface.h"
 /* for logging */
-#include "pacf_log.h"
+#include "bricks_log.h"
 /* for libc string functions */
 #include <string.h>
 /*---------------------------------------------------------------------*/

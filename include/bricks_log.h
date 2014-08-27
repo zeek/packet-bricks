@@ -1,5 +1,5 @@
-#ifndef __PACF_LOG_H__
-#define __PACF_LOG_H__
+#ifndef __BRICKS_LOG_H__
+#define __BRICKS_LOG_H__
 /*---------------------------------------------------------------------*/
 /* for std I/O */
 #include <stdio.h>
@@ -126,4 +126,4 @@
 
 #define TRACE_FLUSH()			fflush(stdout)
 /*---------------------------------------------------------------------*/
-#endif /* !__PACF_LOG_H__ */
+#endif /* !__BRICKS_LOG_H__ */

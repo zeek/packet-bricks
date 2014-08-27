@@ -6,6 +6,7 @@ AC_LANG(C)
 AC_DISABLE_OPTION_CHECKING
 # Check for scheduling
 AC_CHECK_HEADER(linux/sched.h,,,) 
+AC_CHECK_HEADER(pcap/pcap.h,,,) 
 AC_CHECK_HEADER(pthread.h,,,) 
 AC_CHECK_LIB(m, cos)
 # Check if libreadline exists

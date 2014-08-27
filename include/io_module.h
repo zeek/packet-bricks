@@ -4,7 +4,7 @@
 /* for data types */
 #include <stdint.h>
 /* for target and rule def'ns */
-#include "pacf_interface.h"
+#include "bricks_interface.h"
 /* for rule def'n */
 #include "element.h"
 /*---------------------------------------------------------------------*/

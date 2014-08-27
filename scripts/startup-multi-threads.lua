@@ -15,9 +15,6 @@ NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
 NETMAP_PIPES=64
 NO_CPU_AFF=-1
 NO_QIDS=-1
-BI_TUPLED=-2
-QUAD_TUPLED=-4
-ENABLE_MERGE=-1
 BUFFER_SZ=1024
 
 
@@ -116,7 +113,7 @@ end
 --		 __the engine reads from netmap-enabled eth3 and__
 --		 __forwards packets to a netmap pipe.	        __
 function setup_config4(pe, cnt)
-	  local lb = LoadBalancer.new(QUAD_TUPLED)
+	  local lb = Element.new("LoadBalancer", 4)
 	  lb:connect_input("eth3")
 	  lb:connect_output("eth3{" .. cnt)
 	  pe:link(lb, PKT_BATCH, cnt)
@@ -173,7 +170,7 @@ function start4()
 	 local i = 0
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
-	     PACF.show_stats()
+	     BRICKS.show_stats()
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end
@@ -182,7 +179,7 @@ end
 --		 __it then unlinks the interface from the engine and__
 --		 __finally frees the engine context from the system__
 function stop4()
-	 PACF.show_stats()
+	 BRICKS.show_stats()
 	 for cnt = 0, 3 do
 	     	 local pe = PktEngine.retrieve("e" .. cnt)
 		 pe:stop()
@@ -195,7 +192,7 @@ function stop4()
 	 	 pe:delete()
 	 end
 
-	 --PACF.shutdown()
+	 --BRICKS.shutdown()
 end
 -----------------------------------------------------------------------
 
@@ -209,9 +206,9 @@ end
 -- __"main" function (Commented for user's convenience)__
 --
 -------- __This command prints out the main help menu__
--- PACF.help()
--------- __This command shows the current status of PACF__
--- PACF.print_status()
+-- BRICKS.help()
+-------- __This command shows the current status of BRICKS__
+-- BRICKS.print_status()
 -------- __This prints out the __pkt_engine__ help menu__
 -- PktEngine.help()
 -------- __Initialize the system__
@@ -221,5 +218,5 @@ end
 -------- __Stop the engine__
 -- stop()
 -------- __The following commands quits the session__
--- PACF.shutdown()
+-- BRICKS.shutdown()
 -----------------------------------------------------------------------

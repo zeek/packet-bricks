@@ -15,9 +15,6 @@ NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
 NETMAP_PIPES=64
 NO_CPU_AFF=-1
 NO_QIDS=-1
-BI_TUPLED=-2
-QUAD_TUPLED=-4
-ENABLE_MERGE=-1
 BUFFER_SZ=1024
 
 
@@ -113,9 +110,10 @@ end
 --		 __the engine reads from netmap-enabled eth3 and__
 --		 __evenly splits traffic 5-way.		        __
 function setup_config1(pe)
-	 local lb = LoadBalancer.new(BI_TUPLED)
+	 local lb = Element.new("LoadBalancer", 2)
 	 lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth2")
+	 --lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth3{4", "eth3{5", "eth3{6", "eth3{7")
 	 -- now link it!
 	 pe:link(lb)
 end
@@ -127,10 +125,10 @@ end
 --		 __traffic and then splits traffic from 1 branch__
 --		 __using a load balancer.		        __
 function setup_config2(pe)
-	 local dup = Duplicator.new()
+	 local dup = Element.new("Duplicator")
          dup:connect_input("eth3") 
          dup:connect_output("eth3{0", "eth3{1")
-	 local lb2 = LoadBalancer.new(QUAD_TUPLED)
+	 local lb2 = Element.new("LoadBalancer", 4)
 	 lb2:connect_input("eth3}0")
 	 lb2:connect_output("eth3{2", "eth3{3")
 	 dup:link(lb2)
@@ -143,9 +141,10 @@ end
 --		 __The engine reads from a netmap-enabled eth3 and__
 --		 __duplicates traffic 4-way.		          __
 function setup_config3(pe)
-         local dup = Duplicator.new()
+         local dup = Element.new("Duplicator")
          dup:connect_input("eth3")
-         dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
+         --dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
+	 dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth3{4", "eth3{5", "eth3{6", "eth3{7")
 	 -- now link it!
 	 pe:link(dup)
 end
@@ -156,10 +155,10 @@ end
 --		 __enabled eth3, then splits traffic and finally__
 --		 __ merge packets into a netmap pipe.		__
 function setup_config5(pe)
-	 local lb = LoadBalancer.new(QUAD_TUPLED)
+	 local lb = Element.new("LoadBalancer", 4)
          lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1")
-	 local mrg = Merge.new(ENABLE_MERGE)
+	 local mrg = Element.new("Merge")
 	 mrg:connect_input("eth3}0", "eth3}1")
 	 mrg:connect_output("eth3{3")
 	 lb:link(mrg)
@@ -173,10 +172,10 @@ end
 --		 __and then splits traffic based on the filtering__
 --		 __decisions between the output links.		__
 --function setup_config6(pe)
---	 local lb = LoadBalancer.new(QUAD_TUPLED)
+--	 local lb = Element.new("LoadBalancer", 4)
 --       lb:connect_input("eth3") 
 --       lb:connect_output("eth3{0", "eth3{1")
---	 f = Filter.new(2)
+--	 f = Element.new("Filter")
 --	 f:connect_input("eth3}0")
 --	 f:connect_output("eth3{2", "tcp");
 --	 f:connect_output("eth3{3", "others");
@@ -184,6 +183,23 @@ end
 --	 -- now link it!
 --	 pe:link(lb)
 --end
+
+
+
+--setup_config7	 __sets up a configuration of Merge element__
+--		 __The engine reads from netmap-enabled eth3__
+--		 __and then writes all packets to pcap file__
+function setup_config7(pe)
+	 local lb = Element.new("LoadBalancer", 4)
+         lb:connect_input("eth3") 
+         lb:connect_output("eth3{0", "eth3{1")
+	 local mrg = Element.new("Merge")
+	 mrg:connect_input("eth3}0", "eth3}1")
+	 mrg:connect_output(">out.pcap")
+	 lb:link(mrg)	 
+	 -- now link it!
+	 pe:link(lb)
+end
 
 
 
@@ -214,7 +230,7 @@ function init()
 	 enable_nmpipes()
 
 	 -- setup config1
-	 setup_config1(pe)
+	 --setup_config1(pe)
 
 	 -- setup config2
 	 --setup_config2(pe)
@@ -224,6 +240,9 @@ function init()
 	 
 	 -- setup config5
 	 --setup_config5(pe)
+
+	 -- setup config7
+	 setup_config7(pe)
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
@@ -238,7 +257,7 @@ function start()
 	 repeat
 	     sleep(SLEEP_TIMEOUT)
 	     --pe:show_stats()
-	     PACF.show_stats()
+	     BRICKS.show_stats()
 	     i = i + 1
 	 until i > STATS_PRINT_CYCLE_DEFAULT
 end
@@ -249,13 +268,13 @@ end
 function stop()
 	 local pe = PktEngine.retrieve("e0")
 	 --pe:show_stats()
-	 PACF.show_stats()
+	 BRICKS.show_stats()
 
 	 pe:stop()
 	 sleep(SLEEP_TIMEOUT)
 
 	 pe:delete()
-	 --PACF.shutdown()
+	 --BRICKS.shutdown()
 end
 -----------------------------------------------------------------------
 
@@ -275,9 +294,9 @@ end
 -- __"main" function (Commented for user's convenience)__
 --
 -------- __This command prints out the main help menu__
--- PACF.help()
--------- __This command shows the current status of PACF__
--- PACF.print_status()
+-- BRICKS.help()
+-------- __This command shows the current status of BRICKS__
+-- BRICKS.print_status()
 -------- __This prints out the __pkt_engine__ help menu__
 -- PktEngine.help()
 -------- __Initialize the system__
@@ -287,5 +306,5 @@ end
 -------- __Stop the engine__
 -- stop()
 -------- __The following commands quits the session__
--- PACF.shutdown()
+-- BRICKS.shutdown()
 -----------------------------------------------------------------------

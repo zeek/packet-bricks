@@ -1,7 +1,7 @@
 /* for prototypes */
 #include "lua_interpreter.h"
 /* for logging */
-#include "pacf_log.h"
+#include "bricks_log.h"
 /* for global configuration */
 #include "config.h"
 /* for string functions */
@@ -330,7 +330,7 @@ do_rshell(lua_State *L, char *rshell_args)
 	uint32_t input_len;
 	char msg_back;
 
-	csock = connect_to_pacf_server(rshell_args);
+	csock = connect_to_bricks_server(rshell_args);
 	input_len = 0;
 
         while (!stop_processing && (status = loadline(L)) != -1) {
@@ -460,21 +460,21 @@ pmain(lua_State *L) {
  * The lua_kicoff function can run in 4 modes:
  *
  * 1- HOME SHELL mode: This mode is invoked by the non-daemonized version
- * 		       of PACF. The system initializes everything before
+ * 		       of BRICKS. The system initializes everything before
  *		       control is handed over to the LUA shell. Once the
  *		       terminates, the entire system also shuts down. This
  * 		       mode is only used for testing purposes.
  *
- * 2- REMOTE SHELL mode: This mode works when PACF is already running in
+ * 2- REMOTE SHELL mode: This mode works when BRICKS is already running in
  *			daemonized mode. The remote shell is used to connect
- *			to the PACF daemon server and send/recv instructions/
+ *			to the BRICKS daemon server and send/recv instructions/
  *			output.
  *
  * 3- SCRIPT mode:	This mode is used to only read and load a LUA script
- *			file during PACF server initialization
+ *			file during BRICKS server initialization
  *
  * 4- STR mode:		This mode is used to execute single line instructions
- *			in the PACF server when it is taking instructions from
+ *			in the BRICKS server when it is taking instructions from
  *			remote clients (shell)
  */
 int

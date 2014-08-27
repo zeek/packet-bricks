@@ -26,8 +26,8 @@ typedef struct PktEngine_Intf {
 
 /**
  * Struct that accepts lua commands corresponding to the 
- * LoadBalance/Duplicate abstract. All resource management pertaining
- * to this struct is governed by the LUA interpreter.
+ * LoadBalance/Duplicate/Merge/Filter abstract. All resource management 
+ * pertaining to this struct is governed by the LUA interpreter.
  *
  * Garbage collection is implemented in LUA...
  */
@@ -40,7 +40,7 @@ enum {LINKER_LB = 3,
       TOTAL_LINKERS};
 
 typedef struct Linker_Intf {
-	int type;				/* lb?/dup? */
+	int type;				/* lb?/dup/merge/filter? */
 	int hash_split;				/* 2-tuple or 4-tuple split? */
 	const char *input_link[MAX_INLINKS];	/* ingress interface name */
 	const char *output_link[MAX_OUTLINKS];	/* outgress interface names */

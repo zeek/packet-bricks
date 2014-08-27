@@ -1,11 +1,11 @@
 README
 ======
 
-Host PACF is a Linux/FreeBSD daemon that is capable of receiving and 
+Packet BRICKS is a Linux/FreeBSD daemon that is capable of receiving and 
 distributing ingress traffic to userland applications. It 
 splits up traffic evenly across all registered applications. This
 distribution is flow-aware (i.e. packets of one connection will always
-end up in the same application). At the moment, host-pacf uses netmap 
+end up in the same application). At the moment, pacet-bricks uses netmap 
 packet I/O framework for receiving packets. It employs netmap pipes to 
 forward packets to end host applications. 
 
@@ -26,7 +26,7 @@ which also explains what this system is capable of.
       	   	    	      	     |  ____________|  APP 2  |
       	   	    	      	     | |            |_________|
    1/10 Gbps link     	     	     | |	
-   |||||||||||||| ------->eth3{HOST-PACF}	     _________
+   |||||||||||||| ------->eth3{PACKET-BRICKS}	     _________
 				     | |  eth3}2    |	      |
 				     | |____________|  APP 3  |
 				     | 		    |_________|
@@ -42,60 +42,60 @@ which also explains what this system is capable of.
 
 
 User can start the program by running the following command:
-# bin/pacf [-f startup_script_file]
+# bin/bricks [-f startup_script_file]
 
 To start the program as a daemon, either type:
-# bin/pacf -d [-f startup_script_file]
+# bin/bricks -d [-f startup_script_file]
 		OR
-# bin/pacf-server [-f startup_script_file]
+# bin/bricks-server [-f startup_script_file]
 
 If the system is executed as a non-daemon, it opens a 
 LUA-based shell. Type the following command to print the help menu:
 _________________________________________________________________
-	pacf> pacf.help()
-	PACF Commands:
+	bricks> bricks.help()
+	BRICKS Commands:
     	    help()
     	    print_status()
     	    show_stats()
             shutdown()
-          Available subsystems within PACF have their own help() methods:
+          Available subsystems within BRICKS have their own help() methods:
           pkteng
 _________________________________________________________________
 
-Alternatively, the user can run `pacf-shell` to access the
-interface shell to communicate with daemonized pacf-server.
+Alternatively, the user can run `bricks-shell` to access the
+interface shell to communicate with daemonized bricks-server.
 
-You can hit Ctrl+D to exit the pacf-shell client. To gracefully
+You can hit Ctrl+D to exit the bricks-shell client. To gracefully
 turn the daemon off, the user may enter the following command to 
 exit the program:
 
 _________________________________________________________________
-	pacf> pacf.shutdown()
+	bricks> bricks.shutdown()
 	Goodbye!
 _________________________________________________________________
 
 
-In host-pacf, the most important component is the pkteng module.
+In packet-bricks, the most important component is the pkteng module.
 It manages the reception and distribution of ingress traffic coming
-thru an interface. After running host-pacf again, use the following 
+thru an interface. After running packet-bricks again, use the following 
 command to create a pkteng instance, pe:
 
 _________________________________________________________________
-	pacf> pe = PktEngine.new("e0", "netmap", NO_CPU_AFF)
+	bricks> pe = PktEngine.new("e0", "netmap")
 _________________________________________________________________
 
-The "e0" field is internally used by host-pacf as pkteng's ID. You
+The "e0" field is internally used by packet-bricks as pkteng's ID. You
 can delete the pkteng instance by running the following command:
 
 _________________________________________________________________
-	pacf> pe:delete()
+	bricks> pe:delete()
 _________________________________________________________________
 
 The pkteng instance can be instantiated with the possibility of
 affinitizing the engine thread to an arbitrary cpu:
 
 _________________________________________________________________
-	pacf> pe = PktEngine.new("e0", "netmap", 1)
+	bricks> pe = PktEngine.new("e0", "netmap", 1)
 _________________________________________________________________
 
 The last parameter affinitizes the module to CPU 1 once the engine
@@ -103,8 +103,8 @@ thread starts reading packets. You can bind a pkteng with an
 interface by running the following command:
 
 _________________________________________________________________
-	pacf> intf = Interface.new("eth3")
-	pacf> pe:link(intf, 1024, NO_QIDS)
+	bricks> intf = Interface.new("eth3")
+	bricks> pe:link(intf, 1024, NO_QIDS)
 _________________________________________________________________
 
 This binds pkteng pe with interface eth3 and asks the system to
@@ -112,13 +112,13 @@ read ingress packets 1024 packets at a time. One can unbind the
 interface with the following command:
 
 _________________________________________________________________
-	pacf> pe:unlink()
+	bricks> pe:unlink()
 _________________________________________________________________
 
 The user can start the engine with the following command:
 
 _________________________________________________________________
-	pacf> pe:start()
+	bricks> pe:start()
 _________________________________________________________________
 
 The engine will start sniffing for packets from the interface 
@@ -126,7 +126,7 @@ promiscuously. You can use the following command to get the latest
 packets related statistics from the engine:
 
 _________________________________________________________________
-	pacf> pe.show_stats()
+	bricks> pe.show_stats()
 _________________________________________________________________
 
 Please note that you cannot unlink an interface from the pkteng
@@ -134,25 +134,25 @@ while the engine is running. To stop the engine, please run the
 following command:
 
 _________________________________________________________________
-	pacf> pe:stop()
+	bricks> pe:stop()
 _________________________________________________________________
 
-To start forwarding packets from host-pacf to an application, the
+To start forwarding packets from packet-bricks to an application, the
 user needs to run the following command before starting the engine:
 
 __________________________________________________________________________________________
-	pacf> intf_in = Interface.new("eth3")
-	pacf> intf0 = Interface.new("eth3{0")
-	pacf> intf1 = Interface.new("eth3{1")
-	pacf> intf2 = Interface.new("eth3{2")
-	pacf> intf3 = Interface.new("eth3{3")
-	pacf> intf_in:connect_loadbal(pe, intf0, intf1, intf2, intf3)
+	bricks> intf_in = Interface.new("eth3")
+	bricks> intf0 = Interface.new("eth3{0")
+	bricks> intf1 = Interface.new("eth3{1")
+	bricks> intf2 = Interface.new("eth3{2")
+	bricks> intf3 = Interface.new("eth3{3")
+	bricks> intf_in:connect_loadbal(pe, intf0, intf1, intf2, intf3)
 __________________________________________________________________________________________
 
 This creates four netmap-specific channels named "netmap:eth3{x" where
 0 <= x < 4. The traffic is evenly split between all four channels based
 on the five tuple header (sip, dip, sport, dport, prot) information of 
-incoming packets. Userland applications can now use host-pacf to 
+incoming packets. Userland applications can now use packet-bricks to 
 get their fair share of ingress traffic. Sample applications e.g. tcpdump 
 (using netmap-libpcap) can use the following command to start 
 reading traffic:
@@ -162,20 +162,20 @@ reading traffic:
 # tcpdump -i netmap:eth3}2 &
 # tcpdump -i netmap:eth3}3 &
 
-Host-PACF currently supports the following Rule Types ("actions"):
+Host-BRICKS currently supports the following Rule Types ("actions"):
 
 1- Load balancing (using Interface:connect_loadbal() method), and
 2- Forwarding copy of each packet to every registered application
    (using Interface:connect_dup() method)
 
 
-For user's convenience, the host-pacf package comes with a reference
+For user's convenience, the packet-bricks package comes with a reference
 LUA script file: please see scripts/startup.lua file for details. 
 Also, you can use the following command to load the script file in 
-host-pacf at startup:
+packet-bricks at startup:
 
-# bin/pacf -f scripts/startup.lua, OR
-# bin/pacf-server -f scripts/startup.lua
+# bin/bricks -f scripts/startup.lua, OR
+# bin/bricks-server -f scripts/startup.lua
 
 The user is recommended to skim through the script file. It is
 heavily documented and also contains the code for how to run a 4-threaded

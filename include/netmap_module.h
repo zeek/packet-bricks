@@ -8,9 +8,11 @@
 /* for netmap specific decls */
 #define  NETMAP_WITH_LIBS		1
 #include "net/netmap_user.h"
+/* for pcap dumping */
+#include <pcap/pcap.h>
 /*---------------------------------------------------------------------*/
 /* Macros related to TXQ entry */
-#define TXQ_MAX				16
+#define TXQ_MAX				2048
 /*---------------------------------------------------------------------*/
 struct txq_entry {
         void *ring;
@@ -19,6 +21,8 @@ struct txq_entry {
 
 typedef struct CommNode {
 	struct nm_desc *out_nmd;		/* Node-local pipe descriptor */
+	pcap_t *pd;
+	pcap_dumper_t *pdumper;
 	char nm_ifname[IFNAMSIZ];		/* name of the node */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
@@ -56,5 +60,7 @@ typedef struct netmap_iface_context {
 #define NM_EXTRA_BUFS			8
 /* for interface initialization */
 #define NETMAP_LINK_WAIT_TIME		2	/* in secs */
+/* Ethernet MTU frame */
+#define ETH_FRAME_LEN			1518
 /*---------------------------------------------------------------------*/
 #endif /* !__NETMAP_MODULE_H__ */

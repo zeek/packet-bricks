@@ -1,7 +1,7 @@
 /* for func prototypes */
 #include "util.h"
-/* for pacf logging */
-#include "pacf_log.h"
+/* for bricks logging */
+#include "bricks_log.h"
 /* pthread w/ affinity */
 #include <pthread_np.h>
 /* cpu_set */
