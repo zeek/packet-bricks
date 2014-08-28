@@ -84,18 +84,17 @@ end
 --		 __The engine reads from netmap-enabled eth3__
 --		 __and then splits traffic based on the filtering__
 --		 __decisions between the output links.		__
---function C:lbfilt_config(pe)
---	 local lb = Element.new("LoadBalancer", 4)
---       lb:connect_input("eth3") 
---       lb:connect_output("eth3{0", "eth3{1")
---	 f = Element.new("Filter")
---	 f:connect_input("eth3}0")
---	 f:connect_output("eth3{2", "tcp");
---	 f:connect_output("eth3{3", "others");
---	 lb:link(f)
---	 -- now link it!
---	 pe:link(lb)
---end
+function C:lbfilt_config(pe)
+	 local lb = Element.new("LoadBalancer", 4)
+         lb:connect_input("eth3") 
+         lb:connect_output("eth3{0", "eth3{1")
+	 f = Element.new("Filter")
+	 f:connect_input("eth3}0")
+	 f:connect_output("eth3{2", "eth3{3");
+	 lb:link(f)
+	 -- now link it!
+	 pe:link(lb)
+end
 
 
 -----------------------------------------------------------------------

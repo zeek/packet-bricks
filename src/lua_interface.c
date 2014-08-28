@@ -24,7 +24,6 @@ platform_help_wrap(lua_State *L)
 {
 	/* this prints the system's help menu */
 	TRACE_LUA_FUNC_START();
-	UNUSED(L);
 	fprintf(stdout, PLATFORM_NAME" Commands:\n"
 		"    help()\n"
 		"    print_status()\n"
@@ -34,6 +33,7 @@ platform_help_wrap(lua_State *L)
 		"    PktEngine \n"
 		);
 	TRACE_LUA_FUNC_END();
+	UNUSED(L);
         return 0;
 }
 /*---------------------------------------------------------------------*/
@@ -585,15 +585,19 @@ linker_output(lua_State *L)
 			luaL_optstring(L, 2, 0);
 		linker->output_count = 1;
 	} else { /* for LINKER_LB or LINKER_DUP or LINKER_FILTER */
+#if 0
 		if (linker->type == LINKER_FILTER) {
 			
 		} else {
+#endif
 			for (i = 2; i <= nargs; i++) {
 				linker->output_link[linker->output_count] = 
 					luaL_optstring(L, i, 0);
 				linker->output_count++;
 			}
+#if 0
 		}
+#endif
 	}
 	lua_settop(L, 1);
 

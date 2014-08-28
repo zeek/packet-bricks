@@ -41,6 +41,11 @@ function init()
 	 -- create a global variable pe
 	 local pe = PktEngine.new("e0", "netmap", BUFFER_SZ)
 
+	 ---------------------------------------------------
+	 -- SAMPLE SETUPS. PLZ ONLY ENABLE ONE OUT OF THE --
+	 --             FOLLOWING SIX OPTIONS             --
+	 ---------------------------------------------------
+
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
 	 sampleSetup:lb_config(pe)
@@ -60,6 +65,10 @@ function init()
 	 -- setup lbmrgpcap config
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:lbmrgpcap_config(pe)
+
+	 -- setup lbfilt config
+	 -- (see configs/single-threaded-setups.lua file)
+	 --sampleSetup:lbfilt_config(pe)
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__

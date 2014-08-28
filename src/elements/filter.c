@@ -6,6 +6,7 @@
 #include "pkt_engine.h"
 /* for string functions */
 #include <string.h>
+#include "pkt_hash.h"
 /*---------------------------------------------------------------------*/
 int32_t
 filter_init(Element *elem, Linker_Intf *li)
@@ -27,11 +28,17 @@ static BITMAP
 isTCP(Element *elem, unsigned char *buf)
 {
 	TRACE_ELEMENT_FUNC_START();
+	linkdata *lnd = elem->private_data;
+	BITMAP b;
+
+	INIT_BITMAP(b);
+	uint key = pkt_hdr_hash(buf, 4, lnd->level) 
+		% lnd->count;
+	SET_BIT(b, key);
 	
 	TRACE_ELEMENT_FUNC_END();
-	UNUSED(elem);
-	UNUSED(buf);
-	return 1;
+
+	return b;
 }
 /*---------------------------------------------------------------------*/
 void
