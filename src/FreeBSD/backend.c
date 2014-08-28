@@ -63,7 +63,7 @@ connect_to_bricks_server(char *rshell_args)
      
 	TRACE_DEBUG_LOG("Connected\n");
 	TRACE_BACKEND_FUNC_END();
-	UNUSED(rshell_args);
+
 	return sock;
 }
 /*---------------------------------------------------------------------*/
@@ -74,8 +74,9 @@ start_listening_reqs()
 	/* socket info about the listen sock */
 	struct sockaddr_in serv; 
 	int listen_fd, client_sock;
-	struct epoll_event ev, events[EPOLL_MAX_EVENTS];
-	int epoll_fd, nfds, n;	
+	struct kevent evlist;
+	struct kevent chlist[KQUEUE_MAX_EVENTS];
+	int kq, events, n;
 
 	/* zero the struct before filling the fields */
 	memset(&serv, 0, sizeof(serv));
@@ -108,26 +109,10 @@ start_listening_reqs()
 	}
 
 	/* XXX - TODO: port this to kqueue version... */
-#if 0
-	/* set up the epolling structure */
-	epoll_fd = epoll_create(EPOLL_MAX_EVENTS);
-	if (epoll_fd == -1) {
-		TRACE_ERR("BRICKS failed to create an epoll fd!\n");
-		TRACE_BACKEND_FUNC_END();
-		return;
-	}
+	/* set up the kqueue structure */
+	kq = kqueue();
+	EV_SET(&chlist[listen_fd], listen_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
 
-
-	/* register listening socket */
-	ev.events = EPOLLIN | EPOLLOUT;
-	ev.data.fd = listen_fd;
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &ev) == -1) {
-		TRACE_LOG("BRICKS failed to exe epoll_ctl for fd: %d\n",
-			  epoll_fd);
-		TRACE_BACKEND_FUNC_END();
-		return;
-	}
-	
 	/*
 	 * Main loop that processes incoming remote shell commands
 	 * if the remote request arrives at listen_fd, it accepts connections
@@ -137,37 +122,29 @@ start_listening_reqs()
 	 */
 
 	do {
-		/* wait for new epoll requests */
-		nfds = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, -1);
-		if (nfds == -1) {
-			if (errno == EINTR) continue;
-			TRACE_ERR("BRICKS poll error: %s\n", strerror(errno));
+		events = kevent(kq, chlist, 1, &evlist, 1, NULL);
+		if (events == -1) {
+			TRACE_ERR("kqeuue error (engine: %s)\n",
+				  eng->name);
 			TRACE_BACKEND_FUNC_END();
 		}
-		/* got some request... now process each one of them */
-		for (n = 0; n < nfds; n++) {
+		for (n = 0; n < events; n++) {
 			/* the request is for a new shell */
-			if (events[n].data.fd == listen_fd) {
+			if ((int)chlist[n].ident == listen_fd) {
 				client_sock = accept(listen_fd, NULL, NULL);
 				if (client_sock < 0) {
 					TRACE_ERR("accept failed: %s\n", strerror(errno));
 					TRACE_BACKEND_FUNC_END();
 				}
 				lua_kickoff(LUA_EXE_STR, &client_sock);
-				/* add client_sock and listen_fd for epolling again */
-				ev.data.fd = client_sock;
-				ev.events = EPOLLIN;
-				if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
-					TRACE_ERR("Can't register client sock for epolling!\n");
-					TRACE_BACKEND_FUNC_END();
-				}
-				ev.data.fd = listen_fd;
-				ev.events = EPOLLIN | EPOLLOUT;
-				if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
-					TRACE_ERR("Can't register client sock for epolling!\n");
-					TRACE_BACKEND_FUNC_END();
-				}
-			} else { /* events[n].data.fd == regular sock */
+				/* add client_sock and listen_fd for kqueueing again */
+				EV_SET(&chlist[listen_fd], listen_fd, EVFILT_READ,
+				       EV_ADD, 0, 0, NULL);
+				EV_SET(&chlist[client_sock], client_sock, EVFILT_READ,
+				       EV_ADD, 0, 0, NULL);
+			}
+#if 0 
+			else { /* chlist[n].ident == regular sock */
 				/* 
 				 * if the client socket has incoming read, this means we are getting
 				 * some lua commands.... execute them 
@@ -189,9 +166,10 @@ start_listening_reqs()
 					close(ev.data.fd);
 				}
 			}
+#endif
 		}
 	} while (1);
-#endif
+
 	TRACE_BACKEND_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
@@ -213,7 +191,7 @@ create_listening_socket_for_eng(engine *eng)
 	/* set the address to any interface */                
 	serv.sin_addr.s_addr = htonl(INADDR_ANY); 
 	/* set the server port number */    
-	serv.sin_port = htons(PKTENGINE_LISTEN_PORT + eng->dev_fd);
+	serv.sin_port = htons(PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd);
  
 	eng->listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (eng->listen_fd == -1) {
@@ -232,10 +210,10 @@ create_listening_socket_for_eng(engine *eng)
 	/* start listening, allowing a queue of up to 1 pending connection */
 	if (listen(eng->listen_fd, LISTEN_BACKLOG) == -1) {
 		TRACE_ERR("Failed to start listen on port %d (engine %s)\n",
-			  PKTENGINE_LISTEN_PORT + eng->dev_fd, eng->name);
+			  PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd, eng->name);
 		TRACE_BACKEND_FUNC_END();
 	}
-	eng->listen_port = PKTENGINE_LISTEN_PORT + eng->dev_fd;
+	eng->listen_port = PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd;
 	
 	TRACE_BACKEND_FUNC_END();
 }
@@ -323,7 +301,9 @@ initiate_backend(engine *eng)
 	struct kevent evlist;
 	struct kevent chlist[KQUEUE_MAX_EVENTS];
 	int kq, events, n;
+	uint dev_flag, i;
 
+	dev_flag = 0;
 	/* set up the kqueue structure */
 	kq = kqueue();
 
@@ -337,7 +317,11 @@ initiate_backend(engine *eng)
 		  eng->name, eng->listen_port);
 
 	/* register iom socket */
-	EV_SET(&chlist[eng->dev_fd], eng->dev_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+	for (i = 0; i < eng->no_of_sources; i++) {
+		EV_SET(&chlist[eng->esrc[i]->desc_fd], eng->esrc[i]->dev_fd, 
+		       EVFILT_READ, EV_ADD, 0, 0, NULL);
+	}
+
 
 	/* keep on running till engine stops */
 	while (eng->run == 1) {
@@ -349,11 +333,20 @@ initiate_backend(engine *eng)
 		}
 		for (n = 0; n < events; n++) {
 			/* process dev work */
-			if ((int)chlist[n].ident == eng->dev_fd) {
-				eng->iom.callback(eng, TAILQ_FIRST(&eng->r_list));
-				/* continue kqueueing */
-				EV_SET(&chlist[eng->dev_fd], eng->dev_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-			} 
+			for (i = 0; i < eng->no_of_sources; i++) {
+				if ((int)chlist[n].ident == eng->esrc[i]->dev_fd) {
+					eng->iom.callback(eng, TAILQ_FIRST(&eng->r_list));
+					/* continue kqueueing */
+					EV_SET(&chlist[eng->esrc[i]->dev_fd], 
+					       eng->esrc[i]->dev_fd, EVFILT_READ, 
+					       EV_ADD, 0, 0, NULL);
+					dev_flag = 1;
+				} 
+			}
+			if (dev_flag == 1) {
+				dev_flag = 0;
+				continue;
+			}
 #if 0
 			/* XXX - temporarily disabled */
 			/* process app reqs */

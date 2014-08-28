@@ -410,7 +410,10 @@ initiate_backend(engine *eng)
 				} 
 			}
 
-			if (dev_flag == 1) continue;
+			if (dev_flag == 1) {
+				dev_flag = 0;
+				continue;
+			}
 			/* process app reqs */
 			if (events[n].data.fd == eng->listen_fd)
 				process_request_backend(eng, epoll_fd);
