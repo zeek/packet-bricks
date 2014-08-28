@@ -42,18 +42,23 @@ function init()
 	 local pe = PktEngine.new("e0", "netmap", BUFFER_SZ)
 
 	 -- setup loadbalancer config
+	 -- (see configs/single-threaded-setups.lua file)
 	 sampleSetup:lb_config(pe)
 
 	 -- setup dup/lb config
+	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:duplb_config(pe)
 
 	 -- setup dup config
+	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:dup_config(pe)
 	 
 	 -- setup lb/mrg config
+	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:lbmrg_config(pe)
 
 	 -- setup lbmrgpcap config
+	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:lbmrgpcap_config(pe)
 end
 -----------------------------------------------------------------------

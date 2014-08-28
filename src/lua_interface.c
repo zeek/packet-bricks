@@ -462,7 +462,7 @@ static int
 linker_help(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	fprintf(stdout, "LoadBalance/Duplicator/Merge/Filter Commands:\n"
+	fprintf(stdout, "LoadBalance/Duplicator/Merge/Filter/? Commands:\n"
 		"    help()\n"
 		"    new([<split-mode>])\n"
 		"    connect_input(<interfaces>)\n"
@@ -521,23 +521,16 @@ linker_new(lua_State *L)
 	int arg = -1;
 	int nargs = lua_gettop(L);
 	const char *element_name = luaL_optstring(L, 1, 0);
-	
+	int i;
+
 	if (nargs == 2) {
 		arg = luaL_optint(L, 2, 0);
 	}
 
 	Linker_Intf *linker = push_linker(L);
-	if (!strcmp(element_name, "LoadBalancer"))
-		linker->type = LINKER_LB;
-	else if (!strcmp(element_name, "Duplicator"))
-		linker->type = LINKER_DUP;
-	else if (!strcmp(element_name, "Filter"))
-		linker->type = LINKER_FILTER;
-	else if (!strcmp(element_name, "Merge"))
-		linker->type = LINKER_MERGE;
-	else  {
-		TRACE_ERR("Undefined element name!\n");
-		TRACE_LUA_FUNC_END();
+	for (i = 3; elibs[i].init != NULL; i++) {
+		if (!strcmp(elibs[i].getId(), element_name))
+			linker->type = i;
 	}
 	
 	linker->hash_split = arg;
@@ -662,24 +655,11 @@ linker_tostring(lua_State *L)
 	char buff[LUA_MAXINPUT];
 	Linker_Intf *linker;
 	char *type;
+
 	fprintf(stderr, "Calling %s\n", __FUNCTION__);
 	linker = to_linker(L, 1);
-	switch (linker->type) {
-	case LINKER_LB:
-		type = "LoadBalancer";
-		break;
-	case LINKER_DUP:
-		type = "Duplicator";
-		break;
-	case LINKER_MERGE:
-		type = "Merge";
-		break;
-	case LINKER_FILTER:
-		type = "Filter";
-		break;
-	default:
-		TRACE_ERR("Invalid type!\n");
-	}
+	type = elibs[linker->type].getId();
+
 	sprintf(buff, "%s%s%s\n", type,
 		":\n\tSource: ",
 		linker->input_link[0]);

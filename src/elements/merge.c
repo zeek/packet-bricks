@@ -94,10 +94,20 @@ merge_link(struct Element *from, Linker_Intf *linker)
 	TRACE_ELEMENT_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+char *
+merge_getid()
+{
+	TRACE_ELEMENT_FUNC_START();
+	static char *name = "Merge";
+	return name;
+	TRACE_ELEMENT_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 element_funcs mergefuncs = {
 	.init			= 	merge_init,
 	.link			=	merge_link,
 	.process		= 	NULL,
-	.deinit			= 	merge_deinit
+	.deinit			= 	merge_deinit,
+	.getId			=	merge_getid
 };
 /*---------------------------------------------------------------------*/

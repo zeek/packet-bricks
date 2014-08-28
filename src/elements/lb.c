@@ -114,10 +114,20 @@ lb_link(struct Element *elem, Linker_Intf *linker)
 	TRACE_ELEMENT_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+char *
+lb_getid()
+{
+	TRACE_ELEMENT_FUNC_START();
+	static char *name = "LoadBalancer";
+	return name;
+	TRACE_ELEMENT_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 element_funcs lbfuncs = {
 	.init			= 	lb_init,
 	.link			=	lb_link,
 	.process		= 	lb_process,
-	.deinit			= 	lb_deinit
+	.deinit			= 	lb_deinit,
+	.getId			=	lb_getid
 };
 /*---------------------------------------------------------------------*/

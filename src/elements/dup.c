@@ -113,10 +113,20 @@ dup_link(struct Element *elem, Linker_Intf *linker)
 	TRACE_ELEMENT_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+char *
+dup_getid()
+{
+	TRACE_ELEMENT_FUNC_START();
+	static char *name = "Duplicator";
+	return name;
+	TRACE_ELEMENT_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 element_funcs dupfuncs = {
 	.init			= 	dup_init,
 	.link			=	dup_link,
 	.process		= 	dup_process,
-	.deinit			= 	dup_deinit
+	.deinit			= 	dup_deinit,
+	.getId			=	dup_getid
 };
 /*---------------------------------------------------------------------*/

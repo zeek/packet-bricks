@@ -1,7 +1,7 @@
 #---------------------------------------------------------------------#
-SRCS := lb.c dup.c merge.c filter.c
+SRCS := $(shell find -iname '*.c')
 
-_OBJ := lb.o dup.o merge.o filter.o
+_OBJ := $(SRCS:%.c=%.o)
 OBJ := $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 $(OBJDIR)/%.o: %.c

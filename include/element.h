@@ -42,16 +42,22 @@
  *
  *		      - deinit(): frees up resources previously allocated
  *				 by the element.
+ *
+ *		      - getId(): get string id of the element
  */
 /*---------------------------------------------------------------------*/
 struct Element;
+/* maximum number of channels (per parent) you can have are 32 */
 #define BITMAP			uint32_t
+/* maximum number of elements you can have in packet-bricks */
+#define MAX_ELEMENTS		128
 typedef struct element_funcs {		/* element funcs ptrs */
 	int32_t (*init)(struct Element *elem, Linker_Intf *li);
 	void (*link)(struct Element *elem, Linker_Intf *li);
 	BITMAP (*process)(struct Element *elem, unsigned char *pktbuf);
 	void (*deinit)(struct Element *elem);
-} element_funcs __attribute__((aligned(__WORDSIZE)));
+	char *(*getId)();
+} element_funcs;// __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 typedef struct Element
 {
@@ -83,17 +89,28 @@ typedef struct linkdata {
 } linkdata __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
- * List of external element functions
+ * List of external element functions & their respective macros...
+ * Please start indexing with 3
  */
+enum {LINKER_LB = 3, 
+      LINKER_DUP,
+      LINKER_MERGE,
+      LINKER_FILTER};
 extern element_funcs lbfuncs;
 extern element_funcs dupfuncs;
 extern element_funcs mergefuncs;
+extern element_funcs elibs[MAX_ELEMENTS];
 /*---------------------------------------------------------------------*/
 /* creates an Element and initializes the element based on target */
 Element *
 createElement(Target t);
 
 #define FIRST_ELEM(x)		x[0]
+
+/**
+ * Initialize all element function libraries
+ */
+inline void initElements();
 
 /*---------------------------------------------------------------------*/
 /**

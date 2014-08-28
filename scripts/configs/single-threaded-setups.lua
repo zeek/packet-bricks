@@ -110,6 +110,8 @@ function C:lbmrgpcap_config(pe)
          lb:connect_output("eth3{0", "eth3{1")
 	 local mrg = Element.new("Merge")
 	 mrg:connect_input("eth3}0", "eth3}1")
+	 -- if the output is prepended with '>', packet-bricks
+	 -- treats the channel as a pcap-compatible file
 	 mrg:connect_output(">out.pcap")
 	 lb:link(mrg)	 
 	 -- now link it!

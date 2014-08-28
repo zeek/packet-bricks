@@ -102,10 +102,20 @@ filter_link(struct Element *from, Linker_Intf *linker)
 	TRACE_ELEMENT_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+char *
+filter_getid()
+{
+	TRACE_ELEMENT_FUNC_START();
+	static char *name = "Filter";
+	return name;
+	TRACE_ELEMENT_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 element_funcs filterfuncs = {
 	.init			= 	filter_init,
 	.link			=	filter_link,
 	.process		= 	isTCP,
-	.deinit			= 	filter_deinit
+	.deinit			= 	filter_deinit,
+	.getId			=	filter_getid
 };
 /*---------------------------------------------------------------------*/

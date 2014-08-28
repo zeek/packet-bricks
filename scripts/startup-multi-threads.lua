@@ -54,7 +54,8 @@ function init4()
 	 	 local pe = PktEngine.new("e" .. cnt, "netmap", BUFFER_SZ, cnt)
 		 
 		 --setup: load balancing config
-		 lb_config(pe, cnt)		 
+		 -- (see configs/multi-threaded-setups.lua file)
+		 lb_config(pe, cnt)
 	 end
 end
 -----------------------------------------------------------------------
