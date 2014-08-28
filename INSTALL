@@ -41,5 +41,7 @@ are not provided:
 #2. Run make
 $ make
 
+# FreeBSD users, please use gmake
+
 If no errors are encountered, the make script will place the binary
 in bin/ directory.

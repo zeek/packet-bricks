@@ -110,7 +110,7 @@ createElement(Target t);
 /**
  * Initialize all element function libraries
  */
-inline void initElements();
+void initElements();
 
 /*---------------------------------------------------------------------*/
 /**

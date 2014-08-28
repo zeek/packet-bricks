@@ -13,6 +13,13 @@ initElements()
 {
 	TRACE_ELEMENT_FUNC_START();
 	/* register your elements here */
+	/* 
+	 * indices 0, 1, 2..5 are reserved. Please start 
+	 * your indexing from 6.
+	 *
+	 * Maximum # of elements packet-bricks can support
+	 * is MAX_ELEMENTS.
+	 */
 	elibs[3] = lbfuncs;
 	elibs[4] = dupfuncs;
 	elibs[5] = mergefuncs;

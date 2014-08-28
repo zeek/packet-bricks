@@ -187,12 +187,13 @@ reference LUA script file: please see scripts/startup-*.lua files for
 details. You can also use the following command to load the script
 file in packet-bricks at startup:
 
-# bin/bricks -f scripts/startup-*.lua, OR
-# bin/bricks-server -f scripts/startup-*.lua
+# bin/bricks -f scripts/startup-one-thread.lua, OR
+# bin/bricks-server -f scripts/startup-one-thread.lua
 
 The user is recommended to skim through the script file. It is
-heavily documented and also contains code for running a 4-threaded
-version of the pkteng.
+heavily documented. The scripts directory also contains code for 
+running a 4-threaded version of the pkteng (see 
+scripts/startup-multi-threads.lua).
 
 =======================================================================
 NOTE: Please install the required libraries mentioned in INSTALL file.

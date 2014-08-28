@@ -1,0 +1,13 @@
+README: DEVELOPMENT NOTES
+=========================
+The following text provides a brief overview on how a developer can
+create a new element.
+
+All elements in packet-bricks should be placed in src/elements/
+directory. An element
+
+
+
+
+=======================================================================
+Please send your queries to: ajamshed@icsi.berkeley.edu

@@ -16,8 +16,12 @@
 #include <sys/socket.h>
 /* for sockaddr_in */
 #include <netinet/in.h>
+/* for inet_addr */
+#include <arpa/inet.h>
 /* for requests/responses */
 #include "bricks_interface.h"
+/* for remote shell defines */
+#include "lua_interpreter.h"
 /* for errno */
 #include <errno.h>
 /*---------------------------------------------------------------------*/
@@ -124,8 +128,7 @@ start_listening_reqs()
 	do {
 		events = kevent(kq, chlist, 1, &evlist, 1, NULL);
 		if (events == -1) {
-			TRACE_ERR("kqeuue error (engine: %s)\n",
-				  eng->name);
+			TRACE_ERR("kqueue error\n");
 			TRACE_BACKEND_FUNC_END();
 		}
 		for (n = 0; n < events; n++) {
@@ -202,9 +205,9 @@ create_listening_socket_for_eng(engine *eng)
 	
 	/* bind serv information to mysocket */
 	if (bind(eng->listen_fd, (struct sockaddr *)&serv, sizeof(struct sockaddr)) == -1) {
-		TRACE_ERR("Failed to bind listening socket to port %d of engine %s\n",
-			  PKTENGINE_LISTEN_PORT + eng->dev_fd, eng->name);
-		TRACE_BACKEND_FUNC_END();
+	  TRACE_ERR("Failed to bind listening socket to port %d of engine %s\n",
+		    PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd, eng->name);
+	  TRACE_BACKEND_FUNC_END();
 	}
 	
 	/* start listening, allowing a queue of up to 1 pending connection */
@@ -318,7 +321,7 @@ initiate_backend(engine *eng)
 
 	/* register iom socket */
 	for (i = 0; i < eng->no_of_sources; i++) {
-		EV_SET(&chlist[eng->esrc[i]->desc_fd], eng->esrc[i]->dev_fd, 
+		EV_SET(&chlist[eng->esrc[i]->dev_fd], eng->esrc[i]->dev_fd, 
 		       EVFILT_READ, EV_ADD, 0, 0, NULL);
 	}
 
@@ -335,7 +338,7 @@ initiate_backend(engine *eng)
 			/* process dev work */
 			for (i = 0; i < eng->no_of_sources; i++) {
 				if ((int)chlist[n].ident == eng->esrc[i]->dev_fd) {
-					eng->iom.callback(eng, TAILQ_FIRST(&eng->r_list));
+				  eng->iom.callback(eng->esrc[i]);
 					/* continue kqueueing */
 					EV_SET(&chlist[eng->esrc[i]->dev_fd], 
 					       eng->esrc[i]->dev_fd, EVFILT_READ, 
