@@ -10,8 +10,8 @@
 #include "pkt_engine.h"
 /* for DEFAULT_BATCH_SIZE */
 #include "main.h"
-/* for elements */
-#include "element.h"
+/* for bricks */
+#include "brick.h"
 /*---------------------------------------------------------------------*/
 extern volatile uint32_t stop_processing;
 #define METATABLE		PLATFORM_NAME" Metatable"
@@ -148,7 +148,7 @@ pktengine_help(lua_State *L)
 		"    help()\n"
 		"    new(<ioengine_name>, <io_type>, <cpu number>)\n"
 		"    delete()\n"
-		"    link(<element>, <chunk_size>, <qid>)\n"
+		"    link(<brick>, <chunk_size>, <qid>)\n"
 		"    start()\n"
 		"    stop()\n"
 		"    show_stats()\n"
@@ -228,7 +228,7 @@ pkteng_link(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	PktEngine_Intf *pe = check_pkteng(L, 1);
 	Linker_Intf *linker;
-	Element *first_elem;
+	Brick *first_brick;
 	int nargs = lua_gettop(L);
 	int i;
 
@@ -270,27 +270,27 @@ pkteng_link(lua_State *L)
 		TRACE_LOG("Linking %s with link %s with batch size: %d and qid: %d\n",
 			  pe->eng_name, linker->input_link[i], pe->batch, pe->qid);
 	}
-	first_elem = createElement(linker->type);
-	if (first_elem == NULL) {
+	first_brick = createBrick(linker->type);
+	if (first_brick == NULL) {
 		TRACE_LUA_FUNC_END();
 		return 1;
 	}
 
-	first_elem->eng = engine_find((unsigned char *)pe->eng_name);
-	first_elem->elib->init(first_elem, linker);
-	if (first_elem->eng == NULL) {
+	first_brick->eng = engine_find((unsigned char *)pe->eng_name);
+	first_brick->elib->init(first_brick, linker);
+	if (first_brick->eng == NULL) {
 		TRACE_LOG("Could not find engine with name: %s\n",
 			  pe->eng_name);
 		TRACE_LUA_FUNC_END();
-		free(first_elem);
+		free(first_brick);
 		return 1;
 	}
-	first_elem->elib->link(first_elem, linker);
+	first_brick->elib->link(first_brick, linker);
 	
 	/* if there are pipelines, link them as well */
 	while (linker->next_linker != NULL) {
 		linker = linker->next_linker;
-		first_elem->elib->link(first_elem, linker); 
+		first_brick->elib->link(first_brick, linker); 
 	}
 
 	TRACE_LUA_FUNC_END();
@@ -455,7 +455,7 @@ luaopen_pkteng(lua_State *L)
 }
 /*---------------------------------------------------------------------*/
 /**
- * "Linker" Element interface :P
+ * "Linker" Brick interface :P
  */
 /*---------------------------------------------------------------------*/
 static int
@@ -478,7 +478,7 @@ to_linker(lua_State *L, int index)
 {
 	TRACE_LUA_FUNC_START();
 	Linker_Intf *linker = (Linker_Intf *)lua_touserdata(L, index);
-	if (linker == NULL) luaL_typerror(L, index, "Element");
+	if (linker == NULL) luaL_typerror(L, index, "Brick");
 	TRACE_LUA_FUNC_END();
 	return linker;
 }
@@ -489,7 +489,7 @@ push_linker(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	Linker_Intf *linker = (Linker_Intf *)lua_newuserdata(L, sizeof(Linker_Intf));
 
-	luaL_getmetatable(L, "Element");
+	luaL_getmetatable(L, "Brick");
 	lua_setmetatable(L, -2);
 	TRACE_LUA_FUNC_END();
 	return linker;
@@ -505,7 +505,7 @@ check_linker(lua_State *L, int index)
 	luaL_checktype(L, index, LUA_TUSERDATA);
 	linker = (Linker_Intf *)luaL_optudata(L, index);
 	
-	if (linker == NULL) luaL_typerror(L, index, "Element");
+	if (linker == NULL) luaL_typerror(L, index, "Brick");
 
 	TRACE_LUA_FUNC_END();
 	return linker;
@@ -520,7 +520,7 @@ linker_new(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	int arg = -1;
 	int nargs = lua_gettop(L);
-	const char *element_name = luaL_optstring(L, 1, 0);
+	const char *brick_name = luaL_optstring(L, 1, 0);
 	int i;
 
 	if (nargs == 2) {
@@ -529,7 +529,7 @@ linker_new(lua_State *L)
 
 	Linker_Intf *linker = push_linker(L);
 	for (i = 3; elibs[i].init != NULL; i++) {
-		if (!strcmp(elibs[i].getId(), element_name))
+		if (!strcmp(elibs[i].getId(), brick_name))
 			linker->type = i;
 	}
 	
@@ -684,9 +684,9 @@ linker_register(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
 	/* create methods table, add it to the globals */
-	luaL_openlib(L, "Element", linker_methods, 0);
+	luaL_openlib(L, "Brick", linker_methods, 0);
 	/* create metatable for Linker, & add it to the Lua registry */
-	luaL_newmetatable(L, "Element");
+	luaL_newmetatable(L, "Brick");
 	/* fill metatable */
 	luaL_openlib(L, 0, linker_meta, 0);
 	lua_pushliteral(L, "__index");

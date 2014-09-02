@@ -28,7 +28,7 @@ typedef struct CommNode {
 	int32_t cur_txq;			/* current index of the tx entry */
 	Filter *filt;				/* applied filter */
 	uint8_t mark;				/* marking for delivery */
-	struct Element *elem;			/* ptrs to child elements */
+	struct Brick *brick;			/* ptrs to child bricks */
 } CommNode __attribute__((aligned(__WORDSIZE)));
 
 /**

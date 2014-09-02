@@ -9,7 +9,7 @@ local C={};
 --		 __the engine reads from netmap-enabled eth3 and__
 --		 __forwards packets to a netmap pipe.	        __
 function lb_config(pe, cnt)
-	  local lb = Element.new("LoadBalancer", 4)
+	  local lb = Brick.new("LoadBalancer", 4)
 	  lb:connect_input("eth3")
 	  lb:connect_output("eth3{" .. cnt)
 	  pe:link(lb, PKT_BATCH, cnt)

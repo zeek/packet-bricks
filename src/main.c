@@ -89,7 +89,7 @@ init_modules()
 	TRACE_DEBUG_LOG("Initializing the engines module \n");
 	pktengine_init();
 	interface_init();
-	initElements();
+	initBricks();
 
 	TRACE_FUNC_END();
 }

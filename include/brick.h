@@ -1,5 +1,5 @@
-#ifndef __ELEMENT_H__
-#define __ELEMENT_H__
+#ifndef __BRICK_H__
+#define __BRICK_H__
 /*---------------------------------------------------------------------*/
 /* for data types */
 #include <stdint.h>
@@ -14,66 +14,66 @@
 /*---------------------------------------------------------------------*/
 /**
  *
- * ELEMENT DEFINITION
+ * BRICK DEFINITION
  *
- * Template for Elements defined as below. The fields are defined
+ * Template for Bricks defined as below. The fields are defined
  * as below:
  *
- *		private_data: Used to hold element instance-specific
+ *		private_data: Used to hold brick instance-specific
  *			      private data context
  *
- *		eng: the engine that the current element belongs
+ *		eng: the engine that the current brick belongs
  *		      (connects) to.
  *
- *		next_elem: the next element that connects to this
- *			  element (This may not be needed) XXX
+ *		next_brick: the next brick that connects to this
+ *			  brick (This may not be needed) XXX
  *
- *		elib: libary of element functions
- *		      - init(): initializes the element. This function
+ *		elib: libary of brick functions
+ *		      - init(): initializes the brick. This function
  *				can also be used to private contexts.
  *				(private_data)
  *
- *		      - link(): link connecting elements to their parents.
+ *		      - link(): link connecting bricks to their parents.
  *
- *		      - process(): run the Element's action function that
+ *		      - process(): run the Brick's action function that
  *				  processes incoming packet. Returns a
  *				  a bitmap of output links the packet needs
  *				  to be forwarded to.
  *
  *		      - deinit(): frees up resources previously allocated
- *				 by the element.
+ *				 by the brick.
  *
- *		      - getId(): get string id of the element
+ *		      - getId(): get string id of the brick
  */
 /*---------------------------------------------------------------------*/
-struct Element;
+struct Brick;
 /* maximum number of channels (per parent) you can have are 32 */
 #define BITMAP			uint32_t
-/* maximum number of elements you can have in packet-bricks */
-#define MAX_ELEMENTS		128
-typedef struct element_funcs {		/* element funcs ptrs */
-	int32_t (*init)(struct Element *elem, Linker_Intf *li);
-	void (*link)(struct Element *elem, Linker_Intf *li);
-	BITMAP (*process)(struct Element *elem, unsigned char *pktbuf);
-	void (*deinit)(struct Element *elem);
+/* maximum number of bricks you can have in packet-bricks */
+#define MAX_BRICKS		128
+typedef struct brick_funcs {		/* brick funcs ptrs */
+	int32_t (*init)(struct Brick *brick, Linker_Intf *li);
+	void (*link)(struct Brick *brick, Linker_Intf *li);
+	BITMAP (*process)(struct Brick *brick, unsigned char *pktbuf);
+	void (*deinit)(struct Brick *brick);
 	char *(*getId)();
-} element_funcs;// __attribute__((aligned(__WORDSIZE)));
+} brick_funcs;// __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
-typedef struct Element
+typedef struct Brick
 {
 	void *private_data;
 	struct engine *eng;
-	struct Element *next_elem;
+	struct Brick *next_brick;
 	
-	struct element_funcs *elib;
-} Element __attribute__((aligned(__WORDSIZE)));
+	struct brick_funcs *elib;
+} Brick __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
  *
- * LINK DATA ELEMENT'S PRIVATE CONTEXT DEFINITION
+ * LINK DATA BRICK'S PRIVATE CONTEXT DEFINITION
  *
  * This struct is used to declare private contexts for
- * special linker elements (e.g. LoadBalancers and Duplicators) that
+ * special linker bricks (e.g. LoadBalancers and Duplicators) that
  * lays down the topology of BRICKS system...
  * 
  */
@@ -85,32 +85,32 @@ typedef struct linkdata {
 	char ifname[IFNAMSIZ];	/* name of (virtual) source */
 	Target tgt;		/* type */	
 	unsigned char level;	/* the nested level used during dispatch_pkt() */
-	uint8_t hash_split;	/* hash split version if the element is load balancer */
+	uint8_t hash_split;	/* hash split version if the brick is load balancer */
 } linkdata __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
- * List of external element functions & their respective macros...
+ * List of external brick functions & their respective macros...
  * Please start indexing with 3
  */
 enum {LINKER_LB = 3, 
       LINKER_DUP,
       LINKER_MERGE,
       LINKER_FILTER};
-extern element_funcs lbfuncs;
-extern element_funcs dupfuncs;
-extern element_funcs mergefuncs;
-extern element_funcs elibs[MAX_ELEMENTS];
+extern brick_funcs lbfuncs;
+extern brick_funcs dupfuncs;
+extern brick_funcs mergefuncs;
+extern brick_funcs elibs[MAX_BRICKS];
 /*---------------------------------------------------------------------*/
-/* creates an Element and initializes the element based on target */
-Element *
-createElement(Target t);
+/* creates an Brick and initializes the brick based on target */
+Brick *
+createBrick(Target t);
 
-#define FIRST_ELEM(x)		x[0]
+#define FIRST_BRICK(x)		x[0]
 
 /**
- * Initialize all element function libraries
+ * Initialize all brick function libraries
  */
-void initElements();
+inline void initBricks();
 
 /*---------------------------------------------------------------------*/
 /**
@@ -142,4 +142,4 @@ void initElements();
  */
 #define CHECK_BIT(x, val)	(x >> (val)) & 1
 /*---------------------------------------------------------------------*/
-#endif /* !__ELEMENT_H__ */
+#endif /* !__BRICK_H__ */

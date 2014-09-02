@@ -2,13 +2,13 @@ README
 ======
 
 Packet BRICKS is a Linux/FreeBSD daemon that is capable of receiving
-and distributing ingress traffic to userland applications. Its main
-responsibilities may include (i) load-balancing, (ii) duplicating
-and/or (iii) filtering ingress traffic across all registered
-applications. The distribution is flow-aware (i.e. packets of one
+and distributing ingress traffic to userland applications. Its main 
+responsibilities may include (i) load-balancing, (ii) duplicating 
+and/or (iii) filtering ingress traffic across all registered 
+applications. The distribution is flow-aware (i.e. packets of one 
 connection will always end up in the same application). At the moment,
 pacet-bricks uses netmap packet I/O framework for receiving packets.
-It employs netmap pipes to forward packets to end host applications.
+It employs netmap pipes to forward packets to end host applications. 
 
 The following guide provides a walkthrough of the scripts/startup-*.lua
 files and also explains what this system is capable of.
@@ -26,23 +26,23 @@ files and also explains what this system is capable of.
       	   	    	      	     |    eth3}1    |	      |
       	   	    	      	     |  ____________|  APP 2  |
       	   	    	      	     | |            |_________|
-   1/10 Gbps link     	     	     | |
+   1/10 Gbps link     	     	     | |	
    |||||||||||||| ------->eth3{PACKET-BRICKS}	     _________
 				     | |  eth3}2    |	      |
 				     | |____________|  APP 3  |
 				     | 		    |_________|
 				     |
 				     |    eth3}3
-	 			     |_____________
+	 			     |_____________  
 				     		   \
 						    \_________
 	      			     		    |	      |
 	                     			    |  APP 4  |
 						    |_________|
-
+			         
 	Figure 1: A sample packet-bricks instance redirecting ingress
-	       	  traffic from eth3 to 4 userland applications using
-		  a LoadBalancer element
+	       	  traffic from eth3 to 4 userland applications using 
+		  a LoadBalancer brick
 
 
 User can start the program by running the following command:
@@ -53,7 +53,7 @@ To start the program as a daemon, either type:
 		OR
 # bin/bricks-server [-f startup_script_file]
 
-If the system is executed as a non-daemon, it opens a
+If the system is executed as a non-daemon, it opens a 
 LUA-based shell. Type the following command to print the help menu:
 _________________________________________________________________
 	bricks> BRICKS.help()
@@ -70,7 +70,7 @@ Alternatively, the user can run `bricks-shell` to access the
 interface shell to communicate with daemonized bricks-server.
 
 You can hit Ctrl+D to exit the bricks-shell client. To gracefully
-turn the daemon off, the user may enter the following command to
+turn the daemon off, the user may enter the following command to 
 exit the program:
 
 _________________________________________________________________
@@ -81,16 +81,16 @@ _________________________________________________________________
 
 In packet-bricks, the most important component is the pkteng module.
 It manages the reception and distribution of ingress traffic coming
-thru an interface. Once instantiated, the pkteng module spawns a
-threads that starts the packet reception process. After running
-packet-bricks again, use the following command to create a pkteng
+thru an interface. Once instantiated, the pkteng module spawns a 
+threads that starts the packet reception process. After running 
+packet-bricks again, use the following command to create a pkteng 
 instance, pe:
 
 _________________________________________________________________
 	bricks> pe = PktEngine.new("e0", "netmap")
 _________________________________________________________________
 
-The "e0" field is internally used by packet-bricks as pkteng's ID.
+The "e0" field is internally used by packet-bricks as pkteng's ID. 
 You can delete the pkteng instance by running the following command:
 
 _________________________________________________________________
@@ -107,52 +107,52 @@ _________________________________________________________________
 The last parameter affinitizes the module to CPU 1 once the engine
 thread starts reading packets.
 
-In packet-bricks, ingress traffic can be manipulated with packet
-engine constructs called "elements". Currently packet-bricks has
-the following built-in elements that are available for use:
+In packet-bricks, ingress traffic can be manipulated with packet 
+engine constructs called "bricks". Currently packet-bricks has 
+the following built-in bricks that are available for use:
 
-1- LoadBalancer: Element that may be used to split flow-wise
-   		 traffic to different applications using netmap
+1- LoadBalancer: Brick that may be used to split flow-wise
+   		 traffic to different applications using netmap 
 		 pipes.
 
-2- Duplicator: Element that may be used to duplicate traffic
+2- Duplicator: Brick that may be used to duplicate traffic
    	       across each registered netmap pipe.
 
-3- Merge: Element that may be used to combine traffic between
+3- Merge: Brick that may be used to combine traffic between
    	  2 or more netmap pipes.
 
 4- Filter: UNDER CONSTRUCTION.
 
-A packet engine can be linked to any of these elements with
+A packet engine can be linked to any of these bricks with
 any combination/configuration of user's liking. Please see the
-scripts/ example directory to see how elements can be used to
+scripts/ example directory to see how bricks can be used to 
 run variants of such packet engines.
 
-The succeeding text uses a simple load balancing element
+The succeeding text uses a simple load balancing brick 
 ("LoadBalancer") to show how packet-bricks runs. A freshly
 instantiated packet engine can be used to link the LoadBalancer
 as:
 
 _________________________________________________________________
-	bricks> local lb = Element.new("LoadBalancer", 2)
+	bricks> local lb = Brick.new("LoadBalancer", 2)
 	bricks> lb.connect_input("eth3")
-	bricks> lb:connect_output("eth3{0", "eth3{1",
+	bricks> lb:connect_output("eth3{0", "eth3{1", 
 				  "eth3{2", "eth3{3", "eth2")
 	bricks> pe:link(lb)
 _________________________________________________________________
 
-This binds pkteng pe with LoadBalancer element and asks the system
-to read ingress packets from eth3 and split them flow-wise based on
+This binds pkteng pe with LoadBalancer brick and asks the system 
+to read ingress packets from eth3 and split them flow-wise based on 
 the 2-tuple (src & dst IP addresses) metadata of the packet header.
-The "lb:connect_output(...)" command creates four netmap-specific
-pipes named "netmap:eth3{x" where 0 <= x < 4 and an egress
+The "lb:connect_output(...)" command creates four netmap-specific 
+pipes named "netmap:eth3{x" where 0 <= x < 4 and an egress 
 interface named "eth2". The traffic is evenly split between all five
-channels based on the 2 tuple header as previously mentioned.
-Userland applications can now use packet-bricks to get their fair
-share of ingress traffic. The element is finally linked with the
+channels based on the 2 tuple header as previously mentioned. 
+Userland applications can now use packet-bricks to get their fair 
+share of ingress traffic. The brick is finally linked with the 
 packet engine.
 
-One can always unlink the element by running the following command:
+One can always unlink the brick by running the following command:
 
 _________________________________________________________________
 	bricks> pe:unlink()
@@ -165,7 +165,7 @@ _________________________________________________________________
 	bricks> pe:start()
 _________________________________________________________________
 
-The engine will start sniffing for packets from the interface
+The engine will start sniffing for packets from the interface 
 promiscuously. You can use the following command to get the run-time
 packets-related statistics from the engine:
 
@@ -173,8 +173,8 @@ _________________________________________________________________
 	bricks> pe.show_stats()
 _________________________________________________________________
 
-Please note that you cannot unlink an element from the pkteng
-while the engine is running. To stop the engine, please run the
+Please note that you cannot unlink an brick from the pkteng
+while the engine is running. To stop the engine, please run the 
 following command:
 
 _________________________________________________________________
@@ -182,7 +182,7 @@ _________________________________________________________________
 _________________________________________________________________
 
 
-For user's convenience, the packet-bricks package comes with a
+For user's convenience, the packet-bricks package comes with a 
 reference LUA script file: please see scripts/startup-*.lua files for
 details. You can also use the following command to load the script
 file in packet-bricks at startup:
@@ -191,8 +191,8 @@ file in packet-bricks at startup:
 # bin/bricks-server -f scripts/startup-one-thread.lua
 
 The user is recommended to skim through the script file. It is
-heavily documented. The scripts directory also contains code for
-running a 4-threaded version of the pkteng (see
+heavily documented. The scripts directory also contains code for 
+running a 4-threaded version of the pkteng (see 
 scripts/startup-multi-threads.lua).
 
 =======================================================================

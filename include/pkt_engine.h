@@ -11,8 +11,8 @@
 #include <pthread.h>
 /* for file I/O */
 #include <stdio.h>
-/* for Element def'n */
-#include "element.h"
+/* for Brick def'n */
+#include "brick.h"
 /*---------------------------------------------------------------------*/
 /**
  *  io_type: Right now, we only support IO_NETMAP.
@@ -51,7 +51,7 @@ typedef struct engine {
 	struct engine_src **esrc;	/* list of sources connected to the engine */
 	uint no_of_sources;		/* no. of engine sources */
 	uint8_t mark_for_copy;		/* marking for copy */
-	int32_t buffer_sz;		/* buffer sizes in between each element */
+	int32_t buffer_sz;		/* buffer sizes in between each brick */
 
 	/*
 	 * the linked list ptr that will chain together
@@ -77,7 +77,7 @@ typedef TAILQ_HEAD(elist, engine) elist;
  */
 typedef struct engine_src {
 	int32_t dev_fd;			/* file desc of the net I/O */
-	Element *elem;			/* list of attached elements */
+	Brick *brick;			/* list of attached bricks */
 	void *private_context;		/* I/O-related contexts */
 } engine_src;
 /*---------------------------------------------------------------------*/

@@ -10,18 +10,18 @@ $(OBJDIR)/%.o: %.c
 
 all: $(OBJ)
 	cd $(OSARCH) && $(MAKE)
-	cd elements && $(MAKE)
+	cd bricks && $(MAKE)
 
 .PHONY: clean
 
 clean:
 	cd $(OSARCH) && $(MAKE) clean
-	cd elements && $(MAKE) clean
+	cd bricks && $(MAKE) clean
 	$(RM) -rf *~
 	$(RM) -rf $(OBJDIR)
 
 distclean:
 	cd $(OSARCH) && $(MAKE) distclean
-	cd elements && $(MAKE) distclean
+	cd bricks && $(MAKE) distclean
 	$(RM) -rf Makefile
 #---------------------------------------------------------------------#

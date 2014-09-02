@@ -8076,7 +8076,7 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
-ac_config_files="$ac_config_files src/elements/Makefile"
+ac_config_files="$ac_config_files src/bricks/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -8787,7 +8787,7 @@ do
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/FreeBSD/Makefile") CONFIG_FILES="$CONFIG_FILES src/FreeBSD/Makefile" ;;
     "src/Linux/Makefile") CONFIG_FILES="$CONFIG_FILES src/Linux/Makefile" ;;
-    "src/elements/Makefile") CONFIG_FILES="$CONFIG_FILES src/elements/Makefile" ;;
+    "src/bricks/Makefile") CONFIG_FILES="$CONFIG_FILES src/bricks/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

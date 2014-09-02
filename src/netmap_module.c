@@ -20,8 +20,8 @@
 #include "mbuf.h"
 /* for IFNAMSIZ */
 #include <net/if.h>
-/* for element def'n */
-#include "element.h"
+/* for brick def'n */
+#include "brick.h"
 /*---------------------------------------------------------------------*/
 int32_t
 netmap_init(void **ctxt_ptr, void *engptr)
@@ -369,17 +369,17 @@ copy_packets(CommNode *cn)
 }
 /*------------------------------------------------------------------------*/
 void
-flush_all_cnodes(Element *elem, engine *eng)
+flush_all_cnodes(Brick *brick, engine *eng)
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn;
 	uint32_t i;
-	linkdata *lnd = (linkdata *)elem->private_data;
+	linkdata *lnd = (linkdata *)brick->private_data;
 	for (i = 0; i < lnd->count; i++) {
 		cn = (CommNode *)lnd->external_links[i];
-		if (cn->elem != NULL) {
-			flush_all_cnodes(cn->elem, eng);
-		} else { /* cn->elem == NULL */
+		if (cn->brick != NULL) {
+			flush_all_cnodes(cn->brick, eng);
+		} else { /* cn->brick == NULL */
 			if (cn->cur_txq > 0) {
 				(eng->mark_for_copy == 1) ? 
 					copy_packets(cn) :
@@ -391,17 +391,17 @@ flush_all_cnodes(Element *elem, engine *eng)
 }
 /*---------------------------------------------------------------------*/
 void
-update_cnode_ptrs(struct netmap_ring *rxring, Element *elem,
+update_cnode_ptrs(struct netmap_ring *rxring, Brick *brick,
 		  engine *eng, uint src)
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn;
 	uint32_t i;
-	linkdata *lnd = (linkdata *)elem->private_data;
+	linkdata *lnd = (linkdata *)brick->private_data;
 	for (i = 0; i < lnd->count; i++) {
 		cn = (CommNode *)lnd->external_links[i];
-		if (cn->elem != NULL) {
-			update_cnode_ptrs(rxring, cn->elem, eng, src);
+		if (cn->brick != NULL) {
+			update_cnode_ptrs(rxring, cn->brick, eng, src);
 		} else {
 			uint dst = cn->cur_txq;
 			if (cn->mark == 1) {
@@ -418,27 +418,27 @@ update_cnode_ptrs(struct netmap_ring *rxring, Element *elem,
 void
 dispatch_pkt(struct netmap_ring *rxring,
 	     engine *eng,
-	     Element *elem,
+	     Brick *brick,
 	     uint8_t *buf,
 	     unsigned char level)
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
 	uint j;
-	linkdata *lnd = (linkdata *)elem->private_data;
+	linkdata *lnd = (linkdata *)brick->private_data;
 	BITMAP b;
 
 	TRACE_DEBUG_LOG("(ifname: %s, lnd_count: %d\n", 
 			lnd->ifname, lnd->count);
-	/* increment the per-element nested level */
+	/* increment the per-brick nested level */
 	lnd->level = level + 1;
-	b = elem->elib->process(elem, buf);
+	b = brick->elib->process(brick, buf);
 	for (j = 0; b != 0; j++) {
 		if (CHECK_BIT(b, j)) {
 			cn = (CommNode *)lnd->external_links[j];
-			if (cn->elem != NULL) {
+			if (cn->brick != NULL) {
 				dispatch_pkt(rxring, eng, 
-					     cn->elem, buf, 
+					     cn->brick, buf, 
 					     lnd->level);
 			} else if (cn->filt == NULL) {
 				cn->mark = 1;
@@ -461,11 +461,11 @@ netmap_callback(void *engsrcptr)
 	struct netmap_ring *rxring;
 	engine *eng;
 	engine_src *engsrc;
-	Element *elem;
+	Brick *brick;
 
 	engsrc = (engine_src *)engsrcptr;
-	elem = engsrc->elem;
-	eng = (engine *)elem->eng;
+	brick = engsrc->brick;
+	eng = (engine *)brick->eng;
 	nmc = (netmap_module_context *)engsrc->private_context;
 	local_nmd = (struct nm_desc *)nmc->local_nmd;
 
@@ -484,7 +484,7 @@ netmap_callback(void *engsrcptr)
 		__builtin_prefetch(rxring);
 		if (nm_ring_empty(rxring))
 			continue;
-		if (elem == NULL)
+		if (brick == NULL)
 			drop_packets(rxring, eng, engsrc);
 		else {
 			__builtin_prefetch(&rxring->slot[rxring->cur]);
@@ -506,14 +506,14 @@ netmap_callback(void *engsrcptr)
 				__builtin_prefetch(buf);
 				eng->byte_count += slot->len;
 				eng->pkt_count++;
-				dispatch_pkt(rxring, eng, elem, buf, 0);
+				dispatch_pkt(rxring, eng, brick, buf, 0);
 				rxring->head = rxring->cur = nm_ring_next(rxring, src);
-				update_cnode_ptrs(rxring, elem, eng, src);
+				update_cnode_ptrs(rxring, brick, eng, src);
 			}
 		}
 	}
 
-	flush_all_cnodes(elem, eng);
+	flush_all_cnodes(brick, eng);
 		
 	TRACE_NETMAP_FUNC_END();
 	return 0;
@@ -536,12 +536,12 @@ netmap_shutdown(void *engptr)
 }
 /*---------------------------------------------------------------------*/
 void
-netmap_delete_all_channels(Element *elem) 
+netmap_delete_all_channels(Brick *brick) 
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
 	uint32_t i;
-	linkdata *lnd = (linkdata *)elem->private_data;
+	linkdata *lnd = (linkdata *)brick->private_data;
 	
 	for (i = 0; i < lnd->count; i++) {
 		cn = (CommNode *)lnd->external_links[i];
@@ -553,15 +553,15 @@ netmap_delete_all_channels(Element *elem)
 			cn->pd = NULL;
 			cn->pdumper = NULL;				
 		}
-		if (cn->elem != NULL) {
-			netmap_delete_all_channels(cn->elem);
-			elem->elib->deinit(cn->elem);
-			cn->elem = NULL;
+		if (cn->brick != NULL) {
+			netmap_delete_all_channels(cn->brick);
+			brick->elib->deinit(cn->brick);
+			cn->brick = NULL;
 		}
 		free(cn);
 	}
 
-	elem->elib->deinit(elem);
+	brick->elib->deinit(brick);
 	TRACE_NETMAP_FUNC_END();
 	/* not used for the moment */
 }
@@ -592,59 +592,59 @@ strcpy_wtih_reverse_pipe(char *to, char *from)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-static Element *
-enable_pipeline(Element *elem, const char *ifname, Target t)
+static Brick *
+enable_pipeline(Brick *brick, const char *ifname, Target t)
 {
 	TRACE_NETMAP_FUNC_START();
 	uint32_t i;
 	CommNode *cn;
-	linkdata *lnd = (linkdata *)elem->private_data;
+	linkdata *lnd = (linkdata *)brick->private_data;
 	for (i = 0; i < lnd->count; i++) {
 		cn = lnd->external_links[i];
 		if (!strcmp(cn->nm_ifname, ifname)) {
-			/* found the right entry, now fill Element entry */
-			if (cn->elem == NULL) {
-				cn->elem = createElement(t);
-				if (cn->elem->elib->init(cn->elem, NULL) == -1) {
+			/* found the right entry, now fill Brick entry */
+			if (cn->brick == NULL) {
+				cn->brick = createBrick(t);
+				if (cn->brick->elib->init(cn->brick, NULL) == -1) {
 					TRACE_LOG("Can't allocate mem to add new "
-						  "element's private context\n");
+						  "brick's private context\n");
 					TRACE_NETMAP_FUNC_END();
-					free(cn->elem);
+					free(cn->brick);
 					return NULL;
 				}
-				cn->elem->eng = elem->eng;
-				linkdata *lnd = cn->elem->private_data;
+				cn->brick->eng = brick->eng;
+				linkdata *lnd = cn->brick->private_data;
 				strcpy((char *)lnd->ifname, (char *)ifname);
 				lnd->count++;
 				lnd->tgt = t;
 				lnd->external_links = realloc(lnd->external_links,
 							      sizeof(void *) * lnd->count);
 				if (lnd->external_links == NULL) {
-					TRACE_LOG("Can't re-allocate to add a new element!\n");
-					elem->elib->deinit(cn->elem);
+					TRACE_LOG("Can't re-allocate to add a new brick!\n");
+					brick->elib->deinit(cn->brick);
 					TRACE_NETMAP_FUNC_END();
 					return NULL;
 				}
-				return cn->elem;
+				return cn->brick;
 			} else  {
-				linkdata *lnd = cn->elem->private_data;
+				linkdata *lnd = cn->brick->private_data;
 				if (lnd->tgt == t) {
 					lnd->count++;
 					lnd->external_links = realloc(lnd->external_links, 
 								      sizeof(void *) * lnd->count);
 					if (lnd->external_links == NULL) {
-						TRACE_LOG("Can't re-allocate to add a new element!\n");
-						if (lnd->count == 1) free(cn->elem);
+						TRACE_LOG("Can't re-allocate to add a new brick!\n");
+						if (lnd->count == 1) free(cn->brick);
 						TRACE_NETMAP_FUNC_END();
 						return NULL;
 					}
-					return cn->elem;
+					return cn->brick;
 				} else
 					return NULL;
 			}
 		}
-		if (cn->elem != NULL) {
-			Element *rc = enable_pipeline(cn->elem, ifname, t);
+		if (cn->brick != NULL) {
+			Brick *rc = enable_pipeline(cn->brick, ifname, t);
 			if (rc != NULL) return rc;
 		}
 	}
@@ -664,20 +664,20 @@ netmap_create_channel(char *in_name, char *out_name,
 	CommNode *cn;
 	linkdata *lnd;
 	engine_src *esrc;
-	Element *elem;
+	Brick *brick;
 	
 	fd = -1;
 	esrc = (engine_src *)esrcptr;
-	elem = esrc->elem;
-	eng = (engine *)elem->eng;
+	brick = esrc->brick;
+	eng = (engine *)brick->eng;
 
 	nmc = (netmap_module_context *)esrc->private_context;
 
-	lnd = (linkdata *)elem->private_data;
+	lnd = (linkdata *)brick->private_data;
 	/* first locate the in_nmd */
 	if (strcmp((char *)lnd->ifname, in_name) != 0) {
-		elem = enable_pipeline(elem, in_name, t);
-		if (elem == NULL) {
+		brick = enable_pipeline(brick, in_name, t);
+		if (brick == NULL) {
 			TRACE_LOG("Pipelining failed!! Could not find an appropriate "
 				  "source (%s) for engine %s!\n", in_name, eng->name);
 			TRACE_NETMAP_FUNC_END();
@@ -685,9 +685,9 @@ netmap_create_channel(char *in_name, char *out_name,
 		}
 	}
 	
-	/* reinitialize lnd if elem is reset */
-	lnd = (linkdata *)elem->private_data;
-	TRACE_LOG("elem: %p, local_desc: %p\n", elem, nmc->local_nmd);
+	/* reinitialize lnd if brick is reset */
+	lnd = (linkdata *)brick->private_data;
+	TRACE_LOG("brick: %p, local_desc: %p\n", brick, nmc->local_nmd);
 
 	/* create a comm. interface */	
 	lnd->external_links[lnd->init_cur_idx] = calloc(1, sizeof(CommNode));
@@ -732,16 +732,16 @@ netmap_create_channel(char *in_name, char *out_name,
 }
 /*---------------------------------------------------------------------*/
 int32_t
-netmap_add_filter(Element *elem, Filter *f, unsigned char *ifname)
+netmap_add_filter(Brick *brick, Filter *f, unsigned char *ifname)
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn;
 	uint32_t i;
-	linkdata *lnd = (linkdata *)elem->private_data;
+	linkdata *lnd = (linkdata *)brick->private_data;
 	for (i = 0; i < lnd->count; i++) {
 		cn = (CommNode *)lnd->external_links[i];
-		if (cn->elem != NULL)
-			netmap_add_filter(cn->elem, f, ifname);
+		if (cn->brick != NULL)
+			netmap_add_filter(cn->brick, f, ifname);
 		else if (!strcmp((char *)cn->nm_ifname, (char *)ifname)) {
 			if (cn->filt == NULL) {
 				cn->filt = calloc(1, sizeof(Filter));

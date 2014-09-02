@@ -1,5 +1,5 @@
-/* for Element struct */
-#include "element.h"
+/* for Brick struct */
+#include "brick.h"
 /* for bricks logging */
 #include "bricks_log.h"
 /* for engine declaration */
@@ -8,37 +8,37 @@
 #include <string.h>
 /*---------------------------------------------------------------------*/
 int32_t
-merge_init(Element *elem, Linker_Intf *li)
+merge_init(Brick *brick, Linker_Intf *li)
 {
-	TRACE_ELEMENT_FUNC_START();
-	elem->private_data = calloc(1, sizeof(linkdata));
-	if (elem->private_data == NULL) {
+	TRACE_BRICK_FUNC_START();
+	brick->private_data = calloc(1, sizeof(linkdata));
+	if (brick->private_data == NULL) {
 		TRACE_LOG("Can't create private context "
 			  "for merge\n");
-		TRACE_ELEMENT_FUNC_END();
+		TRACE_BRICK_FUNC_END();
 		return -1;
 	}
-	TRACE_ELEMENT_FUNC_END();
+	TRACE_BRICK_FUNC_END();
 	UNUSED(li);
 	return 1;
 }
 /*---------------------------------------------------------------------*/
 void
-merge_deinit(Element *elem)
+merge_deinit(Brick *brick)
 {
-	TRACE_ELEMENT_FUNC_START();
-	if (elem->private_data != NULL) {
-		free(elem->private_data);
-		elem->private_data = NULL;
+	TRACE_BRICK_FUNC_START();
+	if (brick->private_data != NULL) {
+		free(brick->private_data);
+		brick->private_data = NULL;
 	}
-	free(elem);
-	TRACE_ELEMENT_FUNC_END();
+	free(brick);
+	TRACE_BRICK_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 void
-merge_link(struct Element *from, Linker_Intf *linker)
+merge_link(struct Brick *from, Linker_Intf *linker)
 {
-	TRACE_ELEMENT_FUNC_START();
+	TRACE_BRICK_FUNC_START();
 	int i, j, k, rc;
 	engine *eng;
 	linkdata *lbd;
@@ -50,29 +50,29 @@ merge_link(struct Element *from, Linker_Intf *linker)
 	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
 			  from->eng->name);
-		TRACE_ELEMENT_FUNC_END();
+		TRACE_BRICK_FUNC_END();
 		return;
 	}
-	/* if engine is already running, then don't connect elements */
+	/* if engine is already running, then don't connect bricks */
 	if (eng->run == 1) {
 		TRACE_LOG("Can't open channel"
 			  "engine %s is already running\n",
 			  eng->name);
-		TRACE_ELEMENT_FUNC_END();
+		TRACE_BRICK_FUNC_END();
 		return;	      
 	}
 
-	if (eng->FIRST_ELEM(esrc)->elem == NULL) {
+	if (eng->FIRST_BRICK(esrc)->brick == NULL) {
 		strcpy(lbd->ifname, (char *)linker->input_link[0]);
 		lbd->count = linker->output_count;
 		for (k = 0; k < (int)eng->no_of_sources; k++)
-			eng->esrc[k]->elem = from;
+			eng->esrc[k]->brick = from;
 		lbd->external_links = calloc(lbd->count,
 						sizeof(void *));
 		if (lbd->external_links == NULL) {
 			TRACE_LOG("Can't allocate external link contexts "
 				  "for load balancer\n");
-			TRACE_ELEMENT_FUNC_END();
+			TRACE_BRICK_FUNC_END();
 			return;
 		}
 	}
@@ -91,19 +91,19 @@ merge_link(struct Element *from, Linker_Intf *linker)
 			}
 		}
 	}      
-	TRACE_ELEMENT_FUNC_END();
+	TRACE_BRICK_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 char *
 merge_getid()
 {
-	TRACE_ELEMENT_FUNC_START();
+	TRACE_BRICK_FUNC_START();
 	static char *name = "Merge";
 	return name;
-	TRACE_ELEMENT_FUNC_END();
+	TRACE_BRICK_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-element_funcs mergefuncs = {
+brick_funcs mergefuncs = {
 	.init			= 	merge_init,
 	.link			=	merge_link,
 	.process		= 	NULL,

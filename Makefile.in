@@ -12,7 +12,7 @@ BIN := $(BINDIR)/$(BINNAME)
 OSARCH := $(shell uname)
 OSARCH := $(findstring $(OSARCH),FreeBSD Linux Darwin)
 DEBUG_CFLAGS := -g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
-DEBUG_CFLAGS += -DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND -DDPKTHASH -DDELEM
+DEBUG_CFLAGS += -DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND -DDPKTHASH -DDBRICK
 #---------------------------------------------------------------------#
 ifeq ($V,) # no echo
     export MSG=@echo

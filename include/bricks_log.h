@@ -98,13 +98,13 @@
 #define TRACE_PKTHASH_FUNC_END()	(void)0
 #endif /* !DPKTHASH */
 
-#ifdef DELEM
-#define TRACE_ELEMENT_FUNC_START()	TRACE_FUNC_START()
-#define TRACE_ELEMENT_FUNC_END()	TRACE_FUNC_END()
-#else /* DELEM */
-#define TRACE_ELEMENT_FUNC_START()	(void)0
-#define TRACE_ELEMENT_FUNC_END()	(void)0
-#endif /* !DELEM */
+#ifdef DBRICK
+#define TRACE_BRICK_FUNC_START()	TRACE_FUNC_START()
+#define TRACE_BRICK_FUNC_END()	TRACE_FUNC_END()
+#else /* DBRICK */
+#define TRACE_BRICK_FUNC_START()	(void)0
+#define TRACE_BRICK_FUNC_END()	(void)0
+#endif /* !DBRICK */
 
 /**
  * Default loggers.

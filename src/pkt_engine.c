@@ -49,7 +49,7 @@ load_io_module(engine *e) {
 	
 }
 /*---------------------------------------------------------------------*/
-engine *
+inline engine *
 engine_find(const unsigned char *name)
 {
 	TRACE_PKTENGINE_FUNC_START();
@@ -235,7 +235,7 @@ pktengine_delete(const unsigned char *name)
 
 	/* delete all channels for now */
 	for (i = 0; i < eng->no_of_sources; i++)
-		eng->iom.delete_all_channels(eng->esrc[i]->elem);
+		eng->iom.delete_all_channels(eng->esrc[i]->brick);
 	
 	/* check if ifaces have been unlinked */
 	eng->iom.unlink_ifaces(eng);

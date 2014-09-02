@@ -10,7 +10,7 @@ local C={};
 --		 __the engine reads from netmap-enabled eth3 and__
 --		 __evenly splits traffic 5-way.		        __
 function C:lb_config(pe)
-	 local lb = Element.new("LoadBalancer", 2)
+	 local lb = Brick.new("LoadBalancer", 2)
 	 lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth2")
 	 --lb:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth3{4", "eth3{5", "eth3{6", "eth3{7")
@@ -28,10 +28,10 @@ end
 --		 __traffic and then splits traffic from 1 branch__
 --		 __using a load balancer.		        __
 function C:duplb_config(pe)
-	 local dup = Element.new("Duplicator")
+	 local dup = Brick.new("Duplicator")
          dup:connect_input("eth3") 
          dup:connect_output("eth3{0", "eth3{1")
-	 local lb2 = Element.new("LoadBalancer", 4)
+	 local lb2 = Brick.new("LoadBalancer", 4)
 	 lb2:connect_input("eth3}0")
 	 lb2:connect_output("eth3{2", "eth3{3")
 	 dup:link(lb2)
@@ -47,7 +47,7 @@ end
 --		 __The engine reads from a netmap-enabled eth3 and__
 --		 __duplicates traffic 4-way.		          __
 function C:dup_config(pe)
-         local dup = Element.new("Duplicator")
+         local dup = Brick.new("Duplicator")
          dup:connect_input("eth3")
          --dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3")
 	 dup:connect_output("eth3{0", "eth3{1", "eth3{2", "eth3{3", "eth3{4", "eth3{5", "eth3{6", "eth3{7")
@@ -64,10 +64,10 @@ end
 --		 __enabled eth3, then splits traffic and finally__
 --		 __ merge packets into a netmap pipe.		__
 function C:lbmrg_config(pe)
-	 local lb = Element.new("LoadBalancer", 4)
+	 local lb = Brick.new("LoadBalancer", 4)
          lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1")
-	 local mrg = Element.new("Merge")
+	 local mrg = Brick.new("Merge")
 	 mrg:connect_input("eth3}0", "eth3}1")
 	 mrg:connect_output("eth3{3")
 	 lb:link(mrg)
@@ -80,15 +80,15 @@ end
 -----------------------------------------------------------------------
 
 
---lbfilt_config	 __sets up a configuration of filter element__
+--lbfilt_config	 __sets up a configuration of filter brick__
 --		 __The engine reads from netmap-enabled eth3__
 --		 __and then splits traffic based on the filtering__
 --		 __decisions between the output links.		__
 function C:lbfilt_config(pe)
-	 local lb = Element.new("LoadBalancer", 4)
+	 local lb = Brick.new("LoadBalancer", 4)
          lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1")
-	 f = Element.new("Filter")
+	 f = Brick.new("Filter")
 	 f:connect_input("eth3}0")
 	 f:connect_output("eth3{2", "eth3{3");
 	 lb:link(f)
@@ -100,14 +100,14 @@ end
 -----------------------------------------------------------------------
 
 
---lbmrgpcap_config  __sets up a configuration of Merge element__
+--lbmrgpcap_config  __sets up a configuration of Merge brick__
 --		    __The engine reads from netmap-enabled eth3__
 --		    __and then writes all packets to pcap file__
 function C:lbmrgpcap_config(pe)
-	 local lb = Element.new("LoadBalancer", 4)
+	 local lb = Brick.new("LoadBalancer", 4)
          lb:connect_input("eth3") 
          lb:connect_output("eth3{0", "eth3{1")
-	 local mrg = Element.new("Merge")
+	 local mrg = Brick.new("Merge")
 	 mrg:connect_input("eth3}0", "eth3}1")
 	 -- if the output is prepended with '>', packet-bricks
 	 -- treats the channel as a pcap-compatible file
