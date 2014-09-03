@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __BRICK_H__
 #define __BRICK_H__
 /*---------------------------------------------------------------------*/

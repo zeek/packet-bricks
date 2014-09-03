@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* header declarations */
 #include "pkt_engine.h"
 /* for prints etc */
@@ -139,8 +140,9 @@ pktengine_init()
 }
 /*---------------------------------------------------------------------*/
 void
-pktengine_new(const unsigned char *name, const unsigned char *type, 
-	      const int32_t buffer_sz, const int8_t cpu)
+pktengine_new(const unsigned char *name, 
+	      const int32_t buffer_sz,
+	      const int8_t cpu)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
@@ -206,7 +208,6 @@ pktengine_new(const unsigned char *name, const unsigned char *type,
 	/* finally add the engine entry in elist */
 	TAILQ_INSERT_TAIL(&engine_list, eng, entry);
 
-	UNUSED(type);
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

@@ -5757,7 +5757,9 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
-ac_config_files="$ac_config_files src/FreeBSD/Makefile"
+if echo `uname` | grep -q "FreeBSD"
+then
+	ac_config_files="$ac_config_files src/FreeBSD/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6916,7 +6918,10 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
-ac_config_files="$ac_config_files src/Linux/Makefile"
+fi
+if echo `uname` | grep -q "Linux"
+then
+	ac_config_files="$ac_config_files src/Linux/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -8076,6 +8081,7 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+fi
 ac_config_files="$ac_config_files src/bricks/Makefile"
 
 cat >confcache <<\_ACEOF

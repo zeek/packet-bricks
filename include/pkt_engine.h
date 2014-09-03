@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __PKT_ENGINE_H__
 #define __PKT_ENGINE_H__
 /*---------------------------------------------------------------------*/
@@ -86,8 +87,9 @@ typedef struct engine_src {
  *
  */
 void
-pktengine_new(const unsigned char *name, const unsigned char *type, 
-	      const int32_t buffer_sz, const int8_t cpu);
+pktengine_new(const unsigned char *name, 
+	      const int32_t buffer_sz,
+	      const int8_t cpu);
 
 /**
  * Deletes the pkt_engine

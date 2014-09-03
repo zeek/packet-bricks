@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for func prototypes */
 #include "pkt_hash.h"
 /* for bricks logging */

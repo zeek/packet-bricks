@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for stdio and stdlib */
 #include "bricks_log.h"
 /* for filter interface */

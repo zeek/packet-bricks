@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __UTIL_H__
 #define __UTIL_H__
 /*---------------------------------------------------------------------*/

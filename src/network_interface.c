@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for network interface function prototypes */
 #include "network_interface.h"
 /* for logging */

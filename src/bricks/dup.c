@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for Brick struct */
 #include "brick.h"
 /* for bricks logging */

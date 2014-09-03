@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for Brick def'n */
 #include "brick.h"
 /* for logging */

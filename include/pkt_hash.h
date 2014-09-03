@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __PKT_HASH__
 #define __PKT_HASH__
 /*---------------------------------------------------------------------*/

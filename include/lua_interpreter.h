@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __LUA_INTERPRETER_H__
 #define __LUA_INTERPRETER_H__
 /*---------------------------------------------------------------------*/

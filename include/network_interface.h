@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __NETWORK_INTERFACE_H__
 #define __NETWORK_INTERFACE_H__
 /*---------------------------------------------------------------------*/

@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for header definitions */
 #include "lua_interface.h"
 /* for LUA_MAXINPUT */
@@ -146,7 +147,7 @@ pktengine_help(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	fprintf(stdout, "Packet Engine Commands:\n"
 		"    help()\n"
-		"    new(<ioengine_name>, <io_type>, <cpu number>)\n"
+		"    new(<ioengine_name>, <queue_sz>, <cpu number>)\n"
 		"    delete()\n"
 		"    link(<brick>, <chunk_size>, <qid>)\n"
 		"    start()\n"
@@ -200,23 +201,21 @@ pkteng_new(lua_State *L)
 	TRACE_LUA_FUNC_START();
 	int nargs = lua_gettop(L);
 	const char *ename = luaL_optstring(L, 1, 0);
-	const char *type = luaL_optstring(L, 2, 0);
 	int cpu = -1;
 	int buffer_sz = 512;
 	/* only grab cpu metric if it is mentioned */
 	if (nargs >= 3)
-		buffer_sz = luaL_optint(L, 3, 0);
+		buffer_sz = luaL_optint(L, 2, 0);
 	if (nargs == 4)
-		cpu = luaL_optint(L, 4, 0);
+		cpu = luaL_optint(L, 3, 0);
 	
 	/* parse and populate the remaining fields */
 	PktEngine_Intf *pe = push_pkteng(L);
 	pe->eng_name = ename;
-	pe->type = type;
 	pe->cpu = cpu;
 	pe->buffer_sz = buffer_sz;
 
-	pktengine_new((uint8_t *)pe->eng_name, (uint8_t *)pe->type,
+	pktengine_new((uint8_t *)pe->eng_name,
 		      pe->buffer_sz, pe->cpu);
 	TRACE_LUA_FUNC_END();
 	return 1;
@@ -252,12 +251,10 @@ pkteng_link(lua_State *L)
 
 	TRACE_DEBUG_LOG("Engine info so far...:\n"
 			"\tName: %s\n"
-			"\tType: %s\n"
 			"\tCpu: %d\n"
 			"\tBatch: %d\n"
 			"\tQid: %d\n",
 			pe->eng_name,
-			pe->type,
 			pe->cpu,
 			pe->batch,
 			pe->qid);
@@ -402,8 +399,8 @@ pkteng_tostring(lua_State *L)
 	PktEngine_Intf *pe;
 	fprintf(stderr, "Calling %s\n", __FUNCTION__);
 	pe = to_pkteng(L, 1);
-	sprintf(buff, "PktEngine:\n\tName: %s\n\tType: %s\n\tBatch: %d\n",
-		pe->eng_name, pe->type, pe->batch);
+	sprintf(buff, "PktEngine:\n\tName: %s\n\tType: netmap\n\tBatch: %d\n",
+		pe->eng_name, pe->batch);
 	lua_pushfstring(L, "%s", buff);
 
 	TRACE_LUA_FUNC_END();

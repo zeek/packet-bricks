@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for prints etc */
 #include "bricks_log.h"
 /* for string functions */

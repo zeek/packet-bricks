@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __IO_MODULE_H__
 #define __IO_MODULE_H__
 /*---------------------------------------------------------------------*/

@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 #ifndef __LUA_INTERFACE_H__
 #define __LUA_INTERFACE_H__
 /*---------------------------------------------------------------------*/
@@ -17,7 +18,6 @@
  */
 typedef struct PktEngine_Intf {
 	const char *eng_name;			/* engine name */
-	const char *type;			/* netmap */
 	int cpu;				/* engine runs on this thread */
 	int batch;				/* batch size */
 	int qid;				/* queue id */

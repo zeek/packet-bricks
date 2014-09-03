@@ -51,7 +51,7 @@ function init4()
 	 utilObj:enable_nmpipes()
 
 	 for cnt = 0, 3 do
-	 	 local pe = PktEngine.new("e" .. cnt, "netmap", BUFFER_SZ, cnt)
+	 	 local pe = PktEngine.new("e" .. cnt, BUFFER_SZ, cnt)
 		 
 		 --setup: load balancing config
 		 -- (see configs/multi-threaded-setups.lua file)

@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /* for prototypes */
 #include "lua_interpreter.h"
 /* for logging */

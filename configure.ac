@@ -83,6 +83,12 @@ fi
 
 AC_OUTPUT(Makefile)
 AC_OUTPUT(src/Makefile)
-AC_OUTPUT(src/FreeBSD/Makefile)
-AC_OUTPUT(src/Linux/Makefile)
+if echo `uname` | grep -q "FreeBSD"
+then
+	AC_OUTPUT(src/FreeBSD/Makefile)
+fi
+if echo `uname` | grep -q "Linux"
+then
+	AC_OUTPUT(src/Linux/Makefile)
+fi
 AC_OUTPUT(src/bricks/Makefile)

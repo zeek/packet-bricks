@@ -39,7 +39,7 @@ function init()
 	 utilObj:enable_nmpipes()
 
 	 -- create a global variable pe
-	 local pe = PktEngine.new("e0", "netmap", BUFFER_SZ)
+	 local pe = PktEngine.new("e0", BUFFER_SZ)
 
 	 ---------------------------------------------------
 	 -- SAMPLE SETUPS. PLZ ONLY ENABLE ONE OUT OF THE --

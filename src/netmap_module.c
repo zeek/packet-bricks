@@ -1,3 +1,4 @@
+/* See LICENSE in the main directory for copyright. */
 /**
  *
  * Heavily derived from netmap's pkt-gen.c & ipfw package. 
