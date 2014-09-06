@@ -35,6 +35,7 @@
  *				(private_data)
  *
  *		      - link(): link connecting bricks to their parents.
+ *				(not exposed to the user)
  *
  *		      - process(): run the Brick's action function that
  *				  processes incoming packet. Returns a
@@ -89,19 +90,6 @@ typedef struct linkdata {
 	uint8_t hash_split;	/* hash split version if the brick is load balancer */
 } linkdata __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
-/**
- * List of external brick functions & their respective macros...
- * Please start indexing with 3
- */
-enum {LINKER_LB = 3, 
-      LINKER_DUP,
-      LINKER_MERGE,
-      LINKER_FILTER};
-extern brick_funcs lbfuncs;
-extern brick_funcs dupfuncs;
-extern brick_funcs mergefuncs;
-extern brick_funcs elibs[MAX_BRICKS];
-/*---------------------------------------------------------------------*/
 /* creates an Brick and initializes the brick based on target */
 Brick *
 createBrick(Target t);
@@ -112,6 +100,11 @@ createBrick(Target t);
  * Initialize all brick function libraries
  */
 inline void initBricks();
+
+/**
+ * A generic function to link one brick to another.
+ */
+void brick_link(struct Brick *from, Linker_Intf *linker);
 
 /*---------------------------------------------------------------------*/
 /**
@@ -143,4 +136,11 @@ inline void initBricks();
  */
 #define CHECK_BIT(x, val)	(x >> (val)) & 1
 /*---------------------------------------------------------------------*/
-#endif /* !__BRICK_H__ */
+/**
+ * List of external brick functions & their respective macros...
+ * Please start indexing with 3
+ */
+enum {LINKER_LB = 3, 
+      LINKER_DUP,
+      LINKER_MERGE};
+

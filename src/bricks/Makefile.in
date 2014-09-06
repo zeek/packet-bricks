@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------#
-SRCS := $(shell find -iname '*.c')
+SRCS := $(shell ls *.c)
 
 _OBJ := $(SRCS:%.c=%.o)
 OBJ := $(patsubst %,$(OBJDIR)/%,$(_OBJ))

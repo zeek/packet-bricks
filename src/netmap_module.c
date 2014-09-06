@@ -593,6 +593,10 @@ strcpy_wtih_reverse_pipe(char *to, char *from)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+/**
+ * Function very poorly designed. Needs revision! For now.. does the
+ * task correctly.
+ */
 static Brick *
 enable_pipeline(Brick *brick, const char *ifname, Target t)
 {
@@ -606,13 +610,19 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 			/* found the right entry, now fill Brick entry */
 			if (cn->brick == NULL) {
 				cn->brick = createBrick(t);
-				if (cn->brick->elib->init(cn->brick, NULL) == -1) {
+				Linker_Intf li;
+				/* XXX - Fix it! */
+				li.hash_split = 4;
+				if (cn->brick->elib->init(cn->brick, &li) == -1) {
 					TRACE_LOG("Can't allocate mem to add new "
 						  "brick's private context\n");
 					TRACE_NETMAP_FUNC_END();
 					free(cn->brick);
 					return NULL;
 				}
+				brick->eng->mark_for_copy = 
+					(brick->eng->mark_for_copy == 0 && 
+					 li.type == COPY) ? 1 : 0;
 				cn->brick->eng = brick->eng;
 				linkdata *lnd = cn->brick->private_data;
 				strcpy((char *)lnd->ifname, (char *)ifname);

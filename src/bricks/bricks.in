@@ -1,0 +1,9 @@
+# PLEASE DO NOT DELETE (OR MODIFY THE ORDER OF THE FIRST THREE 
+# ENTRIES OF THIS FILE. YOU MAY RISK BREAKING THE SYSTEM
+# You can register more bricks to the system by post-appending
+# bricks' function pointer struct. Please see README.devel for
+# more details.
+lbfuncs
+dupfuncs
+mergefuncs
+filterfuncs

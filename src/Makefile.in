@@ -19,6 +19,7 @@ clean:
 	cd bricks && $(MAKE) clean
 	$(RM) -rf *~
 	$(RM) -rf $(OBJDIR)
+	$(RM) -rf brick.c
 
 distclean:
 	cd $(OSARCH) && $(MAKE) distclean

@@ -1,13 +1,83 @@
 README: DEVELOPMENT NOTES
 =========================
 The following text provides a brief overview on how a developer can
-create a new element.
+create a new brick.
 
-All elements in packet-bricks should be placed in src/elements/
-directory. An element
+New bricks may be placed in src/bricks/ directory. The most important
+component of a brick is the brick_funcs struct that provides a list 
+of function pointers (corresponding to the brick) that the developer 
+needs to write. These are:
+
+	  - init() : this function is called only once during 
+	  initialization. The user can create instance-specific 
+	  private context (data structure) that he/she can use
+	  later for the process() function. A Brick struct contains
+	  a 'private_data' field which the developer can employ for
+	  holding this contect. User should return 1 if the init() 
+	  process is successful; and should return -1 if the brick 
+	  initialization fails. The init() function passes 
+	  (Linker_Intf *) instance as a 2nd argument to the function.
+	  Please see the description of the process() for more
+	  details regarding this argument. See sample code snippet
+	  below:
+	  
+		int32_t sample_brick_init(Brick *brick, Linker_Intf *li)
+		{
+			TRACE_BRICK_FUNC_START();
+			...
+			...
+			...
+			li->type = COPY;
+			TRACE_BRICK_FUNC_END();
+			return 1;
+		}
 
 
+	  - process() : this function is called every time a packet
+	  is passed to an element instance. After parsing the packet
+	  data, the user can decide to which child brick it needs to
+	  forward the packet. A root brick is capable of forwarding
+	  a specific packet to multiple child bricks. A user can enable
+	  this feature (forwarding packets to multiple children) if
+	  he/she sets the (Linter_Intf *) struct pointer's 'type' field
+	  to 'COPY' in the init() function.
+	
+  	 
+	  - deinit() : this function may be used to free up/deallocate
+	   brick's instance-related context from the system. Please
+	   use this function to free the entire brick instance as well.
 
+
+	  - link() : this function may disappear in future packet-brick
+	   revisions. Please hard-code this function pointer to brick_link
+	   for the time being.
+
+
+	  - getId() : Use this function to name your element. A sample
+	   function definition:
+	   
+		char *sample_getid()
+		{
+			TRACE_BRICK_FUNC_START();
+			static char *name = "SampleBrick";
+			TRACE_BRICK_FUNC_END();
+			return name;
+		}
+	   The user will use "SampleBrick" as the object name in
+	   LUA interface packet-bricks shell to refer to this brick.
+
+The developer is suggested to see src/bricks/filter.c file as a reference.
+To finalize registration of the brick, please append the name of the 
+brick_funcs instance in the src/bricks/bricks.in file. Currently, the
+following bricks as registered:
+
+	  lbfuncs
+	  dupfuncs
+	  mergefuncs
+	  filterfuncs
+
+After adding this entry, run './configure' and 'make' to complete the
+setup.
 
 =======================================================================
 Please send your queries to: ajamshed@icsi.berkeley.edu

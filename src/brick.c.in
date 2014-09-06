@@ -1,46 +1,43 @@
 /* See LICENSE in the main directory for copyright. */
-/* for Brick struct */
+/* for Brick def'n */
 #include "brick.h"
-/* for bricks logging */
+/* for logging */
 #include "bricks_log.h"
 /* for engine declaration */
 #include "pkt_engine.h"
 /* for string functions */
 #include <string.h>
 /*---------------------------------------------------------------------*/
-int32_t
-merge_init(Brick *brick, Linker_Intf *li)
+/* Maximum bricks that it can support is MAX_BRICKS */
+brick_funcs elibs[MAX_BRICKS];
+/*---------------------------------------------------------------------*/
+/**
+ * See brick.h for comments. Initializes the brick given
+ * the target.
+ */
+inline Brick *
+createBrick(Target t)
 {
 	TRACE_BRICK_FUNC_START();
-	brick->private_data = calloc(1, sizeof(linkdata));
-	if (brick->private_data == NULL) {
-		TRACE_LOG("Can't create private context "
-			  "for merge\n");
+	Brick *brick = calloc(1, sizeof(Brick));
+	if (brick == NULL) {
+		TRACE_ERR("Can't create brick: %s\n",
+			  (t == (Target)LINKER_LB) ? 
+			  "LoadBalancer" : "Duplicator");
 		TRACE_BRICK_FUNC_END();
-		return -1;
+		return NULL;
 	}
-	li->type = SHARE;
+	brick->elib = &elibs[t];
+
 	TRACE_BRICK_FUNC_END();
-	return 1;
+	return brick;
 }
 /*---------------------------------------------------------------------*/
 void
-merge_deinit(Brick *brick)
+brick_link(struct Brick *from, Linker_Intf *linker)
 {
 	TRACE_BRICK_FUNC_START();
-	if (brick->private_data != NULL) {
-		free(brick->private_data);
-		brick->private_data = NULL;
-	}
-	free(brick);
-	TRACE_BRICK_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-void
-merge_link(struct Brick *from, Linker_Intf *linker)
-{
-	TRACE_BRICK_FUNC_START();
-	int i, j, k, rc;
+	int i, j, rc;
 	engine *eng;
 	linkdata *lbd;
 	int div_type = (linker->type == LINKER_DUP) ? COPY : SHARE;
@@ -66,8 +63,7 @@ merge_link(struct Brick *from, Linker_Intf *linker)
 	if (eng->FIRST_BRICK(esrc)->brick == NULL) {
 		strcpy(lbd->ifname, (char *)linker->input_link[0]);
 		lbd->count = linker->output_count;
-		for (k = 0; k < (int)eng->no_of_sources; k++)
-			eng->esrc[k]->brick = from;
+		eng->FIRST_BRICK(esrc)->brick = from;
 		lbd->external_links = calloc(lbd->count,
 						sizeof(void *));
 		if (lbd->external_links == NULL) {
@@ -80,35 +76,33 @@ merge_link(struct Brick *from, Linker_Intf *linker)
 
 	for (j = 0; j < linker->input_count; j++) {
 		for (i = 0; i < linker->output_count; i++) {
-			for (k = 0; k < (int)eng->no_of_sources; k++) {
-				rc = eng->iom.create_external_link((char *)linker->input_link[j],
-								   (char *)linker->output_link[i],
-								   div_type, eng->esrc[k]);
-				if (rc == -1) {
-					TRACE_LOG("Failed to open channel %s\n",
-						  linker->output_link[i]);
-					return;
-				}
+			rc = eng->iom.create_external_link((char *)linker->input_link[j],
+							   (char *)linker->output_link[i],
+							   div_type, eng->FIRST_BRICK(esrc));
+			if (rc == -1) {
+				TRACE_LOG("Failed to open channel %s\n",
+					  linker->output_link[i]);
+				return;
 			}
 		}
 	}      
 	TRACE_BRICK_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-char *
-merge_getid()
+/**
+ * Initialize all brick function libraries
+ */
+inline void
+initBricks()
 {
 	TRACE_BRICK_FUNC_START();
-	static char *name = "Merge";
-	return name;
-	TRACE_BRICK_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-brick_funcs mergefuncs = {
-	.init			= 	merge_init,
-	.link			=	merge_link,
-	.process		= 	NULL,
-	.deinit			= 	merge_deinit,
-	.getId			=	merge_getid
-};
-/*---------------------------------------------------------------------*/
+	/* register your bricks here. Please do not edit this function. */
+	/* Brick is automatically registered using bricks/bricks.in file. */
+	/* Please see README.devel file for more details */
+	/* 
+	 * indices 0, 1, 2..5 are reserved. Please start 
+	 * your indexing from 6.
+	 *
+	 * Maximum # of bricks packet-bricks can support
+	 * is MAX_BRICKS.
+	 */

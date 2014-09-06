@@ -19,8 +19,8 @@ dup_init(Brick *brick, Linker_Intf *li)
 		TRACE_BRICK_FUNC_END();
 		return -1;
 	}
+	li->type = COPY;
 	TRACE_BRICK_FUNC_END();
-	UNUSED(li);
 	return 1;
 }
 /*---------------------------------------------------------------------*/

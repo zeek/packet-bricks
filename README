@@ -87,7 +87,7 @@ packet-bricks again, use the following command to create a pkteng
 instance, pe:
 
 _________________________________________________________________
-	bricks> pe = PktEngine.new("e0", "netmap")
+	bricks> pe = PktEngine.new("e0")
 _________________________________________________________________
 
 The "e0" field is internally used by packet-bricks as pkteng's ID. 
@@ -101,7 +101,7 @@ The pkteng instance can be instantiated with the possibility of
 affinitizing the engine thread to an arbitrary cpu core id:
 
 _________________________________________________________________
-	bricks> pe = PktEngine.new("e0", "netmap", 1024, 1)
+	bricks> pe = PktEngine.new("e0", 1024, 1)
 _________________________________________________________________
 
 The last parameter affinitizes the module to CPU 1 once the engine

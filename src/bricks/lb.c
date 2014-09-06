@@ -27,6 +27,7 @@ lb_init(Brick *brick, Linker_Intf *li)
 		lnd->hash_split = 4;
 	else
 		lnd->hash_split = li->hash_split;
+	li->type = SHARE;
 	TRACE_BRICK_FUNC_END();
 
 	return 1;

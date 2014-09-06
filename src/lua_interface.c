@@ -204,9 +204,9 @@ pkteng_new(lua_State *L)
 	int cpu = -1;
 	int buffer_sz = 512;
 	/* only grab cpu metric if it is mentioned */
-	if (nargs >= 3)
+	if (nargs >= 2)
 		buffer_sz = luaL_optint(L, 2, 0);
-	if (nargs == 4)
+	if (nargs == 3)
 		cpu = luaL_optint(L, 3, 0);
 	
 	/* parse and populate the remaining fields */
@@ -555,7 +555,7 @@ linker_input(lua_State *L)
 				luaL_optstring(L, i, 0);
 			linker->input_count++;
 		}
-	} else { /* for LINKER_LB or LINKER_DUP or LINKER_FILTER */
+	} else { /* for LINKER_LB or LINKER_DUP, etc. */
 		linker->input_link[0] = 
 			luaL_optstring(L, 2, 0);
 		linker->input_count = 1;
@@ -581,20 +581,12 @@ linker_output(lua_State *L)
 		linker->output_link[0] =
 			luaL_optstring(L, 2, 0);
 		linker->output_count = 1;
-	} else { /* for LINKER_LB or LINKER_DUP or LINKER_FILTER */
-#if 0
-		if (linker->type == LINKER_FILTER) {
-			
-		} else {
-#endif
-			for (i = 2; i <= nargs; i++) {
-				linker->output_link[linker->output_count] = 
-					luaL_optstring(L, i, 0);
-				linker->output_count++;
-			}
-#if 0
+	} else { /* for LINKER_LB or LINKER_DUP, etc. */
+		for (i = 2; i <= nargs; i++) {
+			linker->output_link[linker->output_count] = 
+				luaL_optstring(L, i, 0);
+			linker->output_count++;
 		}
-#endif
 	}
 	lua_settop(L, 1);
 

@@ -54,11 +54,15 @@ all: $(BINNAME)
 
 objs:
 	mkdir -p $(OBJDIR)
+	chmod a+x .create_bricks.sh
+	bash ./.create_bricks.sh
 	cd src && $(MAKE)
 
 objs-dbg:
 	$(eval export CFLAGS := $(DEBUG_CFLAGS))
 	mkdir -p $(OBJDIR)
+	chmod a+x .create_bricks.sh
+	bash ./.create_bricks.sh
 	cd src && $(MAKE)
 
 $(BINNAME): objs
@@ -91,11 +95,13 @@ $(BINNAME)-debug: objs-dbg
 #---------------------------------------------------------------------#
 clean:
 	cd src && $(MAKE) clean
+	$(RM) -rf include/brick.h
 	$(RM) -rf $(BINDIR) include/*~ tags scripts/*~ *~
 
 distclean: clean
 	cd src && $(MAKE) distclean
 	$(RM) -rf Makefile autom4te.cache config.log config.status
+	chmod a-x .create_bricks.sh
 
 .PHONY: clean
 

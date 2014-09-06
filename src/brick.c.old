@@ -4,6 +4,7 @@
 /* for logging */
 #include "bricks_log.h"
 /*---------------------------------------------------------------------*/
+/* Maximum bricks that it can support is MAX_BRICKS */
 brick_funcs elibs[MAX_BRICKS];
 /*---------------------------------------------------------------------*/
 /**
