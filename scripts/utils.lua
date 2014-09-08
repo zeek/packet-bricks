@@ -61,12 +61,15 @@ function C:netmap_loaded()
 	    if C:directory_exists(NETMAP_LIN_PARAMS_PATH) then
 	       return true
 	    end
+	    return false
 	 end
-	 if string.find((tostring(C:shell('uname'), 'FreeBSD'))) ~= nil then
-	    if (tostring(C:shell('sysctl -a --pattern netmap'))) ~= nil then
-	       return true
+	 if string.find((tostring(C:shell('uname'))), 'FreeBSD') ~= nil then
+	    if (string.find(tostring(C:shell('sysctl -a dev.netmap.flags')), "sysctl: unknown oid")) ~= nil then
+	       return false
 	    end
+	    return true
 	 end
+	 -- control should not come here if the system is Linux/FreeBSD
 	 return false
 end
 

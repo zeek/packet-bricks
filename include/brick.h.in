@@ -99,7 +99,7 @@ createBrick(Target t);
 /**
  * Initialize all brick function libraries
  */
-inline void initBricks();
+void initBricks();
 
 /**
  * A generic function to link one brick to another.

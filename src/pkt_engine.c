@@ -50,7 +50,7 @@ load_io_module(engine *e) {
 	
 }
 /*---------------------------------------------------------------------*/
-inline engine *
+engine *
 engine_find(const unsigned char *name)
 {
 	TRACE_PKTENGINE_FUNC_START();

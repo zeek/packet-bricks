@@ -117,4 +117,13 @@ function C:lbmrgpcap_config(pe)
 	 pe:link(lb)
 end
 -----------------------------------------------------------------------
+--simple_config  __comments later__
+function C:simple_config(pe)
+	 local lb = Brick.new("LoadBalancer", 2)
+	 lb:connect_input("em0") 
+         lb:connect_output("em0{0")
+	 -- now link it!
+	 pe:link(lb)
+end
+-----------------------------------------------------------------------
 return C;

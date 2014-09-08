@@ -46,6 +46,10 @@ function init()
 	 --             FOLLOWING SIX OPTIONS             --
 	 ---------------------------------------------------
 
+	 -- setup simple loadbalancer (setup to debug FreeBSD version)
+	 -- (see configs/single-threaded-setups.lua file)
+	 --sampleSetup:simple_config(pe)
+
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
 	 sampleSetup:lb_config(pe)

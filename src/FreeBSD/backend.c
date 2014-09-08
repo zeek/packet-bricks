@@ -302,44 +302,55 @@ void
 initiate_backend(engine *eng)
 {
 	TRACE_BACKEND_FUNC_START();
-	struct kevent evlist;
-	struct kevent chlist[KQUEUE_MAX_EVENTS];
-	int kq, events, n;
+	//struct kevent evlist[KQUEUE_MAX_EVENTS];
+	//struct kevent chlist[KQUEUE_MAX_EVENTS];
+	/*int kq, events, n*/;
 	uint dev_flag, i;
 
 	dev_flag = 0;
 	/* set up the kqueue structure */
-	kq = kqueue();
+	//kq = kqueue();
+	//if (kq == -1) {
+	//	TRACE_ERR("kqueue call failed!!\n");
+	//	TRACE_BACKEND_FUNC_END();
+	//}
 
 	/* create listening socket */
 	create_listening_socket_for_eng(eng);
 
 	/* register listening socket */
-	EV_SET(&chlist[eng->listen_fd], eng->listen_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+	//EV_SET(&chlist[eng->listen_fd], eng->listen_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
 	
 	TRACE_LOG("Engine %s is listening on port %d\n", 
 		  eng->name, eng->listen_port);
 
 	/* register iom socket */
+#if 0
 	for (i = 0; i < eng->no_of_sources; i++) {
 		EV_SET(&chlist[eng->esrc[i]->dev_fd], eng->esrc[i]->dev_fd, 
 		       EVFILT_READ, EV_ADD, 0, 0, NULL);
 	}
-
+#endif
 
 	/* keep on running till engine stops */
 	while (eng->run == 1) {
-	  	events = kevent(kq, chlist, 1, &evlist, 1, NULL);
+		for (i = 0; i < eng->no_of_sources; i++)
+			eng->iom.callback(eng->esrc[i]);
+		//fprintf(stderr, ".");
+#if 0
+	  	events = kevent(kq, chlist, 1, evlist, 1, NULL);
 		if (events == -1) {
 		  	TRACE_ERR("kqueue error (engine: %s)\n",
 				  eng->name);
 			TRACE_BACKEND_FUNC_END();
 		}
+		fprintf(stderr, "I got %d events\n", events);
 		for (n = 0; n < events; n++) {
 			/* process dev work */
 			for (i = 0; i < eng->no_of_sources; i++) {
 				if ((int)chlist[n].ident == eng->esrc[i]->dev_fd) {
-				  eng->iom.callback(eng->esrc[i]);
+					fprintf(stderr, "Got a packet!\n");
+					eng->iom.callback(eng->esrc[i]);
 					/* continue kqueueing */
 					EV_SET(&chlist[eng->esrc[i]->dev_fd], 
 					       eng->esrc[i]->dev_fd, EVFILT_READ, 
@@ -358,6 +369,7 @@ initiate_backend(engine *eng)
 				process_request_backend(eng, chlist);
 #endif
 		}
+#endif
 	}
 
 	TRACE_BACKEND_FUNC_END();
