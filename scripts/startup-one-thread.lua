@@ -43,34 +43,35 @@ function init()
 
 	 ---------------------------------------------------
 	 -- SAMPLE SETUPS. PLZ ONLY ENABLE ONE OUT OF THE --
-	 --             FOLLOWING SIX OPTIONS             --
+	 --             FOLLOWING SEVEN OPTIONS           --
 	 ---------------------------------------------------
 
 	 -- setup simple loadbalancer (setup to debug FreeBSD version)
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:simple_config(pe)
+	 --sampleSetup:simple_lbconfig(pe)
 
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
-	 sampleSetup:lb_config(pe)
+	 --sampleSetup:lb_config(pe, "eth3", "eth2")
 
 	 -- setup dup/lb config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:duplb_config(pe)
+	 --sampleSetup:duplb_config(pe, "eth3")
 
 	 -- setup dup config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:dup_config(pe)
+	 --sampleSetup:dup_config(pe, "eth3")
 	 
 	 -- setup lb/mrg config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lbmrg_config(pe)
+	 --sampleSetup:lbmrg_config(pe, "eth3")
 
 	 -- setup lbmrgpcap config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lbmrgpcap_config(pe)
+	 sampleSetup:lbmrgpcap_config(pe, "eth3")
 
 	 -- setup lbfilt config
+	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:lbfilt_config(pe)
 end

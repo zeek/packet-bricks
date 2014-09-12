@@ -106,5 +106,5 @@ distclean: clean
 .PHONY: clean
 
 tags:
-	find -name '*.c' -or -name '*.h' | xargs ctags
+	find . -name '*.c' -or -name '*.h' | xargs ctags
 #---------------------------------------------------------------------#

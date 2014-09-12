@@ -14,7 +14,7 @@
 uint32_t dropped = 0;
 uint32_t forwarded = 0;
 /*-----------------------------------------------------------------------*/
-inline void
+void
 pkt_swap(struct netmap_slot *ts, struct nm_desc *d)
 {
         u_int c;
@@ -102,7 +102,7 @@ main(int argc, char **argv)
 	//base_req.req.nr_arg3 = 8;
        
 	
-	rxnmd = nm_open("netmap:eth3", &base_req, NM_OPEN_ARG1|NM_OPEN_RING_CFG, NULL);
+	rxnmd = nm_open("netmap:em0", &base_req, NM_OPEN_ARG1|NM_OPEN_RING_CFG, NULL);
 	if (rxnmd == NULL)
 		{
 		printf("cannot open %p", rxnmd);
@@ -117,7 +117,7 @@ main(int argc, char **argv)
 	for ( i=0; i<OUTPUT_RINGS; ++i )
 		{
 		char interface[25];
-		sprintf(interface, "valebro:p{%d", i);
+		sprintf(interface, "netmap:em0{%d", i);
 		fprintf(stderr, "opening pipe named %s\n", interface);
 		uint64_t flags = NM_OPEN_NO_MMAP;// | NM_OPEN_ARG3;// | NM_OPEN_RING_CFG;
 

@@ -55,7 +55,7 @@ function init4()
 		 
 		 --setup: load balancing config
 		 -- (see configs/multi-threaded-setups.lua file)
-		 lb_config(pe, cnt)
+		 lb_config(pe, "eth3", cnt)
 	 end
 end
 -----------------------------------------------------------------------

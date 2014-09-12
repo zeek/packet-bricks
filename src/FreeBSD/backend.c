@@ -1,4 +1,30 @@
-/* See LICENSE in the main directory for copyright. */
+/*
+ * Copyright (c) 2014, Asim Jamshed, Robin Sommer, Seth Hall
+ * and the International Computer Science Institute. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * (1) Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ * (2) Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
 /* for prints etc */
 #include "bricks_log.h"
 /* for string functions */
@@ -25,6 +51,8 @@
 #include "lua_interpreter.h"
 /* for errno */
 #include <errno.h>
+/* for polling */
+#include <sys/poll.h>
 /*---------------------------------------------------------------------*/
 int
 connect_to_bricks_server(char *rshell_args)
@@ -302,73 +330,43 @@ void
 initiate_backend(engine *eng)
 {
 	TRACE_BACKEND_FUNC_START();
-	//struct kevent evlist[KQUEUE_MAX_EVENTS];
-	//struct kevent chlist[KQUEUE_MAX_EVENTS];
-	/*int kq, events, n*/;
+	struct pollfd pollfd[MAX_INLINKS];
+	uint polli;
 	uint dev_flag, i;
 
+	/* initializing main while loop parameters */
 	dev_flag = 0;
-	/* set up the kqueue structure */
-	//kq = kqueue();
-	//if (kq == -1) {
-	//	TRACE_ERR("kqueue call failed!!\n");
-	//	TRACE_BACKEND_FUNC_END();
-	//}
+	polli = 0;
+	memset(pollfd, 0, sizeof(pollfd));
 
 	/* create listening socket */
 	create_listening_socket_for_eng(eng);
 
-	/* register listening socket */
-	//EV_SET(&chlist[eng->listen_fd], eng->listen_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-	
 	TRACE_LOG("Engine %s is listening on port %d\n", 
 		  eng->name, eng->listen_port);
 
 	/* register iom socket */
-#if 0
 	for (i = 0; i < eng->no_of_sources; i++) {
-		EV_SET(&chlist[eng->esrc[i]->dev_fd], eng->esrc[i]->dev_fd, 
-		       EVFILT_READ, EV_ADD, 0, 0, NULL);
+		pollfd[polli].fd = eng->esrc[i]->dev_fd;
+		pollfd[polli].events = POLLIN | POLLRDNORM;
+		pollfd[polli].revents = 0;
+		++polli;
 	}
-#endif
 
 	/* keep on running till engine stops */
 	while (eng->run == 1) {
+		i = poll(pollfd, polli+1, 2500);
+
+		/* if no packet came up, try polling again */
+		if (i <= 0) continue;
+
 		for (i = 0; i < eng->no_of_sources; i++)
 			eng->iom.callback(eng->esrc[i]);
-		//fprintf(stderr, ".");
-#if 0
-	  	events = kevent(kq, chlist, 1, evlist, 1, NULL);
-		if (events == -1) {
-		  	TRACE_ERR("kqueue error (engine: %s)\n",
-				  eng->name);
-			TRACE_BACKEND_FUNC_END();
-		}
-		fprintf(stderr, "I got %d events\n", events);
-		for (n = 0; n < events; n++) {
-			/* process dev work */
-			for (i = 0; i < eng->no_of_sources; i++) {
-				if ((int)chlist[n].ident == eng->esrc[i]->dev_fd) {
-					fprintf(stderr, "Got a packet!\n");
-					eng->iom.callback(eng->esrc[i]);
-					/* continue kqueueing */
-					EV_SET(&chlist[eng->esrc[i]->dev_fd], 
-					       eng->esrc[i]->dev_fd, EVFILT_READ, 
-					       EV_ADD, 0, 0, NULL);
-					dev_flag = 1;
-				} 
-			}
-			if (dev_flag == 1) {
-				dev_flag = 0;
-				continue;
-			}
 #if 0
 			/* XXX - temporarily disabled */
 			/* process app reqs */
 			else if ((int)chlist[n].ident == eng->listen_fd)
 				process_request_backend(eng, chlist);
-#endif
-		}
 #endif
 	}
 
