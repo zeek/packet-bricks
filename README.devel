@@ -13,7 +13,7 @@ needs to write. These are:
 	  private context (data structure) that he/she can use
 	  later for the process() function. A Brick struct contains
 	  a 'private_data' field which the developer can employ for
-	  holding this contect. User should return 1 if the init() 
+	  holding this contact. User should return 1 if the init() 
 	  process is successful; and should return -1 if the brick 
 	  initialization fails. The init() function passes 
 	  (Linker_Intf *) instance as a 2nd argument to the function.
