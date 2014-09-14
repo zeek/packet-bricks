@@ -48,7 +48,7 @@ function init()
 
 	 -- setup simple loadbalancer (setup to debug FreeBSD version)
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:simple_lbconfig(pe)
+	 sampleSetup:simple_lbconfig(pe)
 
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
@@ -68,7 +68,7 @@ function init()
 
 	 -- setup lbmrgpcap config
 	 -- (see configs/single-threaded-setups.lua file)
-	 sampleSetup:lbmrgpcap_config(pe, "eth3")
+	 --sampleSetup:lbmrgpcap_config(pe, "eth3")
 
 	 -- setup lbfilt config
 	 -- don't enable this... this is still under construction
