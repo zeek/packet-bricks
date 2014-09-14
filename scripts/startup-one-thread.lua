@@ -48,11 +48,11 @@ function init()
 
 	 -- setup simple loadbalancer (setup to debug FreeBSD version)
 	 -- (see configs/single-threaded-setups.lua file)
-	 sampleSetup:simple_lbconfig(pe)
+	 --sampleSetup:simple_lbconfig(pe)
 
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lb_config(pe, "eth3", "eth2")
+	 sampleSetup:lb_config(pe, "eth3", "eth2")
 
 	 -- setup dup/lb config
 	 -- (see configs/single-threaded-setups.lua file)
