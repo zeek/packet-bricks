@@ -19,7 +19,7 @@ sampleSetup = dofile("scripts/configs/single-threaded-setups.lua")
 --init function  __initializes pkteng thread and links it with a__
 --		 __netmap-enabled interface. collects PKT_BATCH__
 --		 __pkts at a time. "cpu" and "batch" params can remain__
---		 __unspecified by passing '-1'. Next creates 4 netmap__
+--		 __unspecified by passing '-1'. Next creates _n_ netmap__
 --		 __pipe channels to forward packets to userland apps__
 
 function init()
@@ -52,7 +52,7 @@ function init()
 
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lb_config(pe, "eth3", "eth2")
+	 sampleSetup:lb_config(pe, "eth3", "eth2")
 
 	 -- setup dup/lb config
 	 -- (see configs/single-threaded-setups.lua file)
@@ -68,7 +68,7 @@ function init()
 
 	 -- setup lbmrgpcap config
 	 -- (see configs/single-threaded-setups.lua file)
-	 sampleSetup:lbmrgpcap_config(pe, "eth3")
+	 --sampleSetup:lbmrgpcap_config(pe, "eth3")
 
 	 -- setup lbfilt config
 	 -- don't enable this... this is still under construction

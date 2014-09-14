@@ -173,6 +173,15 @@ _________________________________________________________________
 	bricks> pe.show_stats()
 _________________________________________________________________
 
+Sample applications (e.g. tcpdump) can read ingress traffic from 
+packet-bricks using following command line arguments:
+_________________________________________________________________
+	$ sudo tcpdump -i netmap:eth3}0 &
+	$ sudo tcpdump -i netmap:eth3}1 &
+	$ sudo tcpdump -i netmap:eth3}2 &
+	$ sudo tcpdump -i netmap:eth3}3 &
+_________________________________________________________________
+
 Please note that you cannot unlink an brick from the pkteng
 while the engine is running. To stop the engine, please run the 
 following command:
