@@ -81,8 +81,8 @@ _________________________________________________________________
 
 In packet-bricks, the most important component is the pkteng module.
 It manages the reception and distribution of ingress traffic coming
-thru an interface. Once instantiated, the pkteng module spawns a 
-threads that starts the packet reception process. After running 
+through an interface. Once instantiated, the pkteng module spawns a 
+thread that starts the packet reception process. After running 
 packet-bricks again, use the following command to create a pkteng 
 instance, pe:
 
@@ -182,7 +182,7 @@ _________________________________________________________________
 	$ sudo tcpdump -i netmap:eth3}3 &
 _________________________________________________________________
 
-Please note that you cannot unlink an brick from the pkteng
+Please note that you cannot unlink a brick from the pkteng
 while the engine is running. To stop the engine, please run the 
 following command:
 
