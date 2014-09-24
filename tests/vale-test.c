@@ -49,7 +49,7 @@ typedef struct my_netmap_port {
         /* followed by ifname */
 } my_netmap_port;
 /*-----------------------------------------------------------------------*/
-inline int32_t
+int
 set_sessions(fd_set *r, fd_set *w, my_netmap_port *p1, my_netmap_port *p2)
 {
 	FD_ZERO(r);

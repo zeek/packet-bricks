@@ -1,15 +1,15 @@
-CC=gcc
+CC=cc
 CFLAGS=-O0 -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 INCLUDE=-I./include
 NETMAP_INCLUDE=-I./include/netmap
 #LDFLAGS=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
 	-fno-builtin-free -fno-builtin-posix_memalign -ljemalloc
-LDFLAGS=
+LDFLAGS= -lpcap
 BINDIR=bin
 MKDIR=mkdir
 #---------------------------------------------------------------------#
-SRCS = vale-test.c pkt-rx.c
+SRCS = vale-test.c pkt-rx.c pcap-test.c
 
 all: default
 
@@ -18,6 +18,7 @@ default: tags
 	$(MKDIR) -p $(BINDIR)
 	$(CC) vale-test.o $(LDFLAGS) -o $(BINDIR)/vale-test
 	$(CC) pkt-rx.o $(LDFLAGS) -o $(BINDIR)/pkt-rx
+	$(CC) pcap-test.o $(LDFLAGS) -o $(BINDIR)/pcap-test
 	$(RM) -rf *.o
 #	$(STRIP) $(BIN)
 
@@ -29,7 +30,7 @@ debug: tags
 	$(RM) -rf *.o 
 #---------------------------------------------------------------------#
 tags:
-	find -name '*.c' -or -name '*.h' | xargs ctags
+	find . -name '*.c' -or -name '*.h' | xargs ctags
 #---------------------------------------------------------------------#
 clean:
 	rm -rf *~ bin/*  *.h~ *.c~ *.o tags
