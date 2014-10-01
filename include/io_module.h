@@ -77,7 +77,6 @@ typedef struct io_module_funcs {
 			      int8_t qid);
 	void	(*unlink_ifaces)(void *engptr);
 	int32_t (*callback)(void *engsrcptr);
-	int32_t (*add_filter)(Brick *brick, Filter *f, unsigned char *ifname);
 	void	(*delete_all_channels)(Brick *brick);
 	int32_t (*create_external_link)(char *in_name, char *out_name, 
 					Target t, void *esrcptr);

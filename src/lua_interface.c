@@ -255,7 +255,6 @@ pkteng_link(lua_State *L)
 	Linker_Intf *linker;
 	Brick *first_brick;
 	int nargs = lua_gettop(L);
-	int i;
 
 	/* check if args2 is user-data */
 	luaL_checktype(L, 2, LUA_TUSERDATA);
@@ -284,15 +283,7 @@ pkteng_link(lua_State *L)
 			pe->cpu,
 			pe->batch,
 			pe->qid);
-	
-	for (i = 0; i < linker->input_count; i++) {
-		/* link the source(s) with the packet engine */
-		pktengine_link_iface((uint8_t *)pe->eng_name, 
-				     (uint8_t *)linker->input_link[i], 
-				     pe->batch, pe->qid);
-		TRACE_LOG("Linking %s with link %s with batch size: %d and qid: %d\n",
-			  pe->eng_name, linker->input_link[i], pe->batch, pe->qid);
-	}
+
 	first_brick = createBrick(linker->type);
 	if (first_brick == NULL) {
 		TRACE_LUA_FUNC_END();
@@ -308,12 +299,11 @@ pkteng_link(lua_State *L)
 		free(first_brick);
 		return 1;
 	}
-	first_brick->elib->link(first_brick, linker);
 	
 	/* if there are pipelines, link them as well */
-	while (linker->next_linker != NULL) {
+	while (linker != NULL) {
+		first_brick->elib->link(first_brick, pe, linker); 
 		linker = linker->next_linker;
-		first_brick->elib->link(first_brick, linker); 
 	}
 
 	TRACE_LUA_FUNC_END();

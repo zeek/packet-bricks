@@ -765,35 +765,6 @@ netmap_create_channel(char *in_name, char *out_name,
 	return fd;
 }
 /*---------------------------------------------------------------------*/
-int32_t
-netmap_add_filter(Brick *brick, Filter *f, unsigned char *ifname)
-{
-	TRACE_NETMAP_FUNC_START();
-	CommNode *cn;
-	uint32_t i;
-	linkdata *lnd = (linkdata *)brick->private_data;
-	for (i = 0; i < lnd->count; i++) {
-		cn = (CommNode *)lnd->external_links[i];
-		if (cn->brick != NULL)
-			netmap_add_filter(cn->brick, f, ifname);
-		else if (!strcmp((char *)cn->nm_ifname, (char *)ifname)) {
-			if (cn->filt == NULL) {
-				cn->filt = calloc(1, sizeof(Filter));
-				if (cn->filt == NULL) {
-					TRACE_LOG("Can't allocate mem for "
-						  "filter for ifname %s\n",
-						  ifname);
-					TRACE_NETMAP_FUNC_END();
-					return -1;
-				}
-			}
-			memcpy(cn->filt, f, sizeof(Filter));
-		}
-	}
-	TRACE_NETMAP_FUNC_END();
-	return 1;
-}
-/*---------------------------------------------------------------------*/
 io_module_funcs netmap_module = {
 	.init_context  		= 	netmap_init,
 	.link_iface		= 	netmap_link_iface,
@@ -802,6 +773,5 @@ io_module_funcs netmap_module = {
 	.create_external_link 	=	netmap_create_channel,
 	.delete_all_channels 	=	netmap_delete_all_channels,
 	.shutdown		= 	netmap_shutdown,
-	.add_filter		=	netmap_add_filter
 };
 /*---------------------------------------------------------------------*/

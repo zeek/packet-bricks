@@ -2,6 +2,7 @@
 ---------------------- STARTUP SCRIPT ---------------------------------
 -- contains utility functions and macros
 utilObj = dofile("scripts/utils.lua")
+PCAPDIR="pcapsamples/"
 -- contains example setup scripts
 sampleSetup = dofile("scripts/configs/single-threaded-setups.lua")
 
@@ -67,6 +68,7 @@ function init()
 	 --sampleSetup:lbmrg_config(pe, "eth3")
 
 	 -- setup lbmrgpcap config
+	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:lbmrgpcap_config(pe, "eth3")
 
@@ -74,6 +76,11 @@ function init()
 	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:lbfilt_config(pe)
+
+	 -- setup pcaprdr config
+	 -- don't enable this... this is still under construction
+	 -- (see configs/single-threaded-setups.lua file)
+	 --sampleSetup:pcap_config(pe, PCAPDIR, "eth3")
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__

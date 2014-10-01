@@ -126,4 +126,15 @@ function C:simple_lbconfig(pe)
 	 pe:link(lb)
 end
 -----------------------------------------------------------------------
+--pcap_config      __a trivial example for reading pcap files__
+--		   __ more details will be added as the brick__
+--		   __revised__
+function C:pcap_config(pe, pcapdir, iface)
+	 local pr = Brick.new("PcapReader")
+	 pr:connect_input(pcapdir, iface) 
+         pr:connect_output(iface .. "}0")
+	 -- now link it!
+	 pe:link(pr)
+end
+-----------------------------------------------------------------------
 return C;

@@ -63,7 +63,7 @@ merge_deinit(Brick *brick)
 }
 /*---------------------------------------------------------------------*/
 void
-merge_link(struct Brick *from, Linker_Intf *linker)
+merge_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 {
 	TRACE_BRICK_FUNC_START();
 	int i, j, k, rc;
@@ -89,9 +89,17 @@ merge_link(struct Brick *from, Linker_Intf *linker)
 		return;	      
 	}
 
-	if (eng->FIRST_BRICK(esrc)->brick == NULL) {
+	if (eng->esrc == NULL) {
 		strcpy(lbd->ifname, (char *)linker->input_link[0]);
 		lbd->count = linker->output_count;
+		for (i = 0; i < linker->input_count; i++) {
+			/* link the source(s) with the packet engine */
+			pktengine_link_iface((uint8_t *)eng->name, 
+					     (uint8_t *)linker->input_link[i], 
+					     pe->batch, pe->qid);
+			TRACE_LOG("Linking %s with link %s with batch size: %d and qid: %d\n",
+				  eng->name, linker->input_link[i], pe->batch, pe->qid);
+		}
 		for (k = 0; k < (int)eng->no_of_sources; k++)
 			eng->esrc[k]->brick = from;
 		lbd->external_links = calloc(lbd->count,
@@ -113,6 +121,7 @@ merge_link(struct Brick *from, Linker_Intf *linker)
 				if (rc == -1) {
 					TRACE_LOG("Failed to open channel %s\n",
 						  linker->output_link[i]);
+					TRACE_BRICK_FUNC_END();
 					return;
 				}
 			}

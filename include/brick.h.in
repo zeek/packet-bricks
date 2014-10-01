@@ -81,7 +81,7 @@ struct Brick;
 #define MAX_BRICKS		128
 typedef struct brick_funcs {		/* brick funcs ptrs */
 	int32_t (*init)(struct Brick *brick, Linker_Intf *li);
-	void (*link)(struct Brick *brick, Linker_Intf *li);
+	void (*link)(struct Brick *brick, PktEngine_Intf *pe, Linker_Intf *li);
 	BITMAP (*process)(struct Brick *brick, unsigned char *pktbuf);
 	void (*deinit)(struct Brick *brick);
 	char *(*getId)();
@@ -120,7 +120,7 @@ typedef struct linkdata {
 Brick *
 createBrick(Target t);
 
-#define FIRST_BRICK(x)		x[0]
+#define FIRST_BRICK(x)         x[0]
 
 /**
  * Initialize all brick function libraries
@@ -130,7 +130,7 @@ void initBricks();
 /**
  * A generic function to link one brick to another.
  */
-void brick_link(struct Brick *from, Linker_Intf *linker);
+void brick_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker);
 
 /*---------------------------------------------------------------------*/
 /**
