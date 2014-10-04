@@ -565,7 +565,7 @@ linker_input(lua_State *L)
 
 	linker = check_linker(L, 1);
 	/* pick as many input sources as possible */
-	if (linker->type == LINKER_MERGE) {
+	if (linker->type >= LINKER_MERGE) {
 		for (i = 2; i <= nargs; i++) {
 			linker->input_link[linker->input_count] = 
 				luaL_optstring(L, i, 0);

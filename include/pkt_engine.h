@@ -40,6 +40,8 @@
 #include <stdio.h>
 /* for Brick def'n */
 #include "brick.h"
+/* for pcap_t def'n */
+#include <pcap/pcap.h>
 /*---------------------------------------------------------------------*/
 /**
  *  io_type: Right now, we only support IO_NETMAP.
@@ -74,11 +76,12 @@ typedef struct engine {
 	uint16_t listen_port;		/* listening port */
 
 	struct io_module_funcs iom;	/* io_funcs ptrs */
-	pthread_t t;
 	struct engine_src **esrc;	/* list of sources connected to the engine */
+	pthread_t t;			/* thread context */
 	uint no_of_sources;		/* no. of engine sources */
 	uint8_t mark_for_copy;		/* marking for copy */
 	int32_t buffer_sz;		/* buffer sizes in between each brick */
+	void *pcapr_context;		/* private_context for pcap reading */
 
 	/*
 	 * the linked list ptr that will chain together
@@ -133,6 +136,13 @@ pktengine_link_iface(const unsigned char *name,
 		     const unsigned char *iface,
 		     const int16_t batch_size,
 		     const int8_t queue);
+
+/**
+ * Get the packet from the pcap file and push
+ * it in the netmap framework..
+ */
+void
+process_pcap_read_request(engine *eng, void *prcptr);
 
 /**
  * Start the engine

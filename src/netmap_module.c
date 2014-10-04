@@ -46,6 +46,10 @@
 #include <net/if.h>
 /* for brick def'n */
 #include "brick.h"
+/* for polling (for pcap packet insertions) */
+#include <poll.h>
+/* for poll timeout */
+#include "backend.h"
 /*---------------------------------------------------------------------*/
 int32_t
 netmap_init(void **ctxt_ptr, void *engptr)
@@ -398,7 +402,7 @@ flush_all_cnodes(Brick *brick, engine *eng)
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn;
 	uint32_t i;
-	linkdata *lnd = (linkdata *)brick->private_data;
+	linkdata *lnd = (linkdata *)(&brick->lnd);
 	for (i = 0; i < lnd->count; i++) {
 		cn = (CommNode *)lnd->external_links[i];
 		if (cn->brick != NULL) {
@@ -421,7 +425,7 @@ update_cnode_ptrs(struct netmap_ring *rxring, Brick *brick,
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn;
 	uint32_t i;
-	linkdata *lnd = (linkdata *)brick->private_data;
+	linkdata *lnd = (linkdata *)(&brick->lnd);
 	for (i = 0; i < lnd->count; i++) {
 		cn = (CommNode *)lnd->external_links[i];
 		if (cn->brick != NULL) {
@@ -449,7 +453,7 @@ dispatch_pkt(struct netmap_ring *rxring,
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
 	uint j;
-	linkdata *lnd = (linkdata *)brick->private_data;
+	linkdata *lnd = (linkdata *)(&brick->lnd);
 	BITMAP b;
 
 	TRACE_DEBUG_LOG("(ifname: %s, lnd_count: %d\n", 
@@ -565,7 +569,7 @@ netmap_delete_all_channels(Brick *brick)
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
 	uint32_t i;
-	linkdata *lnd = (linkdata *)brick->private_data;
+	linkdata *lnd = (linkdata *)(&brick->lnd);
 	
 	for (i = 0; i < lnd->count; i++) {
 		cn = (CommNode *)lnd->external_links[i];
@@ -626,7 +630,7 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 	TRACE_NETMAP_FUNC_START();
 	uint32_t i;
 	CommNode *cn;
-	linkdata *lnd = (linkdata *)brick->private_data;
+	linkdata *lnd = (linkdata *)(&brick->lnd);
 	for (i = 0; i < lnd->count; i++) {
 		cn = lnd->external_links[i];
 		if (!strcmp(cn->nm_ifname, ifname)) {
@@ -647,7 +651,7 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 					(brick->eng->mark_for_copy == 0 && 
 					 li.type == COPY) ? 1 : 0;
 				cn->brick->eng = brick->eng;
-				linkdata *lnd = cn->brick->private_data;
+				linkdata *lnd = &cn->brick->lnd;
 				strcpy((char *)lnd->ifname, (char *)ifname);
 				lnd->count++;
 				lnd->tgt = t;
@@ -661,7 +665,7 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 				}
 				return cn->brick;
 			} else  {
-				linkdata *lnd = cn->brick->private_data;
+				linkdata *lnd = &cn->brick->lnd;
 				if (lnd->tgt == t) {
 					lnd->count++;
 					lnd->external_links = realloc(lnd->external_links, 
@@ -707,7 +711,7 @@ netmap_create_channel(char *in_name, char *out_name,
 
 	nmc = (netmap_module_context *)esrc->private_context;
 
-	lnd = (linkdata *)brick->private_data;
+	lnd = (linkdata *)(&brick->lnd);
 	/* first locate the in_nmd */
 	if (strcmp((char *)lnd->ifname, in_name) != 0) {
 		brick = enable_pipeline(brick, in_name, t);
@@ -720,7 +724,7 @@ netmap_create_channel(char *in_name, char *out_name,
 	}
 	
 	/* reinitialize lnd if brick is reset */
-	lnd = (linkdata *)brick->private_data;
+	lnd = (linkdata *)(&brick->lnd);
 	TRACE_LOG("brick: %p, local_desc: %p\n", brick, nmc->local_nmd);
 
 	/* create a comm. interface */	
@@ -763,6 +767,53 @@ netmap_create_channel(char *in_name, char *out_name,
 
 	TRACE_NETMAP_FUNC_END();
 	return fd;
+}
+/*---------------------------------------------------------------------*/
+int32_t
+netmap_pcap_push_pkt(engine *eng, const uint8_t *pkt, const uint16_t len) 
+{
+	TRACE_NETMAP_FUNC_START();
+	netmap_module_context *nmc;
+	struct nm_desc *local_nmd;
+	engine_src *engsrc;
+	CommNode *cn;
+	linkdata *lnd;
+	Brick *brick;
+
+	engsrc = (engine_src *)eng->esrc[0];
+	nmc = (netmap_module_context *)engsrc->private_context;
+	brick = engsrc->brick;
+	lnd = (linkdata *)(&brick->lnd);
+	cn = (CommNode *)lnd->external_links[0];
+
+	local_nmd = (struct nm_desc *)nmc->local_nmd;
+
+	if (local_nmd == NULL) {
+		TRACE_LOG("netmap context was not properly initialized\n");
+		TRACE_NETMAP_FUNC_END();
+		return -1;
+	}
+
+	if (nm_inject(cn->out_nmd, pkt, len) == 0) {
+		TRACE_LOG("Could not send packet through!\n");
+		TRACE_NETMAP_FUNC_END();
+		return -1;
+	} else {
+		struct netmap_ring *txring;
+		struct pollfd pfd;
+		txring = NETMAP_TXRING(cn->out_nmd->nifp, 0);
+		if (nm_tx_pending(txring) > 0 ) {
+			pfd.fd = cn->out_nmd->fd;
+			pfd.events = POLLOUT | POLLWRNORM;
+			pfd.revents = 0;
+		}
+		poll(&pfd, 1, EPOLL_TIMEOUT);
+		netmap_callback(engsrc);
+	}
+	
+	TRACE_NETMAP_FUNC_END();
+	
+	return 0;
 }
 /*---------------------------------------------------------------------*/
 io_module_funcs netmap_module = {

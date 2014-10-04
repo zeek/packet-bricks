@@ -75,6 +75,7 @@ following bricks as registered:
 	  dupfuncs
 	  mergefuncs
 	  filterfuncs
+	  pcaprfuncs
 
 After adding this entry, run './configure' and 'make' to complete the
 setup.

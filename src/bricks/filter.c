@@ -39,11 +39,15 @@
 #endif
 #include "pkt_hash.h"
 /*---------------------------------------------------------------------*/
+typedef struct FilterContext {
+	/* nothing here so far... */
+} FilterContext __attribute__((aligned(__WORDSIZE)));
+/*---------------------------------------------------------------------*/
 int32_t
 filter_init(Brick *brick, Linker_Intf *li)
 {
 	TRACE_BRICK_FUNC_START();
-	brick->private_data = calloc(1, sizeof(linkdata));
+	brick->private_data = calloc(1, sizeof(FilterContext));
 	if (brick->private_data == NULL) {
 		TRACE_LOG("Can't create private context "
 			  "for filter\n");
@@ -63,7 +67,7 @@ static BITMAP
 filter_dummy(Brick *brick, unsigned char *buf)
 {
 	TRACE_BRICK_FUNC_START();
-	linkdata *lnd = brick->private_data;
+	linkdata *lnd = (linkdata *)(&brick->lnd);
 	BITMAP b;
 
 	INIT_BITMAP(b);

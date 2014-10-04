@@ -36,23 +36,32 @@
 /* for hash function */
 #include "pkt_hash.h"
 /*---------------------------------------------------------------------*/
+typedef struct LoadBalancerContext {
+	/* 
+	 * hash split version if the brick is 
+	 * load balancer
+	 */
+	uint8_t hash_split;
+} LoadBalancerContext __attribute__((aligned(__WORDSIZE)));
+/*---------------------------------------------------------------------*/
 int32_t
 lb_init(Brick *brick, Linker_Intf *li)
 {
 	TRACE_BRICK_FUNC_START();
-	linkdata *lnd;
-	brick->private_data = calloc(1, sizeof(linkdata));
+	LoadBalancerContext *lbc;
+
+	brick->private_data = calloc(1, sizeof(LoadBalancerContext));
 	if (brick->private_data == NULL) {
 		TRACE_LOG("Can't create private context "
 			  "for load balancer\n");
 		TRACE_BRICK_FUNC_END();
 		return -1;
 	}
-	lnd = brick->private_data;
+	lbc = brick->private_data;
 	if (li == NULL)
-		lnd->hash_split = 4;
+		lbc->hash_split = 4;
 	else
-		lnd->hash_split = li->hash_split;
+		lbc->hash_split = li->hash_split;
 	li->type = SHARE;
 	TRACE_BRICK_FUNC_END();
 
@@ -63,12 +72,15 @@ BITMAP
 lb_process(Brick *brick, unsigned char *buf)
 {
 	TRACE_BRICK_FUNC_START();
-	linkdata *lnd = brick->private_data;
+	linkdata *lnd;
+	LoadBalancerContext *lbc;
 	BITMAP b;
 	uint key;
 
+	lnd = &(brick->lnd);
+	lbc = brick->private_data;
 	INIT_BITMAP(b);
-	key = pkt_hdr_hash(buf, lnd->hash_split, 
+	key = pkt_hdr_hash(buf, lbc->hash_split, 
 			   lnd->level) % lnd->count;
 	SET_BIT(b, key);
 	TRACE_BRICK_FUNC_END();

@@ -396,6 +396,11 @@ initiate_backend(engine *eng)
 	TRACE_LOG("Engine %s is listening on port %d\n", 
 		  eng->name, eng->listen_port);
 
+	/* adjust pcapr context in engine */
+	if (!strcmp(eng->FIRST_BRICK(esrc)->brick->elib->getId(), "PcapReader")) {
+		eng->pcapr_context = eng->FIRST_BRICK(esrc)->brick->private_data;		
+	}
+	
 	/* register iom socket */
 	for (i = 0; i < eng->no_of_sources; i++) {
 		ev.events = EPOLLIN;
@@ -453,6 +458,9 @@ initiate_backend(engine *eng)
 				close(ev.data.fd);
 			}
 		}
+		/* pcap handling.. */
+		if (eng->pcapr_context != NULL)
+			process_pcap_read_request(eng, eng->pcapr_context);
 	}
 
 	TRACE_BACKEND_FUNC_END();

@@ -38,13 +38,7 @@ int32_t
 merge_init(Brick *brick, Linker_Intf *li)
 {
 	TRACE_BRICK_FUNC_START();
-	brick->private_data = calloc(1, sizeof(linkdata));
-	if (brick->private_data == NULL) {
-		TRACE_LOG("Can't create private context "
-			  "for merge\n");
-		TRACE_BRICK_FUNC_END();
-		return -1;
-	}
+	brick->private_data = NULL;
 	li->type = SHARE;
 	TRACE_BRICK_FUNC_END();
 	return 1;
@@ -62,6 +56,10 @@ merge_deinit(Brick *brick)
 	TRACE_BRICK_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+/**
+ * This brick needs a customized link function since it needs to push
+ * packets from multiple ifaces
+ */
 void
 merge_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 {
@@ -71,7 +69,7 @@ merge_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 	linkdata *lbd;
 	int div_type = (linker->type == LINKER_DUP) ? COPY : SHARE;
 	
-	lbd = (linkdata *)from->private_data;
+	lbd = (linkdata *)(&from->lnd);
 	eng = engine_find(from->eng->name);
 	/* sanity engine check */
 	if (eng == NULL) {

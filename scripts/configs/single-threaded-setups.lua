@@ -3,6 +3,7 @@
 -- S I N G L E - T H R E A D E D - S E T U P S
 -----------------------------------------------------------------------
 local C={};
+PCAPDIR="pcapsamples/"
 
 
 -----------------------------------------------------------------------
@@ -129,10 +130,10 @@ end
 --pcap_config      __a trivial example for reading pcap files__
 --		   __ more details will be added as the brick__
 --		   __revised__
-function C:pcap_config(pe, pcapdir, iface)
+function C:pcap_config(pe, intf)
 	 local pr = Brick.new("PcapReader")
-	 pr:connect_input(pcapdir, iface) 
-         pr:connect_output(iface .. "}0")
+	 pr:connect_input(PCAPDIR, intf) 
+         pr:connect_output(intf .. "{0")
 	 -- now link it!
 	 pe:link(pr)
 end

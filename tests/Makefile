@@ -26,7 +26,8 @@ debug: tags
 	$(CC) $(DEBUG_CFLAGS) $(INCLUDE) $(NETMAP_INCLUDE) -c $(SRCS)
 	$(MKDIR) -p $(BINDIR)
 	$(CC) vale-test.o $(LDFLAGS) -o $(BINDIR)/vale-test
-	$(CC) pkt-rx.o $(LDFLAGS) -o $(BINDIR)/pkt-rx	
+	$(CC) pkt-rx.o $(LDFLAGS) -o $(BINDIR)/pkt-rx
+	$(CC) pcap-test.o $(LDFLAGS) -o $(BINDIR)/pcap-test	
 	$(RM) -rf *.o 
 #---------------------------------------------------------------------#
 tags:

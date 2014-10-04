@@ -59,6 +59,9 @@ createBrick(Target t)
 	return brick;
 }
 /*---------------------------------------------------------------------*/
+/**
+ * General linking function that connects one brick to another
+ */
 void
 brick_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 {
@@ -68,7 +71,7 @@ brick_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 	linkdata *lbd;
 	int div_type = (linker->type == LINKER_DUP) ? COPY : SHARE;
 	
-	lbd = (linkdata *)from->private_data;
+	lbd = (linkdata *)(&from->lnd);
 	eng = engine_find(from->eng->name);
 	/* sanity engine check */
 	if (eng == NULL) {

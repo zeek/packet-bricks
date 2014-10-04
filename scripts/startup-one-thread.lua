@@ -2,7 +2,6 @@
 ---------------------- STARTUP SCRIPT ---------------------------------
 -- contains utility functions and macros
 utilObj = dofile("scripts/utils.lua")
-PCAPDIR="pcapsamples/"
 -- contains example setup scripts
 sampleSetup = dofile("scripts/configs/single-threaded-setups.lua")
 
@@ -80,7 +79,7 @@ function init()
 	 -- setup pcaprdr config
 	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:pcap_config(pe, PCAPDIR, "eth3")
+	 --sampleSetup:pcap_config(pe, "eth3")
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__

@@ -104,7 +104,7 @@ main(int argc, char **argv)
 	//base_req.req.nr_arg3 = 8;
        
 	
-	rxnmd = nm_open("netmap:em0", &base_req, NM_OPEN_ARG1|NM_OPEN_RING_CFG, NULL);
+	rxnmd = nm_open("netmap:eth3", &base_req, NM_OPEN_ARG1|NM_OPEN_RING_CFG, NULL);
 	if (rxnmd == NULL)
 		{
 		printf("cannot open %p", rxnmd);
@@ -119,7 +119,7 @@ main(int argc, char **argv)
 	for ( i=0; i<OUTPUT_RINGS; ++i )
 		{
 		char interface[25];
-		sprintf(interface, "netmap:em0{%d", i);
+		sprintf(interface, "netmap:eth3{%d", i);
 		fprintf(stderr, "opening pipe named %s\n", interface);
 		uint64_t flags = NM_OPEN_NO_MMAP;// | NM_OPEN_ARG3 | NM_OPEN_RING_CFG;
 
@@ -146,7 +146,7 @@ main(int argc, char **argv)
 
 	/*----------------------------------------------------------------------*/
 	char errbuff[PCAP_ERRBUF_SIZE];
-	pcap_t *handler = pcap_open_offline("/root/packet-bricks/tests/wired.pcap", errbuff);
+	pcap_t *handler = pcap_open_offline("/home/ajamshed/packet-bricks/pcapsamples/wired.pcap", errbuff);
 	
 	int packetCount = 0;
 	int errCount = 0;
@@ -195,11 +195,11 @@ main(int argc, char **argv)
 		if ( i <= 0 )
 			{
 				//printf("poll error/timeout  %s", strerror(errno));
-			continue;
+				//continue;
 			}
 		else
 			{
-			//Rprintf(5, "Poll returned %d", i);
+		//Rprintf(5, "Poll returned %d", i);
 			}
 		//#endif
 		//if (pollfd[0].revents & POLLERR)

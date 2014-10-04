@@ -39,6 +39,12 @@
 /* for logging */
 #include "bricks_log.h"
 /*---------------------------------------------------------------------*/
+struct Brick;
+/* maximum number of channels (per parent) you can have are 32 */
+#define BITMAP			uint32_t
+/* maximum number of bricks you can have in packet-bricks */
+#define MAX_BRICKS		128
+/*---------------------------------------------------------------------*/
 /**
  *
  * BRICK DEFINITION
@@ -74,11 +80,6 @@
  *		      - getId(): get string id of the brick
  */
 /*---------------------------------------------------------------------*/
-struct Brick;
-/* maximum number of channels (per parent) you can have are 32 */
-#define BITMAP			uint32_t
-/* maximum number of bricks you can have in packet-bricks */
-#define MAX_BRICKS		128
 typedef struct brick_funcs {		/* brick funcs ptrs */
 	int32_t (*init)(struct Brick *brick, Linker_Intf *li);
 	void (*link)(struct Brick *brick, PktEngine_Intf *pe, Linker_Intf *li);
@@ -87,22 +88,12 @@ typedef struct brick_funcs {		/* brick funcs ptrs */
 	char *(*getId)();
 } brick_funcs;// __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
-typedef struct Brick
-{
-	void *private_data;
-	struct engine *eng;
-	struct Brick *next_brick;
-	
-	struct brick_funcs *elib;
-} Brick __attribute__((aligned(__WORDSIZE)));
-/*---------------------------------------------------------------------*/
 /**
  *
- * LINK DATA BRICK'S PRIVATE CONTEXT DEFINITION
+ * LINK DATA BRICK'S DEFINITION
  *
- * This struct is used to declare private contexts for
- * special linker bricks (e.g. LoadBalancers and Duplicators) that
- * lays down the topology of BRICKS system...
+ * This struct is used to declare linking info for
+ * bricks that lays down the topology of BRICKS system...
  * 
  */
 /*---------------------------------------------------------------------*/
@@ -113,8 +104,17 @@ typedef struct linkdata {
 	char ifname[IFNAMSIZ];	/* name of (virtual) source */
 	Target tgt;		/* type */	
 	unsigned char level;	/* the nested level used during dispatch_pkt() */
-	uint8_t hash_split;	/* hash split version if the brick is load balancer */
 } linkdata __attribute__((aligned(__WORDSIZE)));
+/*---------------------------------------------------------------------*/
+typedef struct Brick
+{
+	void *private_data;		/* used to hold private context of the brick */
+	struct linkdata lnd;		/* holds linking data */
+	struct engine *eng;		/* parent engine that holds the brick */
+	struct Brick *next_brick;	/* ptr to the sibling brick. This may go away in future versions */
+	
+	struct brick_funcs *elib;	/* pointer to brick functions */
+} Brick __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /* creates an Brick and initializes the brick based on target */
 Brick *
@@ -168,5 +168,6 @@ void brick_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker);
  */
 enum {LINKER_LB = 3, 
       LINKER_DUP,
-      LINKER_MERGE};
+      LINKER_MERGE,
+      LINKER_PCAPR};
 

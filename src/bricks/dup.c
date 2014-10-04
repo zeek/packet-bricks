@@ -38,13 +38,7 @@ int32_t
 dup_init(Brick *brick, Linker_Intf *li)
 {
 	TRACE_BRICK_FUNC_START();
-	brick->private_data = calloc(1, sizeof(linkdata));
-	if (brick->private_data == NULL) {
-		TRACE_LOG("Can't create private context "
-			  "for duplicator\n");
-		TRACE_BRICK_FUNC_END();
-		return -1;
-	}
+	brick->private_data = NULL;
 	li->type = COPY;
 	TRACE_BRICK_FUNC_END();
 	return 1;
@@ -54,7 +48,7 @@ BITMAP
 dup_process(Brick *brick, unsigned char *buf)
 {
 	TRACE_BRICK_FUNC_START();
-	linkdata *lnd = brick->private_data;
+	linkdata *lnd = (linkdata *)(&brick->lnd);
 	BITMAP b;
 	int i;
 

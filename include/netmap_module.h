@@ -81,6 +81,13 @@ typedef struct netmap_iface_context {
 	uint64_t nmd_flags;			/* netmap desc flags */
 } netmap_iface_context __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
+/**
+ * Global function that helps push the packet into the netmap framework
+ */
+int32_t netmap_pcap_push_pkt(engine *eng, 
+			     const uint8_t *pkt, 
+			     const uint16_t len);
+/*---------------------------------------------------------------------*/
 /* try netmap-specific tx this many times */
 #define TX_RETRIES			5
 /* for more buffering */
