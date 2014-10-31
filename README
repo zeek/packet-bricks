@@ -78,6 +78,14 @@ _________________________________________________________________
 	Goodbye!
 _________________________________________________________________
 
+Packet bricks relies on netmap pipes to distribute traffic across
+multiple applications. Some OSes have netmap pipes disabled by
+default. Please use the following command to enable netmap pipes
+(if needed) in a packet bricks session:
+
+_________________________________________________________________
+	bricks> utilObj:enable_nmpipes()
+_________________________________________________________________
 
 In packet-bricks, the most important component is the pkteng module.
 It manages the reception and distribution of ingress traffic coming
@@ -134,8 +142,8 @@ instantiated packet engine can be used to link the LoadBalancer
 as:
 
 _________________________________________________________________
-	bricks> local lb = Brick.new("LoadBalancer", 2)
-	bricks> lb.connect_input("eth3")
+	bricks> lb = Brick.new("LoadBalancer", 2)
+	bricks> lb:connect_input("eth3")
 	bricks> lb:connect_output("eth3{0", "eth3{1", 
 				  "eth3{2", "eth3{3", "eth2")
 	bricks> pe:link(lb)
