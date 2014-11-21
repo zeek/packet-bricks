@@ -725,7 +725,7 @@ netmap_create_channel(char *in_name, char *out_name,
 	
 	/* reinitialize lnd if brick is reset */
 	lnd = (linkdata *)(&brick->lnd);
-	TRACE_LOG("brick: %p, local_desc: %p\n", brick, nmc->local_nmd);
+	TRACE_DEBUG_LOG("brick: %p, local_desc: %p\n", brick, nmc->local_nmd);
 
 	/* create a comm. interface */	
 	lnd->external_links[lnd->init_cur_idx] = calloc(1, sizeof(CommNode));

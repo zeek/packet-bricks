@@ -69,9 +69,9 @@ $(BINNAME): objs
 	mkdir -p $(BINDIR)
 	$(MSG) "   LD $@"
 	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)
-	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -d $$""@"> $(BINDIR)/$(BINNAME)-server
-	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
-	@echo "#!/bin/bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
+	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -d $$""@"> $(BINDIR)/$(BINNAME)-server
+	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
+	@printf "#!/usr/bin/env bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
 	chmod a+x $(BINDIR)/$(BINNAME)-server
 	chmod a+x $(BINDIR)/$(BINNAME)-shell
 	chmod a+x $(BINDIR)/$(BINNAME)-kill-server
@@ -86,9 +86,9 @@ $(BINNAME)-debug: objs-dbg
 	mkdir -p $(BINDIR)
 	$(MSG) "   LD $@-debug"
 	$(HIDE) $(CC) $(OBJDIR)/*.o $(LDFLAGS) -o $(BIN)
-	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -d $$""@" > $(BINDIR)/$(BINNAME)-server
-	@echo "#!/bin/bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
-	@echo "#!/bin/bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
+	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -d $$""@" > $(BINDIR)/$(BINNAME)-server
+	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
+	@printf "#!/usr/bin/env bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
 	chmod a+x $(BINDIR)/$(BINNAME)-server
 	chmod a+x $(BINDIR)/$(BINNAME)-shell
 	chmod a+x $(BINDIR)/$(BINNAME)-kill-server

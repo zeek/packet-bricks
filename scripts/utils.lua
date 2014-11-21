@@ -5,7 +5,7 @@
 STATS_PRINT_CYCLE_DEFAULT = 2
 SLEEP_TIMEOUT = 1
 PKT_BATCH=1024
-NETMAP_LIN_PARAMS_PATH="/sys/module/netmap_lin/parameters/"
+NETMAP_LIN_PARAMS_PATH="/sys/module/netmap/parameters/"
 NETMAP_PIPES=64
 NO_CPU_AFF=-1
 NO_QIDS=-1
