@@ -32,6 +32,27 @@ else
 		AC_SUBST(LUALIBPATH, /usr/lib)
 	fi
 fi
+
+a=1
+AC_CHECK_LIB(lua-5.1,lua_close,,[a=0],)
+if test $a == 1
+then
+	AC_SUBST(LIBLUANAME, -llua-5.1)
+else
+	b=1
+	AC_CHECK_LIB(lua5.1,lua_close,,[b=0],)
+	if test $b == 1
+	then
+		AC_SUBST(LIBLUANAME, -llua5.1)
+	fi
+fi
+
+#AC_CHECK_LIB(lua5.1,lua_close,,[a=0],)
+#if test $a == 1
+#then
+#	AC_SUBST(LIBLUANAME, -llua5.1)
+#fi 
+
 AC_ARG_WITH(stuff, [  --with-lua-include	  path to the lua5.1 header install root])
 if test "$with_lua_include" != ""
 then

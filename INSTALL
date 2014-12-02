@@ -12,9 +12,17 @@ Ubuntu requires the following debian packages:
 1- liblua5.1-dev	(Ubuntu Debian Package)
 2- lua5.1		(Ubuntu Debian Package)
 3- libpcap-dev		(Ubuntu Debian Package)
+4- libreadline-dev	(Ubuntu Debian Package)
+
+Fedora packages:
+1- compat-lua-devel	(Fedora Package)
+2- compat-lua		(Fedora Package)
+3- libpcap-devel	(Fedora Package)
+4- readline-devel	(Fedora Package)
 
 This program would work better if jemalloc library is installed.
-3- libjemalloc		(Ubuntu Debian Package)
+5- libjemalloc		(Ubuntu Debian Package), OR
+5- jemalloc-devel	(Fedora Package)
 
 FreeBSD users: please install the following packages
 1- lua51

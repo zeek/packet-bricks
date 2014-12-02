@@ -69,7 +69,7 @@
   ** CHANGE them if you want to improve this functionality (e.g., by using
   ** GNU readline and history facilities).
   */
-#if defined(LUA_USE_READLINE)
+#if defined(LUA_USEREADLINE)
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>

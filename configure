@@ -623,6 +623,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 JEINCPATH
 LUAINCPATH
+LIBLUANAME
 LUALIBPATH
 USEREADLINE
 EGREP
@@ -3360,6 +3361,121 @@ else
 
 	fi
 fi
+
+a=1
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_close in -llua-5.1" >&5
+$as_echo_n "checking for lua_close in -llua-5.1... " >&6; }
+if ${ac_cv_lib_lua_5_1_lua_close+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua-5.1  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_close ();
+int
+main ()
+{
+return lua_close ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua_5_1_lua_close=yes
+else
+  ac_cv_lib_lua_5_1_lua_close=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_5_1_lua_close" >&5
+$as_echo "$ac_cv_lib_lua_5_1_lua_close" >&6; }
+if test "x$ac_cv_lib_lua_5_1_lua_close" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBLUA_5_1 1
+_ACEOF
+
+  LIBS="-llua-5.1 $LIBS"
+
+else
+  a=0
+fi
+
+if test $a == 1
+then
+	LIBLUANAME=-llua-5.1
+
+else
+	b=1
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_close in -llua5.1" >&5
+$as_echo_n "checking for lua_close in -llua5.1... " >&6; }
+if ${ac_cv_lib_lua5_1_lua_close+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua5.1  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_close ();
+int
+main ()
+{
+return lua_close ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua5_1_lua_close=yes
+else
+  ac_cv_lib_lua5_1_lua_close=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua5_1_lua_close" >&5
+$as_echo "$ac_cv_lib_lua5_1_lua_close" >&6; }
+if test "x$ac_cv_lib_lua5_1_lua_close" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBLUA5_1 1
+_ACEOF
+
+  LIBS="-llua5.1 $LIBS"
+
+else
+  b=0
+fi
+
+	if test $b == 1
+	then
+		LIBLUANAME=-llua5.1
+
+	fi
+fi
+
+#AC_CHECK_LIB(lua5.1,lua_close,,[a=0],)
+#if test $a == 1
+#then
+#	AC_SUBST(LIBLUANAME, -llua5.1)
+#fi
+
 
 # Check whether --with-stuff was given.
 if test "${with_stuff+set}" = set; then :

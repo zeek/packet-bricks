@@ -1,6 +1,7 @@
 #---------------------------------------------------------------------#
 CC := @CC@
 LUALIBPATH := @LUALIBPATH@
+LUALIBNAME := @LIBLUANAME@
 LUAINCPATH := @LUAINCPATH@
 JEINCPATH := @JEINCPATH@
 CFLAGS := @CFLAGS@
@@ -26,8 +27,8 @@ export OSARCH
 export OBJDIR := $(shell pwd)/.objs
 export CFLAGS += -O3 -pipe -Wall -Wunused-function -Wextra -Werror -D_GNU_SOURCE -D__USE_GNU 
 ifeq ($(USEREADLINE),1)
-	DEBUG_CFLAGS += -DLUA_USE_READLINE
-	export CFLAGS += -DLUA_USE_READLINE
+	DEBUG_CFLAGS += -DLUA_USEREADLINE
+	export CFLAGS += -DLUA_USEREADLINE
 	export LDFLAGS += -lreadline
 endif
 export NETMAP_INCLUDE := -I$(shell pwd)/include/netmap
@@ -38,7 +39,7 @@ ifeq ($(OSARCH),FreeBSD)
 	export LDFLAGS += $(LIBS)
 else
 	export INCLUDE := -I$(shell pwd)/include -I$(LUAINCPATH)/
-	export LIBS := -L$(LUALIBPATH)/ -llua5.1 -lpthread -lpcap
+	export LIBS := -L$(LUALIBPATH)/ $(LUALIBNAME) -lpthread -lpcap
 
 	ifneq ($(strip $(JEINCPATH)),)
 		export INCLUDE += -I$(JEINCPATH)
