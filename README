@@ -10,6 +10,15 @@ connection will always end up in the same application). At the moment,
 pacet-bricks uses netmap packet I/O framework for receiving packets.
 It employs netmap pipes to forward packets to end host applications. 
 
+Before running packet-bricks, please make sure that you have
+installed the netmap driver successfully. You should first try
+running the sample pkt-gen binary (that is available in the netmap's
+examples/) directory to see if the driver is operational. Also
+make sure that all netmap-enabled interfaces are set to promiscuous
+mode.
+
+# sudo ifconfig eth3 promisc
+
 The following guide provides a walkthrough of the scripts/startup-*.lua
 files and also explains what this system is capable of.
 
