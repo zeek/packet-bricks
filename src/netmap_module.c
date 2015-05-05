@@ -293,7 +293,7 @@ share_packets(CommNode *cn)
 
  try_share_again:	
         /* scan all output rings; dr is the destination ring index */
-        for (dr = dst->first_tx_ring; i < n && dr <= dst->last_tx_ring; dr++) {
+        for (dr = dst->first_tx_ring; i < MIN(n, TXQ_MAX) && dr <= dst->last_tx_ring; dr++) {
                 struct netmap_ring *ring = NETMAP_TXRING(dst->nifp, dr);
 
                 __builtin_prefetch(ring);
@@ -301,7 +301,7 @@ share_packets(CommNode *cn)
                 if (nm_ring_empty(ring))
                         continue;
 
-                for  (; i < n && !nm_ring_empty(ring); i++) {
+                for  (; i < MIN(n, TXQ_MAX) && !nm_ring_empty(ring); i++) {
 			/* we have empty tx slots, swap the pkts now! */
                         struct netmap_slot *dst, *src;
 			struct netmap_ring *sr = x[i].ring;
@@ -319,7 +319,7 @@ share_packets(CommNode *cn)
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
                 }
         }
-        if (i < n) {
+        if (i < MIN(n, TXQ_MAX)) {
                 if (retry-- > 0) {
                         ioctl(cn->out_nmd->fd, NIOCTXSYNC);
                         goto try_share_again;
@@ -359,7 +359,7 @@ copy_packets(CommNode *cn)
         }
  try_copy_again:
 	/* scan all output rings; dr is the destination ring index */
-	for (dr = dst->first_tx_ring; i < n && dr <= dst->last_tx_ring; dr++) {
+	for (dr = dst->first_tx_ring; i < MIN(n, TXQ_MAX) && dr <= dst->last_tx_ring; dr++) {
 		struct netmap_ring *ring = NETMAP_TXRING(dst->nifp, dr);
 		
 		__builtin_prefetch(ring);
@@ -367,7 +367,7 @@ copy_packets(CommNode *cn)
 		if (nm_ring_empty(ring))
 			continue;
 		
-		for  (; i < n && !nm_ring_empty(ring); i++) {
+		for  (; i < MIN(n, TXQ_MAX) && !nm_ring_empty(ring); i++) {
 			/* we have empty tx slots, copy the pkts now! */
 			char *srcbuf, *dstbuf;
 			struct netmap_slot *dst, *src;
@@ -383,7 +383,7 @@ copy_packets(CommNode *cn)
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
 		}
 	}
-	if (i < n) {
+	if (i < MIN(n, TXQ_MAX)) {
 		if (retry-- > 0) {
 			ioctl(cn->out_nmd->fd, NIOCTXSYNC);
 			goto try_copy_again;

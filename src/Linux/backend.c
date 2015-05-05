@@ -37,6 +37,10 @@
 #include "backend.h"
 /* for epoll */
 #include <sys/epoll.h>
+#ifndef ENABLE_EPOLL
+/* for poll */
+#include <poll.h>
+#endif
 /* for socket */
 #include <sys/socket.h>
 /* for sockaddr_in */
@@ -269,6 +273,7 @@ create_listening_socket_for_eng(engine *eng)
 	TRACE_BACKEND_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+#if ENABLE_EPOLL
 /**
  * XXX - This function is being revised
  * Services incoming request from userland applications and takes
@@ -465,4 +470,66 @@ initiate_backend(engine *eng)
 
 	TRACE_BACKEND_FUNC_END();
 }
+/*---------------------------------------------------------------------*/
+#else
+/**
+ * Creates listening socket to serve as a conduit between userland
+ * applications and the system. Starts listening on all sockets 
+ * thereafter.
+ */
+void
+initiate_backend(engine *eng)
+{
+	TRACE_BACKEND_FUNC_START();
+	struct pollfd pollfd[MAX_INLINKS];
+	uint polli;
+	uint i;
+
+	/* initializing main while loop parameters */
+	polli = 0;
+	memset(pollfd, 0, sizeof(pollfd));
+
+	/* create listening socket */
+	create_listening_socket_for_eng(eng);
+
+	TRACE_LOG("Engine %s is listening on port %d\n", 
+		  eng->name, eng->listen_port);
+
+	/* adjust pcapr context in engine */
+	if (!strcmp(eng->FIRST_BRICK(esrc)->brick->elib->getId(), "PcapReader")) {
+		eng->pcapr_context = eng->FIRST_BRICK(esrc)->brick->private_data;		
+	}
+
+	/* register iom socket */
+	for (i = 0; i < eng->no_of_sources; i++) {
+		pollfd[polli].fd = eng->esrc[i]->dev_fd;
+		pollfd[polli].events = POLLIN | POLLRDNORM;
+		pollfd[polli].revents = 0;
+		++polli;
+	}
+
+	/* keep on running till engine stops */
+	while (eng->run == 1) {
+		i = poll(pollfd, polli+1, 2500);
+
+		/* if no packet came up, try polling again */
+		if (i <= 0) continue;
+
+		for (i = 0; i < eng->no_of_sources; i++)
+			if (!(pollfd[i].revents & POLLERR))
+				eng->iom.callback(eng->esrc[i]);
+#if 0
+			/* XXX - temporarily disabled */
+			/* process app reqs */
+			else if ((int)chlist[n].ident == eng->listen_fd)
+				process_request_backend(eng, chlist);
+#endif
+		/* pcap handling.. */
+		if (eng->pcapr_context != NULL)
+			process_pcap_read_request(eng, eng->pcapr_context);
+	}
+
+	TRACE_BACKEND_FUNC_END();
+}
+#endif
 /*---------------------------------------------------------------------*/

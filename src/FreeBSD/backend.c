@@ -366,7 +366,8 @@ initiate_backend(engine *eng)
 		if (i <= 0) continue;
 
 		for (i = 0; i < eng->no_of_sources; i++)
-			eng->iom.callback(eng->esrc[i]);
+			if (!(pollfd[i].revents & POLLERR))
+				eng->iom.callback(eng->esrc[i]);
 #if 0
 			/* XXX - temporarily disabled */
 			/* process app reqs */
