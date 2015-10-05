@@ -39,6 +39,11 @@
 #include "main.h"
 /* for bricks */
 #include "brick.h"
+/* for string functions on FreeBSD */
+#if defined(__FreeBSD__)
+#include <string.h>
+#endif
+
 /*---------------------------------------------------------------------*/
 extern volatile uint32_t stop_processing;
 #define METATABLE		PLATFORM_NAME" Metatable"
