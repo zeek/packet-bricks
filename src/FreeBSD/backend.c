@@ -342,8 +342,8 @@ initiate_backend(engine *eng)
 	/* create listening socket */
 	create_listening_socket_for_eng(eng);
 
-	TRACE_LOG("Engine %s is listening on port %d\n", 
-		  eng->name, eng->listen_port);
+	TRACE_DEBUG_LOG("Engine %s is listening on port %d\n", 
+			eng->name, eng->listen_port);
 
 	/* adjust pcapr context in engine */
 	if (!strcmp(eng->FIRST_BRICK(esrc)->brick->elib->getId(), "PcapReader")) {

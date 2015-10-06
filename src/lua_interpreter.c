@@ -330,7 +330,10 @@ load_startup(lua_State *L)
         if (fname != NULL) {
                 if(stat(fname, &st) != -1) {
                         dofile(L, fname);
-                }
+                } else {
+			TRACE_FUNC_END();
+			TRACE_ERR("File %s does not exist!\n", fname);
+		}
         }
 
 	TRACE_LUA_FUNC_END();

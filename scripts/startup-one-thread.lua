@@ -107,6 +107,7 @@ function stop()
 	 --pe:show_stats()
 	 BRICKS.show_stats()
 
+	 print ("Stopping engine e0")
 	 pe:stop()
 	 utilObj:sleep(SLEEP_TIMEOUT)
 

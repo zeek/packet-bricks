@@ -83,10 +83,10 @@ function stop4()
 	 BRICKS.show_stats()
 	 for cnt = 0, 3 do
 	     	 local pe = PktEngine.retrieve("e" .. cnt)
+	     	 print ("Stopping engine e" .. cnt)
 		 pe:stop()
+		 utilObj:sleep(SLEEP_TIMEOUT)
 	 end
-
-	 utilObj:sleep(SLEEP_TIMEOUT)
 
 	 for cnt = 0, 3 do
 	     	 local pe = PktEngine.retrieve("e" .. cnt)

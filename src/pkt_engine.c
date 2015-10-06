@@ -456,13 +456,13 @@ pktengines_list_stats(FILE *f)
 	total_pkts = total_bytes = 0;
 	fprintf(f, "----------------------------------------- ENGINE STATISTICS");
 	fprintf(f, " --------------------------------------------\n");
-	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt \t\t Listen-port\n");
+	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt\n");// \t\t Listen-port\n");
 	TAILQ_FOREACH(eng, &engine_list, entry) {
-		fprintf(f, "%s \t\t %10llu \t\t %11llu \t\t\t%d\n",
+		fprintf(f, "%s \t\t %10llu \t\t %11llu\n"/* \t\t\t%d\n"*/,
 			eng->name, 
 			(long long unsigned int)eng->pkt_count, 
-			(long long unsigned int)eng->byte_count,
-			eng->listen_port);
+			(long long unsigned int)eng->byte_count/*,
+								 eng->listen_port*/);
 		total_pkts += eng->pkt_count;
 		total_bytes += eng->byte_count;
 	}
