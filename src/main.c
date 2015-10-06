@@ -359,7 +359,13 @@ main(int argc, char **argv)
 	 * if the user wants to daemonize and the process 
 	 * is the child, then jump to accepting requests...
 	 */
-	if (pc_info.daemonize && rc == 0) start_listening_reqs();
+	if (pc_info.daemonize && rc == 0) {
+#ifdef PASSIVE_MODE
+		start_listening_reqs();
+#else
+		while (1) sleep(PAUSE_PERIOD);
+#endif
+	}
 	
 	TRACE_FUNC_END();
 	clean_exit(EXIT_SUCCESS);

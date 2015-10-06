@@ -583,7 +583,6 @@ netmap_delete_all_channels(Brick *brick)
 		}
 		if (cn->brick != NULL) {
 			netmap_delete_all_channels(cn->brick);
-			brick->elib->deinit(cn->brick);
 			cn->brick = NULL;
 		}
 		free(cn);
