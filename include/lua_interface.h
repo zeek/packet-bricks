@@ -52,7 +52,7 @@ typedef struct PktEngine_Intf {
 
 /**
  * Struct that accepts lua commands corresponding to the 
- * LoadBalance/Duplicate/Merge/Filter/? abstract. All resource management 
+ * LoadBalance/Duplicate/Merge/Filter/Dummy/? abstract. All resource management 
  * pertaining to this struct is governed by the LUA interpreter.
  *
  * Garbage collection is implemented in LUA...

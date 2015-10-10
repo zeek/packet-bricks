@@ -197,7 +197,13 @@ do_daemonize()
 		TRACE_ERR("Can't daemonize. Could not fork!\n");
 	}
 	if (pid == 0) {
-		if ((fd = open("/dev/null", O_RDWR)) >= 0) {
+		if ((fd =
+#ifdef DEBUG 
+		     open(FILE_DEBUG, O_CREAT | O_TRUNC | O_RDWR)
+#else
+		     open(FILE_IGNORE, O_RDWR)
+#endif
+		     ) >= 0) {
 			dup2(fd, 0);
 			dup2(fd, 1);
 			dup2(fd, 2);

@@ -480,7 +480,7 @@ static int
 linker_help(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
-	fprintf(stdout, "LoadBalance/Duplicator/Merge/Filter/? Commands:\n"
+	fprintf(stdout, "LoadBalance/Duplicator/Merge/Filter/Dummy/? Commands:\n"
 		"    help()\n"
 		"    new([<split-mode>])\n"
 		"    connect_input(<interfaces>)\n"

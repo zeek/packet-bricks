@@ -48,11 +48,11 @@ function init()
 
 	 -- setup simple loadbalancer (setup to debug FreeBSD version)
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:simple_lbconfig(pe)
+	 --sampleSetup:simple_lbconfig(pe, "p7p1")
 
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
-	 sampleSetup:lb_config(pe, "eth3", "eth2")
+	 --sampleSetup:lb_config(pe, "eth3", "eth2")
 
 	 -- setup dup/lb config
 	 -- (see configs/single-threaded-setups.lua file)
@@ -80,6 +80,11 @@ function init()
 	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:pcap_config(pe, "eth3")
+
+	 -- setup dummy config (for performance testing)
+	 -- (see config/single-threaded-setups.lua file)
+	 sampleSetup:dummy_config(pe, "p7p1")
+	 
 end
 -----------------------------------------------------------------------
 --start function  __starts pkteng and prints overall per sec__
@@ -138,9 +143,9 @@ end
 -------- __This prints out the __pkt_engine__ help menu__
 -- PktEngine.help()
 -------- __Initialize the system__
--- init()
+init()
 -------- __Start the engine__
--- start()
+start()
 -------- __Stop the engine__
 -- stop()
 -------- __The following commands quits the session__

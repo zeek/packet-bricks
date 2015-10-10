@@ -25,39 +25,63 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __MAIN_H__
-#define __MAIN_H__
+/* for Brick struct */
+#include "brick.h"
+/* for bricks logging */
+#include "bricks_log.h"
+/* for engine declaration */
+#include "pkt_engine.h"
+/* for strcmp */
+#include <string.h>
 /*---------------------------------------------------------------------*/
-/**
- * This is the main header file for main.c
- * For now, it contains the struct definition
- * that contains global variables of the system
- */
-/*---------------------------------------------------------------------*/
-/**
- * PacInfo stuct - contains data that is picked up from the command-line
- *		 - and filled in this struct. Batch size gets the default
- *		 - number of packets that needs to be picked up from the
- *		 - interface at one time. lua_startup file contains the
- *		 - the LUA script that will be interpreted by bricks...
- *		 - ...plus a few others
- */
-typedef struct PacInfo {
-	uint16_t batch_size; /* read these many packets per read */
-	const unsigned char *lua_startup_file; /* path to lua startup file 
-						  given at cmd line */	
-	uint8_t daemonize; /* do we have to daemonize the process? */
-	uint8_t rshell; 	/* do we have to make a remote shell? */
-	int8_t *rshell_args; /* remote shell args: "ipaddr:port" */
-} BricksInfo __attribute__((aligned(__WORDSIZE)));
+int32_t
+dummy_init(Brick *brick, Linker_Intf *li)
+{
+	TRACE_BRICK_FUNC_START();
+	brick->private_data = NULL;
+	li->type = SHARE;
+	TRACE_BRICK_FUNC_END();
 
-extern BricksInfo pc_info;
+	return 1;
+}
 /*---------------------------------------------------------------------*/
-//#define PASSIVE_MODE			1
-#define DEFAULT_BATCH_SIZE		512
-#define PAUSE_PERIOD			1 /* in secs */
-#define FILE_PRINT_TIMER		5 /* in secs */
-#define FILE_IGNORE			"/dev/null"
-#define FILE_DEBUG			"/tmp/bricks.dbg"
+BITMAP
+dummy_process(Brick *brick, unsigned char *buf)
+{
+	TRACE_BRICK_FUNC_START();
+	BITMAP b;
+
+	/* straigt in... and straight out */
+	INIT_BITMAP(b);
+	SET_BIT(b, 0);
+	TRACE_BRICK_FUNC_END();
+	return b;
+	UNUSED(brick);
+	UNUSED(buf);
+}
 /*---------------------------------------------------------------------*/
-#endif /* !__MAIN_H__ */
+void
+dummy_deinit(Brick *brick)
+{
+	TRACE_BRICK_FUNC_START();
+	free(brick);
+	TRACE_BRICK_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+char *
+dummy_getid()
+{
+	TRACE_BRICK_FUNC_START();
+	static char *name = "Dummy";
+	return name;
+	TRACE_BRICK_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+brick_funcs dummyfuncs = {
+	.init			= 	dummy_init,
+	.link			=	brick_link,
+	.process		= 	dummy_process,
+	.deinit			= 	dummy_deinit,
+	.getId			=	dummy_getid
+};
+/*---------------------------------------------------------------------*/

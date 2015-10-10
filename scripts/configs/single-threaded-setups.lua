@@ -119,10 +119,10 @@ end
 --simple_lbconfig  __a trivial example of the load balancer usage__
 --		   __specifically designed for FreeBSD config as__
 --		   __it uses hard-coded "em0" interface name__
-function C:simple_lbconfig(pe)
-	 local lb = Brick.new("LoadBalancer", 2)
-	 lb:connect_input("em0") 
-         lb:connect_output("em0{0", "em0{1")
+function C:simple_lbconfig(pe, intf)
+	 local lb = Brick.new("LoadBalancer", 4)
+	 lb:connect_input(intf) 
+         lb:connect_output(intf .. "{0", intf .. "{1")
 	 -- now link it!
 	 pe:link(lb)
 end
@@ -133,6 +133,15 @@ end
 function C:pcap_config(pe, intf)
 	 local pr = Brick.new("PcapReader")
 	 pr:connect_input(PCAPDIR, intf) 
+         pr:connect_output(intf .. "{0")
+	 -- now link it!
+	 pe:link(pr)
+end
+-----------------------------------------------------------------------
+--dummy_config     __a trivial example for performance testing__
+function C:dummy_config(pe, intf)
+	 local pr = Brick.new("Dummy")
+	 pr:connect_input(intf) 
          pr:connect_output(intf .. "{0")
 	 -- now link it!
 	 pe:link(pr)
