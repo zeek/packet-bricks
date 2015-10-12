@@ -216,17 +216,19 @@ pcapr_link_next_pcap(engine *eng)
 	TRACE_BRICK_FUNC_START();
 	PcapReaderContext *prc = (PcapReaderContext *)eng->pcapr_context;
 	if (prc == NULL ||
-	    prc->count_pcaps == prc->current_idx) {
+	    prc->count_pcaps == prc->current_idx + 1) {
 		if (prc != NULL) {
 			eng->pcapr_context = NULL;
 			pcap_close(prc->handler[prc->current_idx - 1]);
 		}
+		TRACE_LOG("End of all pcap files. Quitting now.\n");
+		exit(EXIT_SUCCESS);
 		TRACE_BRICK_FUNC_END();
 		return;
 	}
 
 	int idx = prc->current_idx++;
-	TRACE_DEBUG_LOG("index selected is: %d\n", idx);
+	TRACE_LOG("index selected is: %d\n", idx);
 	/*
 	 * if idx is greater than 1, 
 	 * then close the previous pcap handle
@@ -276,13 +278,15 @@ void
 pcapr_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 {
 	TRACE_BRICK_FUNC_START();
-	int i, j, rc;
+	int i, j, rc, flag;
 	engine *eng;
 	linkdata *lbd;
 	int div_type = (linker->type == LINKER_DUP) ? COPY : SHARE;
 	
 	lbd = (linkdata *)(&from->lnd);
 	eng = engine_find(from->eng->name);
+	flag = 0;
+	
 	/* sanity engine check */
 	if (eng == NULL) {
 		TRACE_LOG("Can't find engine with name: %s\n",
@@ -318,10 +322,17 @@ pcapr_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 				  "for load balancer\n");
 			TRACE_BRICK_FUNC_END();
 			return;
+		} else {
+			TRACE_LOG("Link %s has %d out links\n", linker->input_link[1],
+				  lbd->count);
 		}
+	} else {
+		flag = 1;
 	}
 
-	j =  (!strcmp(from->elib->getId(), "PcapReader")) ? 1 : 0;
+	/* XXX - This line may go away in future revisions */
+	if (flag == 1) j = 0;
+	else j =  (!strcmp(from->elib->getId(), "PcapReader")) ? 1 : 0;
 
 	for (; j < linker->input_count; j++) {
 		for (i = 0; i < linker->output_count; i++) {

@@ -89,7 +89,7 @@ int32_t netmap_pcap_push_pkt(engine *eng,
 			     const uint16_t len);
 /*---------------------------------------------------------------------*/
 /* try netmap-specific tx this many times */
-#define TX_RETRIES			5
+#define TX_RETRIES			20
 /* for more buffering */
 #define NM_EXTRA_BUFS			8
 /* for interface initialization */

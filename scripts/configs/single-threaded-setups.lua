@@ -3,7 +3,7 @@
 -- S I N G L E - T H R E A D E D - S E T U P S
 -----------------------------------------------------------------------
 local C={};
-PCAPDIR="pcapsamples/"
+PCAPDIR="/usr/home/ajamshed/"
 
 
 -----------------------------------------------------------------------
@@ -122,7 +122,7 @@ end
 function C:simple_lbconfig(pe, intf)
 	 local lb = Brick.new("LoadBalancer", 4)
 	 lb:connect_input(intf) 
-         lb:connect_output(intf .. "{0", intf .. "{1")
+         lb:connect_output(intf .. "{0", intf .. "{1", intf .. "{2", intf .. "{3")
 	 -- now link it!
 	 pe:link(lb)
 end
@@ -132,8 +132,14 @@ end
 --		   __revised__
 function C:pcap_config(pe, intf)
 	 local pr = Brick.new("PcapReader")
-	 pr:connect_input(PCAPDIR, intf) 
+	 pr:connect_input(PCAPDIR, intf)
+	 --local pr = Brick.new("Dummy")
+	 --pr:connect_input(intf)
          pr:connect_output(intf .. "{0")
+	 --local d = Brick.new("Duplicator")
+	 --d:connect_input(intf .. "}0")
+	 --d:connect_output(intf .. "{1", intf .. "{2", intf .. "{3", intf .. "{4")
+	 --pr:link(d)
 	 -- now link it!
 	 pe:link(pr)
 end

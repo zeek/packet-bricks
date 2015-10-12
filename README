@@ -13,9 +13,12 @@ It employs netmap pipes to forward packets to end host applications.
 Before running packet-bricks, please make sure that you have
 installed the netmap driver successfully. You should first try
 running the sample pkt-gen binary (that is available in the netmap's
-examples/) directory to see if the driver is operational. Also
-make sure that all netmap-enabled interfaces are set to promiscuous
-mode.
+examples/) directory to see if the driver is operational. The netmap
+module is continuously being updated with enhancements and bug fixes
+(as is common for all open source tools including packet bricks). Before
+using packet bricks, please make sure that you have downloaded and
+updated the netmap kernel module with its latest version. Finally,
+make sure that all netmap-enabled interfaces are set to promiscuous mode.
 
 # sudo ifconfig eth3 promisc
 
@@ -225,5 +228,10 @@ scripts/startup-multi-threads.lua).
 NOTE: Please install the required libraries mentioned in INSTALL file.
 As the system is still under active development, the program may
 exhibit unexpected behavior if libraries are not installed.
+
+The README file in the netmap/ directory contains pointers
+on how to enhance packet I/O performance. We suggest you to follow
+their guide for extracting maximum performance out of packet
+bricks as well.
 
 Please report bugs to: ajamshed@icsi.berkeley.edu

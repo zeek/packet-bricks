@@ -360,23 +360,25 @@ initiate_backend(engine *eng)
 
 	/* keep on running till engine stops */
 	while (eng->run == 1) {
-		i = poll(pollfd, polli+1, 2500);
-
-		/* if no packet came up, try polling again */
-		if (i <= 0) continue;
-
-		for (i = 0; i < eng->no_of_sources; i++)
-			if (!(pollfd[i].revents & POLLERR))
-				eng->iom.callback(eng->esrc[i]);
-#if 0
-			/* XXX - temporarily disabled */
-			/* process app reqs */
-			else if ((int)chlist[n].ident == eng->listen_fd)
-				process_request_backend(eng, chlist);
-#endif
 		/* pcap handling.. */
 		if (eng->pcapr_context != NULL)
 			process_pcap_read_request(eng, eng->pcapr_context);
+		else { /* get input from interface */
+			i = poll(pollfd, polli+1, 2500);
+			
+			/* if no packet came up, try polling again */
+			if (i <= 0) continue;
+			
+			for (i = 0; i < eng->no_of_sources; i++)
+				if (!(pollfd[i].revents & POLLERR))
+					eng->iom.callback(eng->esrc[i]);
+#if 0
+			/* XXX - temporarily disabled */
+			/* process app reqs */
+				else if ((int)chlist[n].ident == eng->listen_fd)
+					process_request_backend(eng, chlist);
+#endif
+		}
 	}
 
 	TRACE_BACKEND_FUNC_END();

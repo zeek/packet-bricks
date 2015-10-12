@@ -319,13 +319,17 @@ share_packets(CommNode *cn)
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
                 }
         }
+
         if (i < MIN(n, TXQ_MAX)) {
                 if (retry-- > 0) {
                         ioctl(cn->out_nmd->fd, NIOCTXSYNC);
                         goto try_share_again;
-                }
+		} else {
+			TRACE_LOG("Giving up for now\n");
+		}
                 TRACE_DEBUG_LOG("%d buffers leftover", n - i);
         }
+
         cn->cur_txq = 0;
 	
 	TRACE_NETMAP_FUNC_END();
@@ -387,6 +391,8 @@ copy_packets(CommNode *cn)
 		if (retry-- > 0) {
 			ioctl(cn->out_nmd->fd, NIOCTXSYNC);
 			goto try_copy_again;
+		} else {
+			TRACE_LOG("Giving up for now\n");
 		}
 		TRACE_DEBUG_LOG("%d buffers leftover", n - i);
 	}
@@ -539,10 +545,9 @@ netmap_callback(void *engsrcptr)
 				update_cnode_ptrs(rxring, brick, eng, src);
 			}
 		}
+		flush_all_cnodes(brick, eng);
 	}
 
-	flush_all_cnodes(brick, eng);
-		
 	TRACE_NETMAP_FUNC_END();
 	return 0;
 }
@@ -724,7 +729,7 @@ netmap_create_channel(char *in_name, char *out_name,
 	
 	/* reinitialize lnd if brick is reset */
 	lnd = (linkdata *)(&brick->lnd);
-	TRACE_DEBUG_LOG("brick: %p, local_desc: %p\n", brick, nmc->local_nmd);
+	TRACE_LOG("brick: %p, local_desc: %p\n", brick, nmc->local_nmd);
 
 	/* create a comm. interface */	
 	lnd->external_links[lnd->init_cur_idx] = calloc(1, sizeof(CommNode));
@@ -809,6 +814,9 @@ netmap_pcap_push_pkt(engine *eng, const uint8_t *pkt, const uint16_t len)
 		poll(&pfd, 1, EPOLL_TIMEOUT);
 		netmap_callback(engsrc);
 	}
+
+	eng->byte_count += len;
+	eng->pkt_count++;
 	
 	TRACE_NETMAP_FUNC_END();
 	
