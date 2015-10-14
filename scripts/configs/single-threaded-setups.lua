@@ -127,10 +127,10 @@ function C:simple_lbconfig(pe, intf)
 	 pe:link(lb)
 end
 -----------------------------------------------------------------------
---pcap_config      __a trivial example for reading pcap files__
+--pcapr_config     __a trivial example for reading pcap files__
 --		   __ more details will be added as the brick__
 --		   __revised__
-function C:pcap_config(pe, intf)
+function C:pcapr_config(pe, intf)
 	 local pr = Brick.new("PcapReader")
 	 pr:connect_input(PCAPDIR, intf)
 	 --local pr = Brick.new("Dummy")
@@ -142,6 +142,24 @@ function C:pcap_config(pe, intf)
 	 --pr:link(d)
 	 -- now link it!
 	 pe:link(pr)
+end
+-----------------------------------------------------------------------
+--pcapw_config     __a trivial example for writing pcap files__
+function C:pcapw_config(pe, intf)
+	 local lb = Brick.new("LoadBalancer", 4)
+	 lb:connect_input(intf)
+         lb:connect_output(intf .. "{0", intf .. "{1", intf .. "{2", intf .. "{3")
+	 local pw1 = Brick.new("PcapWriter")
+	 pw1:connect_input(intf .. "}0")
+	 pw1:connect_output("0.pcap")
+	 lb:link(pw1)
+	 local pw2 = Brick.new("PcapWriter")
+	 pw2:connect_input(intf .. "}2")
+	 pw2:connect_output("2.pcap")
+	 lb:link(pw2)
+
+	 -- now link it!
+	 pe:link(lb)
 end
 -----------------------------------------------------------------------
 --dummy_config     __a trivial example for performance testing__

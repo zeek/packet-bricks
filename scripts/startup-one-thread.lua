@@ -61,7 +61,11 @@ function init()
 	 -- setup dup config
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:dup_config(pe, "eth3")
-	 
+
+	 -- setup pcapwrtr config
+	 -- (see configs/single-threaded-setups.lua file)
+	 --sampleSetup:pcapw_config(pe, "ix0")
+
 	 -- setup lb/mrg config
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:lbmrg_config(pe, "eth3")
@@ -77,8 +81,9 @@ function init()
 	 --sampleSetup:lbfilt_config(pe)
 
 	 -- setup pcaprdr config
+	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:pcap_config(pe, "ix0")
+	 --sampleSetup:pcapr_config(pe, "ix0")
 
 	 -- setup dummy config (for performance testing)
 	 -- (see config/single-threaded-setups.lua file)
@@ -142,9 +147,9 @@ end
 -------- __This prints out the __pkt_engine__ help menu__
 -- PktEngine.help()
 -------- __Initialize the system__
---init()
+-- init()
 -------- __Start the engine__
---start()
+-- start()
 -------- __Stop the engine__
 -- stop()
 -------- __The following commands quits the session__

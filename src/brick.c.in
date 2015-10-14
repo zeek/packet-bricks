@@ -89,6 +89,18 @@ brick_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 		return;	      
 	}
 
+	switch (linker->type) {
+	case LINKER_DUP:
+		div_type = COPY;
+		break;
+	case LINKER_WRITE:
+		div_type = WRITE;
+		break;
+	default:
+		div_type = SHARE;
+		break;
+	}
+	
 	if (eng->esrc == NULL) {
 		strcpy(lbd->ifname, (char *)linker->input_link[0]);
 		lbd->count = linker->output_count;

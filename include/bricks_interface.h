@@ -43,6 +43,8 @@
  * 		     	  interface to a monitoring daemon
  *	- COPY: 	  for passing copy of the packet to the 
  * 			  monitoring daemon
+ *	- WRITE:       	  for writing network traffic in pcap
+ *			  format
  *	- LIMIT: 	  for rate-limiting packets... 
  * 	- PKT_NOTFIY:	  hook-up function for a monitor
  * 			  once a certain packet count threshold
@@ -56,6 +58,7 @@ typedef enum {
 	DROP,
 	SHARE,
 	COPY,
+	WRITE,
 	LIMIT,
 	PKT_NOTIFY,
 	BYTE_NOTIFY

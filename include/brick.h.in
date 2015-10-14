@@ -168,6 +168,7 @@ void brick_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker);
  */
 enum {LINKER_LB = 3, 
       LINKER_DUP,
+      LINKER_WRITE,
       LINKER_MERGE,
       LINKER_PCAPR};
 

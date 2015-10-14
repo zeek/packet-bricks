@@ -2,7 +2,7 @@
 -----------------------------------------------------------------------
 -- MACROS-&-UTILITY-FUNCS
 -----------------------------------------------------------------------
-STATS_PRINT_CYCLE_DEFAULT = 2000
+STATS_PRINT_CYCLE_DEFAULT = 20
 SLEEP_TIMEOUT = 2
 PKT_BATCH=1024
 NETMAP_LIN_PARAMS_PATH="/sys/module/netmap/parameters/"

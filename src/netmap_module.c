@@ -635,6 +635,13 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 	uint32_t i;
 	CommNode *cn;
 	linkdata *lnd = (linkdata *)(&brick->lnd);
+
+	if (lnd->tgt == WRITE) {
+		TRACE_NETMAP_FUNC_END();
+		TRACE_ERR("%s can't have a pipelined brick!\n",
+			  brick->elib->getId());
+	}
+	
 	for (i = 0; i < lnd->count; i++) {
 		cn = lnd->external_links[i];
 		if (!strcmp(cn->nm_ifname, ifname)) {
@@ -742,9 +749,9 @@ netmap_create_channel(char *in_name, char *out_name,
 
 	cn = (CommNode *)lnd->external_links[lnd->init_cur_idx];
 
-	if (out_name[0] == '>') {
+	if (t == WRITE) {
 		cn->pd = pcap_open_dead(DLT_EN10MB, ETH_FRAME_LEN);
-		cn->pdumper = pcap_dump_open(cn->pd, &out_name[1]);
+		cn->pdumper = pcap_dump_open(cn->pd, out_name);
 		fd = 0;
 	} else {		
 		/* setting the name */
