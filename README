@@ -193,13 +193,13 @@ _________________________________________________________________
 	bricks> pe.show_stats()
 _________________________________________________________________
 
-Sample applications (e.g. tcpdump) can read ingress traffic from 
-packet-bricks using following command line arguments:
+Sample applications (e.g. netmap's pkt-gen) can read ingress
+traffic from packet-bricks using following command line arguments:
 _________________________________________________________________
-	$ sudo tcpdump -i netmap:eth3}0 &
-	$ sudo tcpdump -i netmap:eth3}1 &
-	$ sudo tcpdump -i netmap:eth3}2 &
-	$ sudo tcpdump -i netmap:eth3}3 &
+	$ sudo ./pkt-gen -i netmap:eth3}0 -f rx &
+	$ sudo ./pkt-gen -i netmap:eth3}1 -f rx &
+	$ sudo ./pkt-gen -i netmap:eth3}2 -f rx &
+	$ sudo ./pkt-gen -i netmap:eth3}3 -f rx &
 _________________________________________________________________
 
 Please note that you cannot unlink a brick from the pkteng

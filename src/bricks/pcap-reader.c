@@ -45,6 +45,8 @@
 #include "netmap_module.h"
 /* for getting ethernet frame length */
 #include <net/ethernet.h>
+/* for hash function */
+#include "pkt_hash.h"
 /*---------------------------------------------------------------------*/
 /**
  * PcapReaderContext -
@@ -171,9 +173,19 @@ pcapr_process(Brick *brick, unsigned char *buf)
 	TRACE_BRICK_FUNC_START();
 	PcapReaderContext *prc = (PcapReaderContext *)brick->private_data;
 	BITMAP b;
+	linkdata *lnd;
+	uint key;
 
 	INIT_BITMAP(b);
-	SET_BIT(b, 0);
+	lnd = &(brick->lnd);
+	
+	/* if there is only 1 channel, no need to compute hash */
+	if (lnd->count == 1) {
+		SET_BIT(b, 0);
+		return b;
+	}
+	key = pkt_hdr_hash(buf, 4, lnd->level) % lnd->count;
+	SET_BIT(b, key);
 	
 	TRACE_BRICK_FUNC_END();
 	UNUSED(prc);

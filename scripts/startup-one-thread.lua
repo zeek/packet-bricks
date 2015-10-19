@@ -81,7 +81,6 @@ function init()
 	 --sampleSetup:lbfilt_config(pe)
 
 	 -- setup pcaprdr config
-	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
 	 --sampleSetup:pcapr_config(pe, "ix0")
 

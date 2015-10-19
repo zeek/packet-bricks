@@ -128,18 +128,13 @@ function C:simple_lbconfig(pe, intf)
 end
 -----------------------------------------------------------------------
 --pcapr_config     __a trivial example for reading pcap files__
---		   __ more details will be added as the brick__
---		   __revised__
+--		   __adding more output nodes will divide traffic__
+--		   __based on load balancing hashing algo        __
 function C:pcapr_config(pe, intf)
 	 local pr = Brick.new("PcapReader")
 	 pr:connect_input(PCAPDIR, intf)
-	 --local pr = Brick.new("Dummy")
-	 --pr:connect_input(intf)
-         pr:connect_output(intf .. "{0")
-	 --local d = Brick.new("Duplicator")
-	 --d:connect_input(intf .. "}0")
-	 --d:connect_output(intf .. "{1", intf .. "{2", intf .. "{3", intf .. "{4")
-	 --pr:link(d)
+	 pr:connect_output(intf .. "{0")
+         --pr:connect_output(intf .. "{0", intf .. "{1", intf .. "{2", intf .. "{3")
 	 -- now link it!
 	 pe:link(pr)
 end
@@ -158,6 +153,10 @@ function C:pcapw_config(pe, intf)
 	 pw2:connect_output("2.pcap")
 	 lb:link(pw2)
 
+	 --local d = Brick.new("Dummy")
+	 --d:connect_input("2.pcap")
+	 --d:connect_output(intf .. "}4")
+	 --pw2:link(d)
 	 -- now link it!
 	 pe:link(lb)
 end
