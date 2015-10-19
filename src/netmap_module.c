@@ -636,7 +636,7 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 	CommNode *cn;
 	linkdata *lnd = (linkdata *)(&brick->lnd);
 
-	if (/*lnd->tgt == WRITE*/!strcmp(brick->elib->getId(), "PcapWriter") ||
+	if (!strcmp(brick->elib->getId(), "PcapWriter") ||
 	    !strcmp(brick->elib->getId(), "PcapReader")) {
 		TRACE_NETMAP_FUNC_END();
 		TRACE_ERR("%s can't have a pipelined brick!\n",
@@ -812,7 +812,6 @@ netmap_pcap_push_pkt(engine *eng, const uint8_t *pkt, const uint16_t len)
 		TRACE_NETMAP_FUNC_END();
 		TRACE_ERR("CommNode can't be NULL!!\n");
 	}
-	//cn = (CommNode *)lnd->external_links[0];
 
 	local_nmd = (struct nm_desc *)nmc->local_nmd;
 
@@ -835,7 +834,7 @@ netmap_pcap_push_pkt(engine *eng, const uint8_t *pkt, const uint16_t len)
 			pfd.events = POLLOUT | POLLWRNORM;
 			pfd.revents = 0;
 		}
-		poll(&pfd, 1, -1/*EPOLL_TIMEOUT*/);
+		poll(&pfd, 1, -1);	/* EPOLL_TIMEOUT */
 		netmap_callback(engsrc);
 	}
 
