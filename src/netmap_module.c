@@ -325,7 +325,7 @@ share_packets(CommNode *cn)
                         ioctl(cn->out_nmd->fd, NIOCTXSYNC);
                         goto try_share_again;
 		} else {
-			TRACE_LOG("Giving up for now\n");
+			TRACE_DEBUG_LOG("Giving up for now\n");
 		}
                 TRACE_DEBUG_LOG("%d buffers leftover", n - i);
         }
@@ -392,7 +392,7 @@ copy_packets(CommNode *cn)
 			ioctl(cn->out_nmd->fd, NIOCTXSYNC);
 			goto try_copy_again;
 		} else {
-			TRACE_LOG("Giving up for now\n");
+			TRACE_DEBUG_LOG("Giving up for now\n");
 		}
 		TRACE_DEBUG_LOG("%d buffers leftover", n - i);
 	}
