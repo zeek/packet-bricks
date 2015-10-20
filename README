@@ -225,13 +225,28 @@ running a 4-threaded version of the pkteng (see
 scripts/startup-multi-threads.lua).
 
 =======================================================================
-NOTE: Please install the required libraries mentioned in INSTALL file.
+-:TROUBLESHOOTING:-
+
+Packet bricks is still in development stages. While we welcome 
+feedback, we suggest that you refer to the following pointers before
+contacting the authors for bug reports.
+
+1- Please install the required libraries mentioned in INSTALL file.
 As the system is still under active development, the program may
 exhibit unexpected behavior if libraries are not installed.
 
-The README file in the netmap/ directory contains pointers
+2- The README file in the netmap/ directory contains pointers
 on how to enhance packet I/O performance. We suggest you to follow
 their guide for extracting maximum performance out of packet
 bricks as well.
 
-Please report bugs to: ajamshed@icsi.berkeley.edu
+3- Some users have reported erroneous behavior when executing
+tcpdump with netmap-libpcap patch. tcpdump has compatibility 
+constraints with libpcap. Please refer to 
+http://www.tcpdump.org/#old-releases to verify which tcpdump
+version should be linked with the latest netmap-libpcap
+release. At the time of writing, the latest netmap-libpcap
+version is 1.6.0. The compatible tcpdump version for this 
+release is 4.6.0.
+
+4. Please report further bugs to: ajamshed@icsi.berkeley.edu

@@ -382,7 +382,9 @@ copy_packets(CommNode *cn)
 			dst->len = src->len;
 			srcbuf = NETMAP_BUF(sr, src->buf_idx);
 			dstbuf = NETMAP_BUF(ring, dst->buf_idx);
-			nm_pkt_copy(dstbuf, srcbuf, dst->len); 
+			/* nm_pkt_copy() is not ideal for the real world, 
+			   it only copies 64-byte aligned data segments */
+			memcpy(dstbuf, srcbuf, dst->len);
 			
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
 		}
