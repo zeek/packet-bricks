@@ -33,6 +33,15 @@
 #include <pthread_np.h>
 /* cpu_set */
 #include <sys/cpuset.h>
+/* for struct ifreq */
+#include <net/if.h>
+/* for ioctl */
+#include <sys/ioctl.h>
+/* for strcpy */
+#include <string.h>
+/* for htons */
+#include <netinet/in.h>
+#include <net/bpf.h>
 /*---------------------------------------------------------------------*/
 /**
  * Affinitizes current thread to the specified cpu
@@ -61,5 +70,41 @@ set_affinity(int cpu, pthread_t *t)
 
 	TRACE_UTIL_FUNC_END();	
 	return 0;
+}
+/*---------------------------------------------------------------------*/
+void
+promisc(const char *iface)
+{
+	TRACE_UTIL_FUNC_START();
+	int fd, ret;
+	struct ifreq eth;
+
+	TRACE_LOG("Converting %s to promiscuous mode\n", iface);
+	fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (fd == -1) {
+		TRACE_LOG("Couldn't open socket!\n");
+		TRACE_UTIL_FUNC_END();
+		return;
+	}
+	strcpy(eth.ifr_name, iface);
+	ret = ioctl(fd, SIOCGIFFLAGS, &eth);
+	if (ret == -1) {
+		TRACE_LOG("Get ioctl for %s failed!\n", iface);
+		TRACE_UTIL_FUNC_END();
+		close(fd);
+		return;
+	}
+	eth.ifr_flags |= IFF_PROMISC | IFF_PPROMISC;
+	ret = ioctl(fd, SIOCSIFFLAGS, &eth);
+	if (ret == -1) {
+		TRACE_LOG("Set ioctl for %s failed!\n", iface);
+		TRACE_UTIL_FUNC_END();
+		close(fd);
+		return;
+	}
+
+	close(fd);
+	
+	TRACE_UTIL_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

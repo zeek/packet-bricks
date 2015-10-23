@@ -753,6 +753,8 @@ netmap_create_channel(char *in_name, char *out_name,
 	cn = (CommNode *)lnd->external_links[lnd->init_cur_idx];
 
 	if (t == WRITE) {
+		TRACE_LOG("Creating pcap writing element %p to file: %s\n",
+			  brick, out_name);
 		cn->pd = pcap_open_dead(DLT_EN10MB, ETH_FRAME_LEN);
 		cn->pdumper = pcap_dump_open(cn->pd, out_name);
 		fd = 0;

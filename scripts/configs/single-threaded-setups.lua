@@ -78,6 +78,29 @@ end
 
 -----------------------------------------------------------------------
 
+--mrg_config	 __sets up a simple merge brick configuration__
+--		 __The engine reads from netmap-enabled $int1__
+--		 __& $int2, and then pushes it in a common__
+--		 __ netmap pipe.__
+function C:mrg_config(pe, int1, int2)
+	 local mrg = Brick.new("Merge")
+         mrg:connect_input(int1, int2) 
+         mrg:connect_output(int1 .. "{1")
+
+	 -- The following works fine as well
+	 local lb = Brick.new("LoadBalancer", 4)
+	 lb:connect_input(int1 .. "}1")
+	 lb:connect_output(int2 .. "{2", int2 .. "{3", int2 .. "{4", int2 .. "{5")
+	 mrg:link(lb)
+	 
+	 -- now link it!
+	 pe:link(mrg)
+end
+
+
+
+-----------------------------------------------------------------------
+
 
 --lbfilt_config	 __sets up a configuration of filter brick__
 --		 __The engine reads from netmap-enabled eth3__
@@ -108,10 +131,14 @@ function C:lbmrgpcap_config(pe, int1)
          lb:connect_output(int1 .. "{0", int1 .. "{1")
 	 local mrg = Brick.new("Merge")
 	 mrg:connect_input(int1 .. "}0", int1 .. "}1")
-	 -- if the output is prepended with '>', packet-bricks
-	 -- treats the channel as a pcap-compatible file
-	 mrg:connect_output(">out.pcap")
-	 lb:link(mrg)	 
+	 mrg:connect_output(int1 .. "{2")
+	 lb:link(mrg)
+
+	 local pw = Brick.new("PcapWriter")
+	 pw:connect_input(int1 .. "}2")
+	 pw:connect_output("out.pcap")
+	 mrg:link(pw)
+
 	 -- now link it!
 	 pe:link(lb)
 end

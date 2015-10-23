@@ -56,6 +56,21 @@ merge_deinit(Brick *brick)
 	TRACE_BRICK_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+BITMAP
+merge_process(Brick *brick, unsigned char *buf)
+{
+	TRACE_BRICK_FUNC_START();
+	BITMAP b;
+
+	/* straight in... and straight out */
+	INIT_BITMAP(b);
+	SET_BIT(b, 0);
+	TRACE_BRICK_FUNC_END();
+	return b;
+	UNUSED(brick);
+	UNUSED(buf);
+}
+/*---------------------------------------------------------------------*/
 /**
  * This brick needs a customized link function since it needs to push
  * packets from multiple ifaces
@@ -112,16 +127,14 @@ merge_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker)
 
 	for (j = 0; j < linker->input_count; j++) {
 		for (i = 0; i < linker->output_count; i++) {
-			for (k = 0; k < (int)eng->no_of_sources; k++) {
-				rc = eng->iom.create_external_link((char *)linker->input_link[j],
-								   (char *)linker->output_link[i],
-								   div_type, eng->esrc[k]);
-				if (rc == -1) {
-					TRACE_LOG("Failed to open channel %s\n",
-						  linker->output_link[i]);
-					TRACE_BRICK_FUNC_END();
-					return;
-				}
+			rc = eng->iom.create_external_link((char *)linker->input_link[0],
+							   (char *)linker->output_link[i],
+							   div_type, eng->esrc[j]);
+			if (rc == -1) {
+				TRACE_LOG("Failed to open channel %s\n",
+					  linker->output_link[i]);
+				TRACE_BRICK_FUNC_END();
+				return;
 			}
 		}
 	}      
@@ -140,7 +153,7 @@ merge_getid()
 brick_funcs mergefuncs = {
 	.init			= 	merge_init,
 	.link			=	merge_link,
-	.process		= 	NULL,
+	.process		= 	merge_process,
 	.deinit			= 	merge_deinit,
 	.getId			=	merge_getid
 };

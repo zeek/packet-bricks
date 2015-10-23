@@ -51,7 +51,7 @@ pcapw_process(Brick *brick, unsigned char *buf)
 	TRACE_BRICK_FUNC_START();
 	BITMAP b;
 
-	/* straigt in... and straight out */
+	/* straight in... and straight out */
 	INIT_BITMAP(b);
 	SET_BIT(b, 0);
 	TRACE_BRICK_FUNC_END();

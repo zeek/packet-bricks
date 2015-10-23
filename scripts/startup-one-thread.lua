@@ -68,17 +68,11 @@ function init()
 
 	 -- setup lb/mrg config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lbmrg_config(pe, "eth3")
+	 --sampleSetup:lbmrg_config(pe, "ix1")
 
 	 -- setup lbmrgpcap config
-	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lbmrgpcap_config(pe, "eth3")
-
-	 -- setup lbfilt config
-	 -- don't enable this... this is still under construction
-	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lbfilt_config(pe)
+	 --sampleSetup:lbmrgpcap_config(pe, "ix1")
 
 	 -- setup pcaprdr config
 	 -- (see configs/single-threaded-setups.lua file)
@@ -87,6 +81,15 @@ function init()
 	 -- setup dummy config (for performance testing)
 	 -- (see config/single-threaded-setups.lua file)
 	 --sampleSetup:dummy_config(pe, "ix0")
+
+	 -- setup merge config (with multiple sources)
+	 -- (see config/single-threaded-setups.lua file)
+	 --sampleSetup:mrg_config(pe, "ix0", "ix1")
+
+	 -- setup lbfilt config
+	 -- don't enable this... this is still under construction
+	 -- (see configs/single-threaded-setups.lua file)
+	 --sampleSetup:lbfilt_config(pe)
 	 
 end
 -----------------------------------------------------------------------

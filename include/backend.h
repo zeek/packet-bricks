@@ -70,5 +70,11 @@ initiate_backend(engine *eng);
  */
 int
 connect_to_bricks_server(char *rshell_args);
+
+/**
+ * Converts given interface to promiscuous mode
+ */
+void
+promisc(const char *iface);
 /*---------------------------------------------------------------------*/
 #endif /* __BACKEND_H__ */
