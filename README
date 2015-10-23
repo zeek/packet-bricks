@@ -17,10 +17,9 @@ examples/) directory to see if the driver is operational. The netmap
 module is continuously being updated with enhancements and bug fixes
 (as is common for all open source tools including packet bricks). Before
 using packet bricks, please make sure that you have downloaded and
-updated the netmap kernel module with its latest version. Finally,
-make sure that all netmap-enabled interfaces are set to promiscuous mode.
-
-# sudo ifconfig eth3 promisc
+updated the netmap kernel module with its latest version. The netmap
+authors suggest building the netmap module into the kernel for
+performance reasons.
 
 The following guide provides a walkthrough of the scripts/startup-*.lua
 files and also explains what this system is capable of.

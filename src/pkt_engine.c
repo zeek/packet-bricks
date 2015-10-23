@@ -314,9 +314,9 @@ pktengine_link_iface(const unsigned char *name,
 		return;
 	}
 
-#if defined(__FreeBSD__)
+	/* set iface to promiscuous mode */
 	promisc((const char *)iface);
-#endif
+
 	eng->no_of_sources++;
 	eng->esrc = realloc(eng->esrc, 
 			    sizeof(struct engine_src *) * 

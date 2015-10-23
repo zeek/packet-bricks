@@ -29,6 +29,14 @@
 #include "util.h"
 /* for bricks logging */
 #include "bricks_log.h"
+/* for struct ifreq */
+#include <net/if.h>
+/* for ioctl */
+#include <sys/ioctl.h>
+/* for strcpy */
+#include <string.h>
+/* for SOCK_STREAM */
+#include <netinet/in.h>
 /*---------------------------------------------------------------------*/
 /**
  * Affinitizes current thread to the specified cpu
@@ -59,5 +67,50 @@ set_affinity(int cpu, pthread_t *t)
 	TRACE_UTIL_FUNC_END();
 	UNUSED(t);
 	return 0;
+}
+/*---------------------------------------------------------------------*/
+void
+promisc(const char *iface)
+{
+	TRACE_UTIL_FUNC_START();
+	int fd, ret;
+	struct ifreq eth;
+
+	fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (fd == -1) {
+		TRACE_LOG("Couldn't open socket!\n");
+		TRACE_UTIL_FUNC_END();
+		return;
+	}
+	strcpy(eth.ifr_name, iface);
+	ret = ioctl(fd, SIOCGIFFLAGS, &eth);
+	if (ret == -1) {
+		TRACE_LOG("Get ioctl for %s failed!\n", iface);
+		TRACE_UTIL_FUNC_END();
+		close(fd);
+		return;
+	}
+
+	if (eth.ifr_flags & IFF_PROMISC) {
+		TRACE_LOG("Interface %s is already set to "
+			  "promiscuous mode\n", iface);
+		TRACE_UTIL_FUNC_END();
+		close(fd);
+		return;
+	}
+	eth.ifr_flags |= IFF_PROMISC;
+
+	ret = ioctl(fd, SIOCSIFFLAGS, &eth);
+	if (ret == -1) {
+		TRACE_LOG("Set ioctl for %s failed!\n", iface);
+		TRACE_UTIL_FUNC_END();
+		close(fd);
+		return;
+	}
+	
+	close(fd);
+	TRACE_LOG("Converting %s to promiscuous mode\n", iface);
+	
+	TRACE_UTIL_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

@@ -39,9 +39,8 @@
 #include <sys/ioctl.h>
 /* for strcpy */
 #include <string.h>
-/* for htons */
+/* for SOCK_STREAM */
 #include <netinet/in.h>
-#include <net/bpf.h>
 /*---------------------------------------------------------------------*/
 /**
  * Affinitizes current thread to the specified cpu
@@ -76,10 +75,9 @@ void
 promisc(const char *iface)
 {
 	TRACE_UTIL_FUNC_START();
-	int fd, ret;
+	int fd, ret, flags;
 	struct ifreq eth;
 
-	TRACE_LOG("Converting %s to promiscuous mode\n", iface);
 	fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (fd == -1) {
 		TRACE_LOG("Couldn't open socket!\n");
@@ -94,7 +92,18 @@ promisc(const char *iface)
 		close(fd);
 		return;
 	}
-	eth.ifr_flags |= IFF_PROMISC | IFF_PPROMISC;
+	flags = (eth.ifr_flags & 0xffff) | (eth.ifr_flagshigh << 16);
+	if (flags & IFF_PPROMISC) {
+		TRACE_LOG("Interface %s is already set to "
+			  "promiscuous mode\n", iface);
+		TRACE_UTIL_FUNC_END();
+		close(fd);
+		return;
+	}
+	flags |= IFF_PPROMISC;
+	eth.ifr_flags = flags & 0xffff;
+	eth.ifr_flagshigh = flags >> 16;
+	
 	ret = ioctl(fd, SIOCSIFFLAGS, &eth);
 	if (ret == -1) {
 		TRACE_LOG("Set ioctl for %s failed!\n", iface);
@@ -104,6 +113,7 @@ promisc(const char *iface)
 	}
 
 	close(fd);
+	TRACE_LOG("Converting %s to promiscuous mode\n", iface);
 	
 	TRACE_UTIL_FUNC_END();
 }
