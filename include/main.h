@@ -53,7 +53,6 @@ typedef struct PacInfo {
 
 extern BricksInfo pc_info;
 /*---------------------------------------------------------------------*/
-//#define PASSIVE_MODE			1
 #define DEFAULT_BATCH_SIZE		512
 #define PAUSE_PERIOD			1 /* in secs */
 #define FILE_PRINT_TIMER		5 /* in secs */

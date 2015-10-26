@@ -53,6 +53,8 @@
 #include <errno.h>
 /* for polling */
 #include <sys/poll.h>
+/* for open/close */
+#include <unistd.h>
 /*---------------------------------------------------------------------*/
 int
 connect_to_bricks_server(char *rshell_args)
@@ -107,8 +109,8 @@ start_listening_reqs()
 	/* socket info about the listen sock */
 	struct sockaddr_in serv; 
 	int listen_fd, client_sock;
-	struct kevent evlist;
-	struct kevent chlist[KQUEUE_MAX_EVENTS];
+	struct kevent evlist[KQUEUE_MAX_EVENTS];
+	struct kevent evSet;
 	int kq, events, n;
 
 	/* zero the struct before filling the fields */
@@ -141,10 +143,17 @@ start_listening_reqs()
 		TRACE_BACKEND_FUNC_END();
 	}
 
-	/* XXX - TODO: port this to kqueue version... */
 	/* set up the kqueue structure */
 	kq = kqueue();
-	EV_SET(&chlist[listen_fd], listen_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+	if (kq == -1) {
+		TRACE_ERR("kqueue error: %s\n", strerror(errno));
+		TRACE_BACKEND_FUNC_END();
+	}
+	EV_SET(&evSet, listen_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+	if (kevent(kq, &evSet, 1, NULL, 0, NULL) == -1) {
+		TRACE_ERR("kevent error: %s\n", strerror(errno));
+		TRACE_BACKEND_FUNC_END();
+	}
 
 	/*
 	 * Main loop that processes incoming remote shell commands
@@ -155,50 +164,48 @@ start_listening_reqs()
 	 */
 
 	do {
-		events = kevent(kq, chlist, 1, &evlist, 1, NULL);
-		if (events == -1) {
-			TRACE_ERR("kqueue error\n");
+		events = kevent(kq, NULL, 0, evlist, KQUEUE_MAX_EVENTS, NULL);
+		if (events == -1 && errno != EINTR) {
+			TRACE_ERR("kevent error: %s\n", strerror(errno));
 			TRACE_BACKEND_FUNC_END();
 		}
 		for (n = 0; n < events; n++) {
 			/* the request is for a new shell */
-			if ((int)chlist[n].ident == listen_fd) {
+			if ((int)evlist[n].ident == listen_fd) {
 				client_sock = accept(listen_fd, NULL, NULL);
 				if (client_sock < 0) {
 					TRACE_ERR("accept failed: %s\n", strerror(errno));
 					TRACE_BACKEND_FUNC_END();
 				}
-				lua_kickoff(LUA_EXE_STR, &client_sock);
 				/* add client_sock and listen_fd for kqueueing again */
-				EV_SET(&chlist[listen_fd], listen_fd, EVFILT_READ,
-				       EV_ADD, 0, 0, NULL);
-				EV_SET(&chlist[client_sock], client_sock, EVFILT_READ,
-				       EV_ADD, 0, 0, NULL);
-			}
-#if 0 
-			else { /* chlist[n].ident == regular sock */
-				/* 
-				 * if the client socket has incoming read, this means we are getting
-				 * some lua commands.... execute them 
-				 */
-				if (events[n].events == EPOLLIN || events[n].events == EPOLLPRI) {
-					lua_kickoff(LUA_EXE_STR, &events[n].data.fd);
-					ev.data.fd = events[n].data.fd;
-					ev.events = EPOLLIN;
-					if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, ev.data.fd, &ev) == -1) {
-						TRACE_ERR("Can't register client sock for epolling!\n");
+				EV_SET(&evSet, client_sock, EVFILT_READ,
+				       EV_ADD | EV_ENABLE, 0, 0, NULL);
+				if (kevent(kq, &evSet, 1, NULL, 0, NULL) == -1) {
+					TRACE_ERR("kevent error: %s\n", strerror(errno));
+					TRACE_BACKEND_FUNC_END();
+				}
+				lua_kickoff(LUA_EXE_STR, &client_sock);
+			} else { /* evlist[n].ident == regular sock */
+				/* if the socket sees an error.. close the socket. */
+				int s = evlist[n].ident;
+				if ((evlist[n].flags & EV_ERROR) ||
+				    (evlist[n].flags & EV_EOF)) { 
+					EV_SET(&evSet, s, EVFILT_READ,
+					       EV_DELETE, 0, 0, NULL);
+					if (kevent(kq, &evSet, 1, NULL, 0, NULL) == -1) {
+						TRACE_ERR("kevent error: %s\n", strerror(errno));
 						TRACE_BACKEND_FUNC_END();
 					}
-				} else { /* the only other epoll request is for error output.. close the socket then */
-					ev.data.fd = events[n].data.fd;
-					if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, ev.data.fd, &ev) == -1) {
-						TRACE_ERR("Can't register client sock for epolling!\n");
-						TRACE_BACKEND_FUNC_END();
-					}	
-					close(ev.data.fd);
+					close(s);
 				}
+				/* 
+				 * else if the client socket has incoming read, 
+				 * this means we are getting some lua commands.... 
+				 * execute them 
+				 */
+				else
+					lua_kickoff(LUA_EXE_STR, &s);
 			}
-#endif
 		}
 	} while (1);
 

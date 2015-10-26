@@ -14,6 +14,19 @@ OSARCH := $(shell uname)
 OSARCH := $(findstring $(OSARCH),FreeBSD Linux Darwin)
 DEBUG_CFLAGS := -g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS += -DDLUA -DDPKTENG -DDNMP -DDUTIL -DDIFACE -DDBKEND -DDPKTHASH -DDBRICK
+INSTALL := @INSTALL@
+INSTALL_PROGRAM := @INSTALL_PROGRAM@
+INSTALL_DATA := @INSTALL_DATA@
+# Top level hierarchy
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+bindir = @bindir@
+sbindir = @sbindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
+sysconfdir = @sysconfdir@
 #---------------------------------------------------------------------#
 ifeq ($V,) # no echo
     export MSG=@echo
@@ -108,4 +121,18 @@ distclean: clean
 
 tags:
 	find . -name '*.c' -or -name '*.h' | xargs ctags
+#---------------------------------------------------------------------#
+install:
+	$(INSTALL_PROGRAM) $(BIN) $(sbindir)/
+	$(INSTALL_PROGRAM) $(BIN)-server $(sbindir)/
+	$(INSTALL_PROGRAM) $(BIN)-shell $(sbindir)/
+	$(INSTALL_PROGRAM) $(BIN)-kill-server $(sbindir)/
+	mkdir -p $(sysconfdir)/$(BINNAME)-scripts
+	cp -R scripts/ $(sysconfdir)/$(BINNAME)-scripts
+uninstall:
+	$(RM) $(sbindir)/$(BINNAME)
+	$(RM) $(sbindir)/$(BINNAME)-server
+	$(RM) $(sbindir)/$(BINNAME)-shell
+	$(RM) $(sbindir)/$(BINNAME)-kill-server
+	$(RM) -r $(sysconfdir)/$(BINNAME)-scripts
 #---------------------------------------------------------------------#

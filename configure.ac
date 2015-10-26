@@ -9,6 +9,7 @@ AC_CHECK_HEADER(linux/sched.h,,,)
 AC_CHECK_HEADER(pcap/pcap.h,,,) 
 AC_CHECK_HEADER(pthread.h,,,) 
 AC_CHECK_LIB(m, cos)
+
 # Check if libreadline exists
 a=1
 AC_CHECK_LIB(readline, readline,,[a=0],)
@@ -100,6 +101,15 @@ AC_CHECK_HEADER($JEINCPATH/jemalloc.h,[AC_DEFINE(HAVE_JEMALLOC_H, 1)],[a=0],
 if test $a == 0
 then
 	AC_MSG_WARN([jemalloc.h not found.])
+fi
+
+AC_CHECK_PROG(INSTALL_CHECK,install,yes)
+if test x"$INSTALL_CHECK" != x"yes" ; then
+	AC_MSG_ERROR([Please install `install'.])
+else
+	AC_SUBST(INSTALL, "install -c")
+	AC_SUBST(INSTALL_PROGRAM, "install -c")
+	AC_SUBST(INSTALL_DATA, "install -m 644")
 fi
 
 AC_OUTPUT(Makefile)

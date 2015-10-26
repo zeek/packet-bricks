@@ -366,11 +366,7 @@ main(int argc, char **argv)
 	 * is the child, then jump to accepting requests...
 	 */
 	if (pc_info.daemonize && rc == 0) {
-#ifdef PASSIVE_MODE
 		start_listening_reqs();
-#else
-		while (1) sleep(PAUSE_PERIOD);
-#endif
 	}
 	
 	TRACE_FUNC_END();
