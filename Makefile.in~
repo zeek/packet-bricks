@@ -139,7 +139,7 @@ install:
 	$(INSTALL_PROGRAM) $(BIN)-duplicate $(sbindir)/
 	@echo "Placing the scripts in the $(sysconfdir)/$(BINNAME)-scripts/ directory"
 	mkdir -p $(sysconfdir)/$(BINNAME)-scripts
-	cp -R scripts/* $(sysconfdir)/$(BINNAME)-scripts
+	cp -R scripts/ $(sysconfdir)/$(BINNAME)-scripts
 uninstall:
 	$(RM) $(sbindir)/$(BINNAME)
 	$(RM) $(sbindir)/$(BINNAME)-server
