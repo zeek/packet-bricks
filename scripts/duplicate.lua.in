@@ -1,0 +1,100 @@
+-- /usr/bin/lua
+---------------------- STARTUP SCRIPT ---------------------------------
+prefix = "@prefix@/etc/"
+-- contains utility functions and macros
+utilObj = dofile(prefix .. "bricks-scripts/utils.lua")
+-- contains example setup scripts
+sampleSetup = dofile(prefix .. "bricks-scripts/configs/single-threaded-setups.lua")
+
+
+
+
+
+
+
+
+
+-----------------------------------------------------------------------
+-- S I N G L E - T H R E A D E D - S E T U P
+-----------------------------------------------------------------------
+--init function  __initializes pkteng thread and links it with a__
+--		 __netmap-enabled interface. collects PKT_BATCH__
+--		 __pkts at a time. "cpu" and "batch" params can remain__
+--		 __unspecified by passing '-1'. Next creates _n_ netmap__
+--		 __pipe channels to forward packets to userland apps__
+
+function init()
+	 -- check if netmap module is loaded
+	 if utilObj:netmap_loaded() == false then
+	    print 'Netmap module does not exist'
+	    os.exit(-1)
+	 end
+
+	 -- check if you are root
+	 if utilObj:check_superuser() == false then
+	    print 'You have to be superuser to run this function'
+	    os.exit(-1)
+	 end
+
+	 -- enable underlying netmap pipe framework
+	 utilObj:enable_nmpipes()
+
+	 -- create a global variable pe
+	 local pe = PktEngine.new("e0", BUFFER_SZ)
+
+	 -- retrieve BRICKS_IFACE
+	 local iface = (lines_from("/tmp/bricks.iface"))[1]
+	 -- retrieve BRICKS_SPLIT
+	 local split = (lines_from("/tmp/bricks.split"))[1]
+
+	 if iface == nil or iface == '' then
+	    print 'Interface invalid or does not exist'
+	    os.exit(-1)
+	 end
+
+	 if split == nil or split == '' then
+	    print 'Split does not exist'
+	    os.exit(-1)
+	 end
+
+	 -- setup simple duplicator
+	 -- (see configs/single-threaded-setups.lua file)
+	 sampleSetup:dupconfig(pe, iface, split)
+end
+-----------------------------------------------------------------------
+--start function  __starts pkteng and prints overall per sec__
+--		  __stats for STATS_PRINT_CYCLE_DEFAULT secs__
+
+function start()
+	 -- start reading pkts from the interface
+	 local pe = PktEngine.retrieve("e0")
+	 pe:start()
+
+	 local i = 0
+	 repeat
+	     utilObj:sleep(SLEEP_TIMEOUT)
+	     BRICKS.show_stats()
+	     i = i + 1
+	 until i > STATS_PRINT_CYCLE_DEFAULT
+end
+-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+-----------------------------------------------------------------------
+-- S T A R T _ OF _ S C R I P T
+-----------------------------------------------------------------------
+-- __"main" function (Commented for user's convenience)__
+--
+init()
+-------- __Start the engine__
+start()
+-----------------------------------------------------------------------

@@ -197,4 +197,22 @@ function C:dummy_config(pe, intf)
 	 pe:link(pr)
 end
 -----------------------------------------------------------------------
+--lbconfig  	   __a trivial example of the load balancer usage__
+function C:lbconfig(pe, intf, split)
+	 local lb = Brick.new("LoadBalancer", 4)
+	 lb:connect_input(intf) 
+         lb:connect_outputs(intf, split)
+	 -- now link it!
+	 pe:link(lb)
+end
+-----------------------------------------------------------------------
+--dupconfig  	   __a trivial example of the duplicator usage__
+function C:dupconfig(pe, intf, split)
+	 local dup = Brick.new("Duplicator")
+	 dup:connect_input(intf) 
+         dup:connect_outputs(intf, split)
+	 -- now link it!
+	 pe:link(dup)
+end
+-----------------------------------------------------------------------
 return C;

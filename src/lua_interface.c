@@ -485,6 +485,7 @@ linker_help(lua_State *L)
 		"    new([<split-mode>])\n"
 		"    connect_input(<interfaces>)\n"
 	     	"    connect_output(<interfaces>)\n"
+		"    connect_outputs(<interface>, split)\n"
 		);
 	UNUSED(L);
 	TRACE_LUA_FUNC_END();
@@ -617,6 +618,36 @@ linker_output(lua_State *L)
 }
 /*---------------------------------------------------------------------*/
 static int
+linker_outputs(lua_State *L)
+{
+	TRACE_LUA_FUNC_START();
+	Linker_Intf *linker;
+	int i;
+	char iface[IFNAMSIZ];
+	int split = -1;
+
+	linker = check_linker(L, 1);
+	strcpy(iface, luaL_optstring(L, 2, 0));
+	split = luaL_optint(L, 3, 0);
+	for (i = 0; i < split; i++) {
+		char *tmp = calloc(1, IFNAMSIZ);
+		if (tmp == NULL) {
+			TRACE_ERR("Can't allocate string for interface name\n");
+			TRACE_LUA_FUNC_END();
+		}
+		sprintf(tmp, "%s{%d", iface, i);
+		linker->output_link[linker->output_count] = tmp;
+		linker->output_count++;
+	}
+
+	lua_settop(L, 1);
+
+	TRACE_LUA_FUNC_END();
+
+	return 1;
+}
+/*---------------------------------------------------------------------*/
+static int
 linker_link(lua_State *L)
 {
 	TRACE_LUA_FUNC_START();
@@ -641,6 +672,7 @@ static const luaL_reg linker_methods[] = {
         {"new",           	linker_new},
         {"connect_input",	linker_input},
 	{"connect_output",	linker_output},
+	{"connect_outputs",	linker_outputs},
 	{"link",		linker_link},
 	{"help",		linker_help},
         {0, 0}

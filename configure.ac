@@ -123,3 +123,7 @@ then
 	AC_OUTPUT(src/Linux/Makefile)
 fi
 AC_OUTPUT(src/bricks/Makefile)
+AC_OUTPUT(scripts/load-balance.lua)
+AC_OUTPUT(scripts/duplicate.lua)
+AC_OUTPUT(scripts/startup-one-thread.lua)
+AC_OUTPUT(scripts/startup-multi-threads.lua)

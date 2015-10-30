@@ -86,9 +86,13 @@ $(BINNAME): objs
 	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -d $$""@"> $(BINDIR)/$(BINNAME)-server
 	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
 	@printf "#!/usr/bin/env bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
+	@printf "#!/usr/bin/env bash\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/load-balance.lua" > $(BINDIR)/$(BINNAME)-load-balance
+	@printf "#!/usr/bin/env bash\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/duplicate.lua" > $(BINDIR)/$(BINNAME)-duplicate
 	chmod a+x $(BINDIR)/$(BINNAME)-server
 	chmod a+x $(BINDIR)/$(BINNAME)-shell
 	chmod a+x $(BINDIR)/$(BINNAME)-kill-server
+	chmod a+x $(BINDIR)/$(BINNAME)-load-balance
+	chmod a+x $(BINDIR)/$(BINNAME)-duplicate
 	strip $(BIN)
 
 run: $(BINNAME)
@@ -103,9 +107,13 @@ $(BINNAME)-debug: objs-dbg
 	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -d $$""@" > $(BINDIR)/$(BINNAME)-server
 	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
 	@printf "#!/usr/bin/env bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
+	@printf "#!/usr/bin/env bash\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/load-balance.lua" > $(BINDIR)/$(BINNAME)-load-balance
+	@printf "#!/usr/bin/env bash\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/duplicate.lua" > $(BINDIR)/$(BINNAME)-duplicate
 	chmod a+x $(BINDIR)/$(BINNAME)-server
 	chmod a+x $(BINDIR)/$(BINNAME)-shell
 	chmod a+x $(BINDIR)/$(BINNAME)-kill-server
+	chmod a+x $(BINDIR)/$(BINNAME)-load-balance
+	chmod a+x $(BINDIR)/$(BINNAME)-duplicate
 #---------------------------------------------------------------------#
 clean:
 	cd src && $(MAKE) clean
@@ -127,6 +135,9 @@ install:
 	$(INSTALL_PROGRAM) $(BIN)-server $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-shell $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-kill-server $(sbindir)/
+	$(INSTALL_PROGRAM) $(BIN)-load-balance $(sbindir)/
+	$(INSTALL_PROGRAM) $(BIN)-duplicate $(sbindir)/
+	@echo "Placing the scripts in the $(sysconfdir)/$(BINNAME)-scripts/ directory"
 	mkdir -p $(sysconfdir)/$(BINNAME)-scripts
 	cp -R scripts/ $(sysconfdir)/$(BINNAME)-scripts
 uninstall:
@@ -134,5 +145,7 @@ uninstall:
 	$(RM) $(sbindir)/$(BINNAME)-server
 	$(RM) $(sbindir)/$(BINNAME)-shell
 	$(RM) $(sbindir)/$(BINNAME)-kill-server
+	$(RM) $(sbindir)/$(BINNAME)-load-balance
+	$(RM) $(sbindir)/$(BINNAME)-duplicate
 	$(RM) -r $(sysconfdir)/$(BINNAME)-scripts
 #---------------------------------------------------------------------#

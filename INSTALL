@@ -51,5 +51,8 @@ $ make
 
 # FreeBSD users, please use gmake
 
-If no errors are encountered, the make script will place the binary
-in bin/ directory.
+#3. Finally install
+$ make install
+
+If no errors are encountered, the make script will place the binaries
+in the ${prefix}/ directory.

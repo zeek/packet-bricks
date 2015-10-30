@@ -7,7 +7,7 @@ responsibilities may include (i) load-balancing, (ii) duplicating
 and/or (iii) filtering ingress traffic across all registered 
 applications. The distribution is flow-aware (i.e. packets of one 
 connection will always end up in the same application). At the moment,
-pacet-bricks uses netmap packet I/O framework for receiving packets.
+packet-bricks uses netmap packet I/O framework for receiving packets.
 It employs netmap pipes to forward packets to end host applications. 
 
 Before running packet-bricks, please make sure that you have
@@ -21,8 +21,9 @@ updated the netmap kernel module with its latest version. The netmap
 authors suggest building the netmap module into the kernel for
 performance reasons.
 
-The following guide provides a walkthrough of the scripts/startup-*.lua
-files and also explains what this system is capable of.
+The following guide provides a walkthrough of the
+/usr/local/etc/bricks-scripts/startup-*.lua files and also explains
+what this system is capable of.
 
 
 
@@ -57,12 +58,12 @@ files and also explains what this system is capable of.
 
 
 User can start the program by running the following command:
-# bin/bricks [-f startup_script_file]
+# bricks [-f startup_script_file]
 
 To start the program as a daemon, either type:
-# bin/bricks -d [-f startup_script_file]
+# bricks -d [-f startup_script_file]
 		OR
-# bin/bricks-server [-f startup_script_file]
+# bricks-server [-f startup_script_file]
 
 If the system is executed as a non-daemon, it opens a 
 LUA-based shell. Type the following command to print the help menu:
@@ -215,13 +216,34 @@ reference LUA script file: please see scripts/startup-*.lua files for
 details. You can also use the following command to load the script
 file in packet-bricks at startup:
 
-# bin/bricks -f scripts/startup-one-thread.lua, OR
-# bin/bricks-server -f scripts/startup-one-thread.lua
+# bin/bricks -f /usr/local/etc/bricks-scripts/startup-one-thread.lua, OR
+# bin/bricks-server -f /usr/local/etc/bricks-scripts/startup-one-thread.lua
 
 The user is recommended to skim through the script file. It is
 heavily documented. The scripts directory also contains code for 
 running a 4-threaded version of the pkteng (see 
-scripts/startup-multi-threads.lua).
+/usr/local/etc/bricks-scripts/startup-multi-threads.lua).
+
+=======================================================================
+~:NEW:~
+We have created 2 new tools that can quickly set up (i) load-balancer,
+and (ii) duplicator.
+
+i) The user can use bricks-load-balance to split traffic for a given
+interface. Example usage:
+
+$ bricks-load-balance eth3 4
+
+The example above will split traffic on netmap-enabled interface, eth3,
+to 4 netmap pipe channels named eth3}0, eth3}1, eth3}2 and eth3}3.
+
+ii) The user can use bricks-duplicate to duplicate ingress traffic
+for the given interface. Example usage:
+
+$ bricks-duplicate eth3 4
+
+The example above will duplicate traffic on netmap-enabled interface,
+eth3, to 4 netmap pipe channels named eth3}0, eth3}1, eth3}2 and eth3}3.
 
 =======================================================================
 -:TROUBLESHOOTING:-
