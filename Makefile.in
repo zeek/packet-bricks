@@ -140,6 +140,10 @@ install:
 	@echo "Placing the scripts in the $(sysconfdir)/$(BINNAME)-scripts/ directory"
 	mkdir -p $(sysconfdir)/$(BINNAME)-scripts
 	cp -R scripts/* $(sysconfdir)/$(BINNAME)-scripts
+	@echo "Installing manual pages"
+	gzip man/*
+	cp man/* /usr/share/man/man1/
+	makewhatis
 uninstall:
 	$(RM) $(sbindir)/$(BINNAME)
 	$(RM) $(sbindir)/$(BINNAME)-server
@@ -148,4 +152,10 @@ uninstall:
 	$(RM) $(sbindir)/$(BINNAME)-load-balance
 	$(RM) $(sbindir)/$(BINNAME)-duplicate
 	$(RM) -r $(sysconfdir)/$(BINNAME)-scripts
+	$(RM) /usr/share/man/man1/$(BINNAME).1.gz
+	$(RM) /usr/share/man/man1/$(BINNAME)-server.1.gz
+	$(RM) /usr/share/man/man1/$(BINNAME)-kill-server.1.gz
+	$(RM) /usr/share/man/man1/$(BINNAME)-load-balance.1.gz
+	$(RM) /usr/share/man/man1/$(BINNAME)-duplicate.1.gz
+	$(RM) /usr/share/man/man1/$(BINNAME)-shell.1.gz
 #---------------------------------------------------------------------#

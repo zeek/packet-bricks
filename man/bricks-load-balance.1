@@ -1,0 +1,20 @@
+.\" Manpage for packet-bricks.
+.\" Contact ajamshed@icsi.berkeley.edu to correct errors or typos.
+.TH man 1 "30 Oct 2015" "1.0" "Packet-bricks man page"
+.SH NAME
+bricks-load-balance \- create bricks-server with load-balancer settings.
+.SH SYNOPSIS
+bricks-load-balance iface split
+.SH DESCRIPTION
+bricks-load-balance runs the brick-server in daemon mode with load-balancer
+settings. The tool can only be executed when two additional command line
+arguments are passed. The first argument 'iface' is used by the bricks-server
+daemon to select the network interface from which the network traffic is
+captured. The second argument 'split' is a non-zero integer which informs
+the daemon how many netmap pipes needs to be created. The netmap pipes
+are then connected to the interface and traffic is split flow-wise
+symmetrically across all 'split' number of netmap pipes.
+.SH SEE ALSO
+bricks-server(1), bricks-shell(1), bricks-duplicate(1), bricks(1), bricks-kill-server(1)
+.SH AUTHOR
+Asim Jamshed (ajamshed@icsi.berkeley.edu)

@@ -1,0 +1,18 @@
+.\" Manpage for packet-bricks.
+.\" Contact ajamshed@icsi.berkeley.edu to correct errors or typos.
+.TH man 1 "30 Oct 2015" "1.0" "Packet-bricks man page"
+.SH NAME
+bricks-kill-server \- Kills an instance of the bricks tool
+.SH SYNOPSIS
+bricks-kill-server
+.SH DESCRIPTION
+Sends a SIGTERM signal to bricks process which kills the tool
+immediately.
+.SH BUGS
+Repeated usage may disrupt the netmap kernel module. In case
+the netmap module crashes, the user should reboot the system.
+This issue has been reported to the netmap authors.
+.SH SEE ALSO
+bricks(1), bricks-shell(1), bricks-duplicate(1), bricks-load-balance(1), bricks-server(1)
+.SH AUTHOR
+Asim Jamshed (ajamshed@icsi.berkeley.edu)
