@@ -130,7 +130,21 @@ distclean: clean
 tags:
 	find . -name '*.c' -or -name '*.h' | xargs ctags
 #---------------------------------------------------------------------#
-install:
+ifeq ($(OSARCH),FreeBSD)
+install-man:
+	@echo "Installing manual pages"
+	gzip man/*
+	cp man/* /usr/share/man/man1/
+	makewhatis
+else
+install-man:
+	@echo "Installing manual pages"
+	gzip man/*
+	cp man/* /usr/share/man/man1/
+	mandb
+endif
+
+install: install-man
 	$(INSTALL_PROGRAM) $(BIN) $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-server $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-shell $(sbindir)/
@@ -140,10 +154,7 @@ install:
 	@echo "Placing the scripts in the $(sysconfdir)/$(BINNAME)-scripts/ directory"
 	mkdir -p $(sysconfdir)/$(BINNAME)-scripts
 	cp -R scripts/* $(sysconfdir)/$(BINNAME)-scripts
-	@echo "Installing manual pages"
-	gzip man/*
-	cp man/* /usr/share/man/man1/
-	makewhatis
+
 uninstall:
 	$(RM) $(sbindir)/$(BINNAME)
 	$(RM) $(sbindir)/$(BINNAME)-server

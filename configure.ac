@@ -112,19 +112,22 @@ else
 	AC_SUBST(INSTALL_DATA, "install -m 644")
 fi
 
-AC_CHECK_PROG(MAKEWHATIS_CHECK,makewhatis,yes)
-if test x"$MAKEWHATIS_CHECK" != x"yes" ; then
-	AC_MSG_ERROR([Please install `makewhatis'.])
-fi
-
 AC_OUTPUT(Makefile)
 AC_OUTPUT(src/Makefile)
 if echo `uname` | grep -q "FreeBSD"
 then
+	AC_CHECK_PROG(MAKEWHATIS_CHECK,makewhatis,yes)
+	if test x"$MAKEWHATIS_CHECK" != x"yes" ; then
+	   AC_MSG_ERROR([Please install `makewhatis'.])
+	fi
 	AC_OUTPUT(src/FreeBSD/Makefile)
 fi
 if echo `uname` | grep -q "Linux"
 then
+	AC_CHECK_PROG(MANDB_CHECK,mandb,yes)
+	if test x"$MANDB_CHECK" != x"yes" ; then
+	   AC_MSG_ERROR([Please install `mandb'.])
+	fi
 	AC_OUTPUT(src/Linux/Makefile)
 fi
 AC_OUTPUT(src/bricks/Makefile)
