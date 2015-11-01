@@ -103,6 +103,7 @@ then
 	AC_MSG_WARN([jemalloc.h not found.])
 fi
 
+# Check if `install' exists
 AC_CHECK_PROG(INSTALL_CHECK,install,yes)
 if test x"$INSTALL_CHECK" != x"yes" ; then
 	AC_MSG_ERROR([Please install `install'.])
@@ -112,21 +113,47 @@ else
 	AC_SUBST(INSTALL_DATA, "install -m 644")
 fi
 
+# Check if gzip exists 
+AC_CHECK_PROG(GZIP_CHECK,gzip,yes)
+if test x"$GZIP_CHECK" != x"yes" ; then
+   AC_MSG_ERROR([Please install `gzip'.])
+fi
+
+# Check if gunzip exists 
+AC_CHECK_PROG(GUNZIP_CHECK,gunzip,yes)
+if test x"$GUNZIP_CHECK" != x"yes" ; then
+   AC_MSG_ERROR([Please install `gunzip'.])
+fi
+
 AC_OUTPUT(Makefile)
 AC_OUTPUT(src/Makefile)
 if echo `uname` | grep -q "FreeBSD"
 then
+	# Check if `makewhatis' exists
 	AC_CHECK_PROG(MAKEWHATIS_CHECK,makewhatis,yes)
 	if test x"$MAKEWHATIS_CHECK" != x"yes" ; then
 	   AC_MSG_ERROR([Please install `makewhatis'.])
+	fi
+
+	# Check if `gmake' exists
+	AC_CHECK_PROG(GMAKE_CHECK,gmake,yes)
+	if test x"$GMAKE_CHECK" != x"yes" ; then
+	   AC_MSG_ERROR([Please install `gmake'.])
 	fi
 	AC_OUTPUT(src/FreeBSD/Makefile)
 fi
 if echo `uname` | grep -q "Linux"
 then
+	# Check if `mandb' exists
 	AC_CHECK_PROG(MANDB_CHECK,mandb,yes)
 	if test x"$MANDB_CHECK" != x"yes" ; then
 	   AC_MSG_ERROR([Please install `mandb'.])
+	fi
+
+	# Check if `make' exists
+	AC_CHECK_PROG(MAKE_CHECK,make,yes)
+	if test x"$MAKE_CHECK" != x"yes" ; then
+	   AC_MSG_ERROR([Please install `make'.])
 	fi
 	AC_OUTPUT(src/Linux/Makefile)
 fi

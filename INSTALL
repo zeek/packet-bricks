@@ -13,12 +13,16 @@ Ubuntu requires the following debian packages:
 2- lua5.1		(Ubuntu Debian Package)
 3- libpcap-dev		(Ubuntu Debian Package)
 4- libreadline-dev	(Ubuntu Debian Package)
+5- make			(Ubuntu Debian Package)
+6- gzip			(Ubuntu Debian Package)
 
 Fedora packages:
 1- compat-lua-devel	(Fedora Package)
 2- compat-lua		(Fedora Package)
 3- libpcap-devel	(Fedora Package)
 4- readline-devel	(Fedora Package)
+5- make			(Fedora Package)
+6- gzip			(Fedora Package)
 
 This program would work better if jemalloc library is installed.
 5- libjemalloc		(Ubuntu Debian Package), OR
@@ -27,6 +31,7 @@ This program would work better if jemalloc library is installed.
 FreeBSD users: please install the following packages
 1- lua51
 2- gmake
+3- gzip
 
 Installation process
 --------------------
@@ -51,7 +56,7 @@ $ make
 
 # FreeBSD users, please use gmake
 
-#3. Finally install
+#3. Finally install (or `gmake install' in case of FreeBSD)
 $ make install
 
 If no errors are encountered, the make script will place the binaries

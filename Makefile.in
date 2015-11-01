@@ -136,12 +136,14 @@ install-man:
 	gzip man/*
 	cp man/* /usr/share/man/man1/
 	makewhatis
+	gunzip man/*
 else
 install-man:
 	@echo "Installing manual pages"
 	gzip man/*
 	cp man/* /usr/share/man/man1/
 	mandb
+	gunzip man/*
 endif
 
 install: install-man
