@@ -51,6 +51,12 @@
 /* for poll timeout */
 #include "backend.h"
 /*---------------------------------------------------------------------*/
+/*
+ * limit the number of packets per cycle based on Luigi's suggestion
+ * "Important to release buffers quickly!"
+ */
+#define BATCH_SIZE			128
+/*---------------------------------------------------------------------*/
 int32_t
 netmap_init(void **ctxt_ptr, void *engptr)
 {
@@ -490,7 +496,7 @@ int32_t
 netmap_callback(void *engsrcptr)
 {
 	TRACE_NETMAP_FUNC_START();
-	int i;
+	int i, n;
 	netmap_module_context *nmc;
 	struct nm_desc *local_nmd;
 	struct netmap_if *nifp;
@@ -514,7 +520,7 @@ netmap_callback(void *engsrcptr)
 	nifp = local_nmd->nifp;
 
 	for (i = local_nmd->first_rx_ring;
-	     i <= local_nmd->last_rx_ring;
+	     i <= local_nmd->last_rx_ring ;
 	     i++) {
 		rxring = NETMAP_RXRING(nifp, i);
 		__builtin_prefetch(rxring);
@@ -524,7 +530,7 @@ netmap_callback(void *engsrcptr)
 			drop_packets(rxring, eng, engsrc);
 		else {
 			__builtin_prefetch(&rxring->slot[rxring->cur]);
-			while (!nm_ring_empty(rxring)) {
+			for (n = 0; !nm_ring_empty(rxring) && n < BATCH_SIZE; n++) {
 				u_int src, idx;
 				struct netmap_slot *slot;
 				void *buf;

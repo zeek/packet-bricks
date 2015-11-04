@@ -216,8 +216,8 @@ reference LUA script file: please see scripts/startup-*.lua files for
 details. You can also use the following command to load the script
 file in packet-bricks at startup:
 
-# bin/bricks -f /usr/local/etc/bricks-scripts/startup-one-thread.lua, OR
-# bin/bricks-server -f /usr/local/etc/bricks-scripts/startup-one-thread.lua
+# bricks -f /usr/local/etc/bricks-scripts/startup-one-thread.lua, OR
+# bricks-server -f /usr/local/etc/bricks-scripts/startup-one-thread.lua
 
 The user is recommended to skim through the script file. It is
 heavily documented. The scripts directory also contains code for 
