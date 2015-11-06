@@ -1,7 +1,7 @@
 README
 ======
 
-Packet BRICKS is a Linux/FreeBSD daemon that is capable of receiving
+Packet Bricks is a Linux/FreeBSD daemon that is capable of receiving
 and distributing ingress traffic to userland applications. Its main 
 responsibilities may include (i) load-balancing, (ii) duplicating 
 and/or (iii) filtering ingress traffic across all registered 
