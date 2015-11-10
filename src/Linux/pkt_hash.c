@@ -41,6 +41,13 @@
 #include <linux/if_ether.h>
 /* for [n/h]to[h/n][ls] */
 #include <linux/in.h>
+/* for memset */
+#include <string.h>
+/*---------------------------------------------------------------------*/
+/* transport port */
+typedef uint16_t in_port_t;
+/* Internet address */
+typedef uint32_t in_addr_t;
 /*---------------------------------------------------------------------*/
 /* no. of bits in a byte */
 #define NBBY			8
@@ -55,7 +62,7 @@ static uint32_t toeplitz_keyseeds[TOEPLITZ_KEYSEED_CNT] =
 
 uint32_t        toeplitz_cache[TOEPLITZ_KEYSEED_CNT][256];
 /*---------------------------------------------------------------------*/
-static inline uint32_t __unused
+static inline uint32_t
 toeplitz_rawhash_addrport(in_addr_t _faddr, in_addr_t _laddr,
 			  in_port_t _fport, in_port_t _lport)
 {
@@ -80,7 +87,7 @@ toeplitz_rawhash_addrport(in_addr_t _faddr, in_addr_t _laddr,
 	return _res;
 }
 /*---------------------------------------------------------------------*/
-static __inline uint32_t __unused
+static __inline uint32_t
 toeplitz_rawhash_addr(in_addr_t _faddr, in_addr_t _laddr)
 {
 	TRACE_PKTHASH_FUNC_START();
@@ -112,7 +119,7 @@ toeplitz_hash(uint32_t _rawhash)
 /*---------------------------------------------------------------------*/
 static void
 toeplitz_cache_create(uint32_t cache[][256], int cache_len,
-		      const uint8_t key_str[], int key_strlen __unused)
+		      const uint8_t key_str[], int key_strlen)
 {
 	TRACE_PKTHASH_FUNC_START();
 	int i;
@@ -156,6 +163,7 @@ toeplitz_cache_create(uint32_t cache[][256], int cache_len,
 		}
 	}
 	TRACE_PKTHASH_FUNC_END();
+	UNUSED(key_strlen);
 }
 /*---------------------------------------------------------------------*/
 #ifdef RSS_DEBUG  
@@ -204,7 +212,7 @@ toeplitz_get_key(uint8_t *key, int keylen)
 }
 /*---------------------------------------------------------------------*/
 static void
-toeplitz_init(void *dummy __unused)
+toeplitz_init(void *dummy)
 {
 	TRACE_PKTHASH_FUNC_START();
 	uint8_t key[TOEPLITZ_INIT_KEYLEN];
@@ -228,6 +236,7 @@ toeplitz_init(void *dummy __unused)
 	toeplitz_verify();
 #endif
 	TRACE_PKTHASH_FUNC_END();
+	UNUSED(dummy);
 }
 /*---------------------------------------------------------------------*/
 /**
