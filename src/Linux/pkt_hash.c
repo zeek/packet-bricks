@@ -42,6 +42,194 @@
 /* for [n/h]to[h/n][ls] */
 #include <linux/in.h>
 /*---------------------------------------------------------------------*/
+/* no. of bits in a byte */
+#define NBBY			8
+#define TOEPLITZ_KEYLEN_MAX     40
+#define TOEPLITZ_KEYSEED_CNT    2
+#define TOEPLITZ_KEYSEED0       0x6d
+#define TOEPLITZ_KEYSEED1       0x5a
+#define TOEPLITZ_INIT_KEYLEN    (TOEPLITZ_KEYSEED_CNT + sizeof(uint32_t))
+
+static uint32_t toeplitz_keyseeds[TOEPLITZ_KEYSEED_CNT] =
+	{ TOEPLITZ_KEYSEED0, TOEPLITZ_KEYSEED1 };
+
+uint32_t        toeplitz_cache[TOEPLITZ_KEYSEED_CNT][256];
+/*---------------------------------------------------------------------*/
+static inline uint32_t __unused
+toeplitz_rawhash_addrport(in_addr_t _faddr, in_addr_t _laddr,
+			  in_port_t _fport, in_port_t _lport)
+{
+	TRACE_PKTHASH_FUNC_START();
+	uint32_t _res;
+	
+	_res =  toeplitz_cache[0][_faddr & 0xff];
+	_res ^= toeplitz_cache[0][(_faddr >> 16) & 0xff];
+	_res ^= toeplitz_cache[0][_laddr & 0xff];
+	_res ^= toeplitz_cache[0][(_laddr >> 16) & 0xff];
+	_res ^= toeplitz_cache[0][_fport & 0xff];
+	_res ^= toeplitz_cache[0][_lport & 0xff];
+	
+	_res ^= toeplitz_cache[1][(_faddr >> 8) & 0xff];
+	_res ^= toeplitz_cache[1][(_faddr >> 24) & 0xff];
+	_res ^= toeplitz_cache[1][(_laddr >> 8) & 0xff];
+	_res ^= toeplitz_cache[1][(_laddr >> 24) & 0xff];
+	_res ^= toeplitz_cache[1][(_fport >> 8) & 0xff];
+	_res ^= toeplitz_cache[1][(_lport >> 8) & 0xff];
+
+	TRACE_PKTHASH_FUNC_END();
+	return _res;
+}
+/*---------------------------------------------------------------------*/
+static __inline uint32_t __unused
+toeplitz_rawhash_addr(in_addr_t _faddr, in_addr_t _laddr)
+{
+	TRACE_PKTHASH_FUNC_START();
+	uint32_t _res;
+	
+	_res =  toeplitz_cache[0][_faddr & 0xff];
+	_res ^= toeplitz_cache[0][(_faddr >> 16) & 0xff];
+	_res ^= toeplitz_cache[0][_laddr & 0xff];
+	_res ^= toeplitz_cache[0][(_laddr >> 16) & 0xff];
+	
+	_res ^= toeplitz_cache[1][(_faddr >> 8) & 0xff];
+	_res ^= toeplitz_cache[1][(_faddr >> 24) & 0xff];
+	_res ^= toeplitz_cache[1][(_laddr >> 8) & 0xff];
+	_res ^= toeplitz_cache[1][(_laddr >> 24) & 0xff];
+
+	TRACE_PKTHASH_FUNC_END();
+	return _res;
+}
+/*---------------------------------------------------------------------*/
+#if 0
+static __inline int
+toeplitz_hash(uint32_t _rawhash)
+{
+	TRACE_PKTHASH_FUNC_START();
+	TRACE_PKTHASH_FUNC_END();
+	return (_rawhash & 0xffff);
+}
+#endif
+/*---------------------------------------------------------------------*/
+static void
+toeplitz_cache_create(uint32_t cache[][256], int cache_len,
+		      const uint8_t key_str[], int key_strlen __unused)
+{
+	TRACE_PKTHASH_FUNC_START();
+	int i;
+	
+	for (i = 0; i < cache_len; ++i) {
+		uint32_t key[NBBY];
+		int j, b, shift, val;
+		
+		memset(key, 0, sizeof(key));
+		
+		/*
+		 * Calculate 32bit keys for one byte; one key for each bit.
+		 */
+		for (b = 0; b < NBBY; ++b) {
+			for (j = 0; j < 32; ++j) {
+				uint8_t k;
+				int bit;
+				
+				bit = (i * NBBY) + b + j;
+				
+				k = key_str[bit / NBBY];
+				shift = NBBY - (bit % NBBY) - 1;
+				if (k & (1 << shift))
+					key[b] |= 1 << (31 - j);
+			}
+		}
+		
+		/*
+		 * Cache the results of all possible bit combination of
+		 * one byte.
+		 */
+		for (val = 0; val < 256; ++val) {
+			uint32_t res = 0;
+			
+			for (b = 0; b < NBBY; ++b) {
+				shift = NBBY - b - 1;
+				if (val & (1 << shift))
+					res ^= key[b];
+			}
+			cache[i][val] = res;
+		}
+	}
+	TRACE_PKTHASH_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+#ifdef RSS_DEBUG  
+static void
+toeplitz_verify(void)
+{
+	TRACE_PKTHASH_FUNC_START();
+	in_addr_t faddr, laddr;
+	in_port_t fport, lport;
+	
+	/*
+	 * The first IPv4 example in the verification suite
+	 */
+	
+	/* 66.9.149.187:2794 */
+	faddr = 0xbb950942;
+	fport = 0xea0a;
+	
+	/* 161.142.100.80:1766 */
+	laddr = 0x50648ea1;
+	lport = 0xe606;
+	
+	kprintf("toeplitz: verify addr/port 0x%08x, addr 0x%08x\n",
+		toeplitz_rawhash_addrport(faddr, laddr, fport, lport),
+		toeplitz_rawhash_addr(faddr, laddr));
+	TRACE_PKTHASH_FUNC_END();
+}
+#endif  /* RSS_DEBUG */
+/*---------------------------------------------------------------------*/
+void
+toeplitz_get_key(uint8_t *key, int keylen)
+{
+	TRACE_PKTHASH_FUNC_START();
+	int i;
+	
+	if (keylen > TOEPLITZ_KEYLEN_MAX) {
+		TRACE_ERR("invalid key length %d", keylen);
+		TRACE_PKTHASH_FUNC_END();
+		exit(EXIT_FAILURE);
+	}
+	
+	/* Replicate key seeds to form key */
+	for (i = 0; i < keylen; ++i)
+		key[i] = toeplitz_keyseeds[i % TOEPLITZ_KEYSEED_CNT];
+	TRACE_PKTHASH_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+static void
+toeplitz_init(void *dummy __unused)
+{
+	TRACE_PKTHASH_FUNC_START();
+	uint8_t key[TOEPLITZ_INIT_KEYLEN];
+	int i;
+
+	for (i = 0; i < TOEPLITZ_KEYSEED_CNT; ++i)
+		toeplitz_keyseeds[i] &= 0xff;
+	
+	toeplitz_get_key(key, TOEPLITZ_INIT_KEYLEN);
+	
+#ifdef RSS_DEBUG
+	kprintf("toeplitz: keystr ");
+	for (i = 0; i < TOEPLITZ_INIT_KEYLEN; ++i)
+		kprintf("%02x ", key[i]);
+	kprintf("\n");
+#endif
+	toeplitz_cache_create(toeplitz_cache, TOEPLITZ_KEYSEED_CNT,
+			      key, TOEPLITZ_INIT_KEYLEN);
+	
+#ifdef RSS_DEBUG
+	toeplitz_verify();
+#endif
+	TRACE_PKTHASH_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 /**
  * The cache table is used to pick a nice seed for the hash value. It is
  * built only once when sym_hash_fn is called for the very first time
@@ -100,6 +288,7 @@ sym_hash_fn(uint32_t sip, uint32_t dip, uint16_t sp, uint32_t dp)
 	
 	if (first_time) {
 		build_sym_key_cache(key_cache, KEY_CACHE_LEN);
+		toeplitz_init(NULL);
 		first_time = 0;
 	}
 	

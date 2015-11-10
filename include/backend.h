@@ -49,7 +49,7 @@
 /* __FreeBSD__ */
 #define KQUEUE_MAX_EVENTS		EPOLL_MAX_EVENTS
 /* epoll timeout = 500ms */
-#define EPOLL_TIMEOUT			500
+#define POLL_TIMEOUT			2500
 /* passive sock port */
 #define PKTENGINE_LISTEN_PORT		1234
 /* listen queue length */

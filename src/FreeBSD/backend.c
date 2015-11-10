@@ -257,16 +257,13 @@ create_listening_socket_for_eng(engine *eng)
 	TRACE_BACKEND_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-#if 0
-/* This function has been disabled... it will be re-enabled in the near future */
 /**
- * XXX - This function needs to be revised..
  * Services incoming request from userland applications and takes
  * necessary actions. The actions can be: (i) passing packets to userland
  * apps etc.
  */
 static void
-process_request_backend(engine *eng, struct kevent chlist[])
+process_request_backend(engine *eng, struct pollfd pfd)
 {
 	TRACE_BACKEND_FUNC_START();
 	int client_sock, c, total_read, fd;
@@ -304,6 +301,10 @@ process_request_backend(engine *eng, struct kevent chlist[])
 	TRACE_DEBUG_LOG("TargetArgs.proc_name: %s\n", rb->targs.proc_name);
 	TRACE_FLUSH();
 
+	UNUSED(pfd);
+	UNUSED(channelname);
+	UNUSED(fd);
+#if 0
 	//snprintf(channelname, 20, "vale%s%d:s", 
 	//	 rb->targs.proc_name, rb->targs.pid);
 	snprintf(channelname, 20, "%s%d", 
@@ -322,11 +323,10 @@ process_request_backend(engine *eng, struct kevent chlist[])
 	/* continue listening */
 	fd = eng->listen_fd;
 	EV_SET(&chlist[fd], fd, EVFILT_READ | EVFILT_WRITE, EV_ADD, 0, 0, NULL);
-	
+#endif	
 	TRACE_BACKEND_FUNC_END();
 	return;
 }
-#endif
 /*---------------------------------------------------------------------*/
 /**
  * Creates listening socket to serve as a conduit between userland
@@ -339,7 +339,7 @@ initiate_backend(engine *eng)
 	TRACE_BACKEND_FUNC_START();
 	struct pollfd pollfd[MAX_INLINKS];
 	uint polli;
-	uint dev_flag, i;
+	uint dev_flag, i, j;
 
 	/* initializing main while loop parameters */
 	dev_flag = 0;
@@ -365,26 +365,40 @@ initiate_backend(engine *eng)
 		++polli;
 	}
 
+	/* register eng's listening socket */
+	pollfd[polli].fd = eng->listen_fd;
+	pollfd[polli].events = POLLIN | POLLRDNORM;
+	pollfd[polli].revents = 0;
+	++polli;
+	
 	/* keep on running till engine stops */
 	while (eng->run == 1) {
 		/* pcap handling.. */
 		if (eng->pcapr_context != NULL)
 			process_pcap_read_request(eng, eng->pcapr_context);
 		else { /* get input from interface */
-			i = poll(pollfd, polli+1, 2500);
+			i = poll(pollfd, (polli + 1), POLL_TIMEOUT);
 			
 			/* if no packet came up, try polling again */
 			if (i <= 0) continue;
 			
-			for (i = 0; i < eng->no_of_sources; i++)
-				if (!(pollfd[i].revents & POLLERR))
-					eng->iom.callback(eng->esrc[i]);
-#if 0
-			/* XXX - temporarily disabled */
-			/* process app reqs */
-				else if ((int)chlist[n].ident == eng->listen_fd)
-					process_request_backend(eng, chlist);
-#endif
+			for (i = 0; i < MAX_INLINKS; i++) {
+				if (pollfd[i].revents & POLLERR)
+					continue;
+				/* process listening requests */
+				if (pollfd[i].fd == eng->listen_fd
+				    && pollfd[i].revents & POLLIN) {
+					process_request_backend(eng, pollfd[i]);
+					continue;
+				}
+				/* process iom fds */
+				for (j = 0; j < eng->no_of_sources; j++) {
+					if (eng->esrc[j]->dev_fd == pollfd[i].fd) {
+						eng->iom.callback(eng->esrc[j]);
+						break;
+					}
+				}
+			}
 		}
 	}
 

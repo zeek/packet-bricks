@@ -132,14 +132,14 @@ tags:
 #---------------------------------------------------------------------#
 ifeq ($(OSARCH),FreeBSD)
 install-man:
-	@echo "Installing manual pages"
+	@echo -e "\e[1;34mInstalling manual pages $<\e[0m"
 	gzip man/*
 	cp man/* /usr/share/man/man1/
 	makewhatis
 	gunzip man/*
 else
 install-man:
-	@echo "Installing manual pages"
+	@echo -e "\e[1;34mInstalling manual pages $<\e[0m"
 	gzip man/*
 	cp man/* /usr/share/man/man1/
 	mandb
@@ -147,24 +147,28 @@ install-man:
 endif
 
 install: install-man
+	@echo -e "\e[1;34mPlacing the binaries in the $(sbindir)/ directory $<\e[0m"
 	$(INSTALL_PROGRAM) $(BIN) $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-server $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-shell $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-kill-server $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-load-balance $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-duplicate $(sbindir)/
-	@echo "Placing the scripts in the $(sysconfdir)/$(BINNAME)-scripts/ directory"
+	@echo -e "\e[1;34mPlacing the scripts in the $(sysconfdir)/$(BINNAME)-scripts/ directory $<\e[0m"
 	mkdir -p $(sysconfdir)/$(BINNAME)-scripts
 	cp -R scripts/* $(sysconfdir)/$(BINNAME)-scripts
 
 uninstall:
+	@echo -e "\e[1;34mRemoving binaries... $<\e[0m"
 	$(RM) $(sbindir)/$(BINNAME)
 	$(RM) $(sbindir)/$(BINNAME)-server
 	$(RM) $(sbindir)/$(BINNAME)-shell
 	$(RM) $(sbindir)/$(BINNAME)-kill-server
 	$(RM) $(sbindir)/$(BINNAME)-load-balance
 	$(RM) $(sbindir)/$(BINNAME)-duplicate
+	@echo -e "\e[1;34mRemoving scripts... $<\e[0m"
 	$(RM) -r $(sysconfdir)/$(BINNAME)-scripts
+	@echo -e "\e[1;34mRemoving manpages... $<\e[0m"
 	$(RM) /usr/share/man/man1/$(BINNAME).1.gz
 	$(RM) /usr/share/man/man1/$(BINNAME)-server.1.gz
 	$(RM) /usr/share/man/man1/$(BINNAME)-kill-server.1.gz
