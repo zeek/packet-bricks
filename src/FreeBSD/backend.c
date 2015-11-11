@@ -55,6 +55,8 @@
 #include <sys/poll.h>
 /* for open/close */
 #include <unistd.h>
+/* for assert */
+#include <assert.h>
 /*---------------------------------------------------------------------*/
 int
 connect_to_bricks_server(char *rshell_args)
@@ -253,17 +255,16 @@ create_listening_socket_for_eng(engine *eng)
 		TRACE_BACKEND_FUNC_END();
 	}
 	eng->listen_port = PKTENGINE_LISTEN_PORT + eng->esrc[0]->dev_fd;
+	TRACE_LOG("Engine listening on port: %u\n", eng->listen_port);
 	
 	TRACE_BACKEND_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 /**
- * Services incoming request from userland applications and takes
- * necessary actions. The actions can be: (i) passing packets to userland
- * apps etc.
+ * Accepts connection for connecting to the backend...
  */
-static void
-process_request_backend(engine *eng, struct pollfd pfd)
+static int
+accept_request_backend(engine *eng, int sock)
 {
 	TRACE_BACKEND_FUNC_START();
 	int client_sock, c, total_read, fd;
@@ -272,16 +273,22 @@ process_request_backend(engine *eng, struct pollfd pfd)
 	char client_message[2000];
 	req_block *rb;
 	char channelname[20];
+
 	total_read = read_size = 0;
 
-	/* accept connection from an incoming client */
-	client_sock = accept(eng->listen_fd, (struct sockaddr *)&client, (socklen_t *)&c);
-	if (client_sock < 0) {
-		TRACE_LOG("accept failed: %s\n", strerror(errno));
+	if (sock == eng->listen_fd) {
+		/* accept connection from an incoming client */
+		client_sock = accept(eng->listen_fd, (struct sockaddr *)&client, (socklen_t *)&c);
+		if (client_sock < 0) {
+			TRACE_LOG("accept failed: %s\n", strerror(errno));
+			TRACE_BACKEND_FUNC_END();
+			return -1;
+		}
 		TRACE_BACKEND_FUNC_END();
-		return;
+		return client_sock;
 	}
-     
+
+#if 0
 	/* Receive a message from client */
 	while ((read_size = recv(client_sock, 
 				 &client_message[total_read], 
@@ -289,7 +296,7 @@ process_request_backend(engine *eng, struct pollfd pfd)
 		total_read += read_size;
 		if ((unsigned)total_read >= sizeof(req_block)) break;
 	}
-
+	
 	TRACE_DEBUG_LOG("Total bytes read from listening socket: %d\n", 
 			total_read);
 	
@@ -300,32 +307,27 @@ process_request_backend(engine *eng, struct pollfd pfd)
 	TRACE_DEBUG_LOG("TargetArgs.pid: %d\n", rb->targs.pid);
 	TRACE_DEBUG_LOG("TargetArgs.proc_name: %s\n", rb->targs.proc_name);
 	TRACE_FLUSH();
-
-	UNUSED(pfd);
+#endif
 	UNUSED(channelname);
 	UNUSED(fd);
-#if 0
-	//snprintf(channelname, 20, "vale%s%d:s", 
-	//	 rb->targs.proc_name, rb->targs.pid);
-	snprintf(channelname, 20, "%s%d", 
-		 rb->targs.proc_name, rb->targs.pid);
-
-	Rule *r = add_new_rule(eng, NULL, rb->t);
-
-	/* create communication back channel */
-	fd = eng->iom.create_channel(eng, r, channelname/*, client_sock*/);
-	EV_SET(&chlist[fd], fd, EVFILT_READ | EVFILT_WRITE, EV_ADD, 0, 0, NULL);
-
-	/* add client sock to the polling layer */
-	fd = client_sock;
-	EV_SET(&chlist[fd], fd, EVFILT_READ | EVFILT_WRITE, EV_ADD, 0, 0, NULL);
+	UNUSED(client_message);
+	UNUSED(rb);
 	
-	/* continue listening */
-	fd = eng->listen_fd;
-	EV_SET(&chlist[fd], fd, EVFILT_READ | EVFILT_WRITE, EV_ADD, 0, 0, NULL);
-#endif	
 	TRACE_BACKEND_FUNC_END();
-	return;
+	return -1;
+}
+/*---------------------------------------------------------------------*/
+/**
+ * Services incoming request from userland applications and takes
+ * necessary actions. The actions can be: (i) passing packets to userland
+ * apps etc.
+ */
+int __unused
+process_request_backend(engine *eng __unused, int sock __unused)
+{
+	TRACE_BACKEND_FUNC_START();
+	TRACE_BACKEND_FUNC_END();
+	return -1;
 }
 /*---------------------------------------------------------------------*/
 /**
@@ -337,14 +339,16 @@ void
 initiate_backend(engine *eng)
 {
 	TRACE_BACKEND_FUNC_START();
-	struct pollfd pollfd[MAX_INLINKS];
+
+	struct pollfd pollfd[POLL_MAX_EVENTS];
 	uint polli;
-	uint dev_flag, i, j;
+	int i;
+	uint dev_flag, j;
 
 	/* initializing main while loop parameters */
 	dev_flag = 0;
 	polli = 0;
-	memset(pollfd, 0, sizeof(pollfd));
+	memset(pollfd, -1, sizeof(pollfd));
 
 	/* create listening socket */
 	create_listening_socket_for_eng(eng);
@@ -358,18 +362,18 @@ initiate_backend(engine *eng)
 	}
 
 	/* register iom socket */
-	for (i = 0; i < eng->no_of_sources; i++) {
-		pollfd[polli].fd = eng->esrc[i]->dev_fd;
+	for (j = 0; j < eng->no_of_sources; j++) {
+		pollfd[polli].fd = eng->esrc[j]->dev_fd;
 		pollfd[polli].events = POLLIN | POLLRDNORM;
 		pollfd[polli].revents = 0;
-		++polli;
+		polli++;
 	}
 
 	/* register eng's listening socket */
 	pollfd[polli].fd = eng->listen_fd;
 	pollfd[polli].events = POLLIN | POLLRDNORM;
 	pollfd[polli].revents = 0;
-	++polli;
+	polli++;
 	
 	/* keep on running till engine stops */
 	while (eng->run == 1) {
@@ -377,27 +381,71 @@ initiate_backend(engine *eng)
 		if (eng->pcapr_context != NULL)
 			process_pcap_read_request(eng, eng->pcapr_context);
 		else { /* get input from interface */
-			i = poll(pollfd, (polli + 1), POLL_TIMEOUT);
+			int source_flag;
+			i = poll(pollfd, POLL_MAX_EVENTS, POLL_TIMEOUT);
 			
 			/* if no packet came up, try polling again */
 			if (i <= 0) continue;
 			
-			for (i = 0; i < MAX_INLINKS; i++) {
-				if (pollfd[i].revents & POLLERR)
+			for (i = 0; i < POLL_MAX_EVENTS; i++) {
+				if (pollfd[i].fd == -1)
 					continue;
-				/* process listening requests */
-				if (pollfd[i].fd == eng->listen_fd
-				    && pollfd[i].revents & POLLIN) {
-					process_request_backend(eng, pollfd[i]);
-					continue;
-				}
+				/* reset the source flag */
+				source_flag = 0;
 				/* process iom fds */
 				for (j = 0; j < eng->no_of_sources; j++) {
 					if (eng->esrc[j]->dev_fd == pollfd[i].fd) {
 						eng->iom.callback(eng->esrc[j]);
+						source_flag = 1;
 						break;
 					}
 				}
+
+				if (source_flag == 1) continue;
+				/* process listening requests */
+				if (pollfd[i].fd == eng->listen_fd) {
+					if ((pollfd[i].revents & POLLIN) &&
+					    polli < POLL_MAX_EVENTS) {
+						int sock = accept_request_backend(eng, pollfd[i].fd);
+						if (sock != -1) {
+							register int t = 0;
+							/* locate empty index */
+							while (t < POLL_MAX_EVENTS && pollfd[t].fd != -1)
+								t++;
+							assert(t < POLL_MAX_EVENTS);
+							/* register client's socket */
+							pollfd[t].fd = sock;
+							pollfd[t].events = POLLIN | POLLRDNORM;
+							pollfd[t].revents = 0;
+							polli++;
+							TRACE_LOG("Accepted connection with sockid: %d\n", pollfd[t].fd);
+						}
+					}
+				} else {
+					if ((pollfd[i].revents & POLLIN)) {
+						char buf[1024];
+						if (read(pollfd[i].fd, buf, sizeof(buf)) <= 0) {
+							close(pollfd[i].fd);
+							TRACE_LOG("Closing connection with sockid: %d\n", pollfd[i].fd);
+							pollfd[i].fd = -1;
+							polli--;
+						} else {
+							int rc = process_request_backend(eng, pollfd[i].fd);
+							if (rc == -1) {
+								close(pollfd[i].fd);
+								TRACE_LOG("Closing connection with sockid: %d\n", pollfd[i].fd);
+								pollfd[i].fd = -1;
+								polli--;
+							}							
+						}
+					}
+					if ((pollfd[i].revents & (POLLERR | POLLHUP | POLLNVAL))) {
+						close(pollfd[i].fd);
+						TRACE_LOG("Closing connection with sockid: %d\n", pollfd[i].fd);
+						pollfd[i].fd = -1;
+						polli--;						
+					}
+				}				
 			}
 		}
 	}

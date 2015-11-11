@@ -45,9 +45,9 @@
  */
 /* Sets the limit on how many processes each engine can handle */
 /* __linux__ */
-#define EPOLL_MAX_EVENTS		FD_SETSIZE
+#define POLL_MAX_EVENTS			MAX_INLINKS//FD_SETSIZE
 /* __FreeBSD__ */
-#define KQUEUE_MAX_EVENTS		EPOLL_MAX_EVENTS
+#define KQUEUE_MAX_EVENTS		POLL_MAX_EVENTS
 /* epoll timeout = 500ms */
 #define POLL_TIMEOUT			2500
 /* passive sock port */
