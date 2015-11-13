@@ -234,6 +234,9 @@ pktengine_new(const unsigned char *name,
 	/* finally add the engine entry in elist */
 	TAILQ_INSERT_TAIL(&engine_list, eng, entry);
 
+	/* creating the commnode list */
+	TAILQ_INIT(&eng->commnode_list);
+
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

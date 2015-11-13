@@ -50,6 +50,8 @@
 #include <poll.h>
 /* for poll timeout */
 #include "backend.h"
+/* for filter functions */
+#include "bricks_filter.h"
 /*---------------------------------------------------------------------*/
 /*
  * limit the number of packets per cycle based on Luigi's suggestion
@@ -482,8 +484,11 @@ dispatch_pkt(struct netmap_ring *rxring,
 				dispatch_pkt(rxring, eng, 
 					     cn->brick, buf, 
 					     lnd->level);
-			} else if (cn->filt == NULL) {
+			} else if (cn->filt.filter_type_flag ==
+				   BRICKS_NO_FILTER) {
 				cn->mark = 1;
+			} else {
+				cn->mark = analyze_packet(buf, cn);
 			}
 		}
 		CLR_BIT(b, j);
@@ -611,7 +616,7 @@ netmap_delete_all_channels(Brick *brick)
  * Will further improve later...
  */
 static void
-strcpy_wtih_reverse_pipe(char *to, char *from)
+strcpy_with_reverse_pipe(char *to, char *from)
 {
 	TRACE_NETMAP_FUNC_START();
 	register int i = 0;
@@ -773,8 +778,13 @@ netmap_create_channel(char *in_name, char *out_name,
 			TRACE_ERR("Can't open %p(%s)\n", cn->out_nmd, ifname);
 			TRACE_NETMAP_FUNC_END();
 		}
-		strcpy_wtih_reverse_pipe(cn->nm_ifname, out_name);
-	
+		strcpy_with_reverse_pipe(cn->nm_ifname, out_name);
+
+		/* Adding comm node to the engine's commnode list */
+		TRACE_LOG("Adding CommNode named %s to the commlist for engine %s\n",
+			  cn->nm_ifname, eng->name);
+		TAILQ_INSERT_TAIL(&eng->commnode_list, cn, entry);
+		
 		TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", 
 			  lnd->ifname, 
 			  out_name, 
@@ -789,6 +799,24 @@ netmap_create_channel(char *in_name, char *out_name,
 
 	TRACE_NETMAP_FUNC_END();
 	return fd;
+}
+/*---------------------------------------------------------------------*/
+int32_t
+install_filter(req_block *rb, engine *eng)
+{
+	TRACE_NETMAP_FUNC_START();
+	CommNode *cn;
+	/* first locate the right commnode entry */
+	TAILQ_FOREACH(cn, &eng->commnode_list, entry) {
+		if (!strcmp((char *)cn->nm_ifname, (char *)rb->ifname)) {
+			/* apply the filter */
+			cn->filt = rb->f;
+			return 1;
+		}
+	}
+	
+	TRACE_NETMAP_FUNC_END();
+	return -1;
 }
 /*---------------------------------------------------------------------*/
 int32_t

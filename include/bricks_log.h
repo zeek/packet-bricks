@@ -127,11 +127,19 @@
 
 #ifdef DBRICK
 #define TRACE_BRICK_FUNC_START()	TRACE_FUNC_START()
-#define TRACE_BRICK_FUNC_END()	TRACE_FUNC_END()
+#define TRACE_BRICK_FUNC_END()		TRACE_FUNC_END()
 #else /* DBRICK */
 #define TRACE_BRICK_FUNC_START()	(void)0
-#define TRACE_BRICK_FUNC_END()	(void)0
+#define TRACE_BRICK_FUNC_END()		(void)0
 #endif /* !DBRICK */
+
+#ifdef DFILTER
+#define TRACE_FILTER_FUNC_START()	TRACE_FUNC_START()
+#define TRACE_FILTER_FUNC_END()		TRACE_FUNC_END()
+#else /* DFILTER */
+#define TRACE_FILTER_FUNC_START()	(void)0
+#define TRACE_FILTER_FUNC_END()		(void)0
+#endif /* !DFILTER */
 
 /**
  * Default loggers.

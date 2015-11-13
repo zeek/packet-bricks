@@ -119,6 +119,7 @@ typedef struct {
 /**
  * MACROS for filter_type_flag
  */
+#define BRICKS_NO_FILTER		 0
 #define BRICKS_CONNECTION_FILTER	 1
 #define BRICKS_TCPSPORT_FILTER		 2
 #define BRICKS_TCPDPORT_FILTER		 3
@@ -162,12 +163,12 @@ typedef struct {
 typedef struct Filter {
 	uint32_t filter_type_flag: BRICKS_TOTAL_FILTERS;
 	union {
-		EthAddress *ethaddr;
-		IP4Address *ip4addr;
-		IP6Address *ip6addr;
-		Port *p;
-		Protocol *prot;
-		Connection *conn;
+		EthAddress ethaddr;
+		IP4Address ip4addr;
+		IP6Address ip6addr;
+		Port p;
+		Protocol prot;
+		Connection conn;
 	};
 } Filter __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/

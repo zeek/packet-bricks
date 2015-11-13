@@ -46,17 +46,24 @@ struct txq_entry {
         uint16_t slot_idx;      /* used if ring */
 };
 
-typedef struct CommNode {
+struct CommNode {
 	struct nm_desc *out_nmd;		/* Node-local pipe descriptor */
 	pcap_t *pd;
 	pcap_dumper_t *pdumper;
 	char nm_ifname[IFNAMSIZ];		/* name of the node */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
-	Filter *filt;				/* applied filter */
+	Filter filt;				/* applied filter */
 	uint8_t mark;				/* marking for delivery */
 	struct Brick *brick;			/* ptrs to child bricks */
-} CommNode __attribute__((aligned(__WORDSIZE)));
+
+	/*
+	 * the linked list ptr that will chain together
+	 * all commnodes (for netmap_module.c). this will
+	 * be used for network communication module
+	 */
+	TAILQ_ENTRY(CommNode) entry;
+}  __attribute__((aligned(__WORDSIZE)));
 
 /**
  * Private per-engine netmap module context. Please see the comments 
@@ -84,9 +91,17 @@ typedef struct netmap_iface_context {
 /**
  * Global function that helps push the packet into the netmap framework
  */
-int32_t netmap_pcap_push_pkt(engine *eng, 
-			     const uint8_t *pkt, 
-			     const uint16_t len);
+int32_t
+netmap_pcap_push_pkt(engine *eng, 
+		     const uint8_t *pkt, 
+		     const uint16_t len);
+
+/**
+ * Function that will install the filter on the right CommNode within
+ * the pkt engine.
+ */
+int32_t
+install_filter(req_block *rb, engine *eng);
 /*---------------------------------------------------------------------*/
 /* try netmap-specific tx this many times */
 #define TX_RETRIES			20

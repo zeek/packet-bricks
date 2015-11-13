@@ -54,6 +54,11 @@ typedef enum io_type {
 /*---------------------------------------------------------------------*/
 /* Declaring struct source for engine_src */
 struct engine_src;
+
+/* Declaring CommNode struct */
+typedef struct CommNode CommNode;
+/* CommNode list declaration */
+typedef TAILQ_HEAD(clist, CommNode) clist;
 /*---------------------------------------------------------------------*/
 /**
  *
@@ -83,6 +88,8 @@ typedef struct engine {
 	int32_t buffer_sz;		/* buffer sizes in between each brick */
 	void *pcapr_context;		/* private_context for pcap reading */
 
+	/* the commnode list that shall be referred to by netmodule */
+	clist commnode_list;
 	/*
 	 * the linked list ptr that will chain together
 	 * all the engines (for network_interface.c) 
