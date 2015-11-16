@@ -31,7 +31,7 @@
 /* Denotes the platform name */
 #define PLATFORM_NAME		"BRICKS"
 /* Denotes current version of the prototype */
-#define VERSION 		"0.1-alpha"
+#define VERSION 		"0.5-beta"
 /* Denotes the symbol that is going to appear at command prompt */
 #define PLATFORM_PROMPT		"bricks"
 /*---------------------------------------------------------------------*/

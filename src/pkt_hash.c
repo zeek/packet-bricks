@@ -25,12 +25,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+/*---------------------------------------------------------------------*/
 /* for func prototypes */
 #include "pkt_hash.h"
 /* for bricks logging */
 #include "bricks_log.h"
 /* for types */
 #include <sys/types.h>
+/*---------------------------------------------------------------------*/
+#define __FAVOR_BSD		1
+/*---------------------------------------------------------------------*/
 /* for [n/h]to[h/n][ls] */
 #include <netinet/in.h>
 /* iphdr */
@@ -89,7 +93,7 @@ build_sym_key_cache(uint32_t *cache, int cache_len)
 /**
  * Computes symmetric hash based on the 4-tuple header data
  */
-static uint32_t __unused
+static uint32_t
 sym_hash_fn(uint32_t sip, uint32_t dip, uint16_t sp, uint32_t dp)
 {
 #define MSB32				0x80000000
@@ -142,15 +146,10 @@ decode_ip_n_hash(struct ip *iph, uint8_t hash_split, uint8_t seed)
 	uint32_t rc = 0;
 	
 	if (hash_split == 2) {
-#if 1
 		rc = sym_hash_fn(ntohl(iph->ip_src.s_addr),
 			ntohl(iph->ip_dst.s_addr),
 			ntohs(0xFFFD) + seed,
 			ntohs(0xFFFE) + seed);
-#else
-		rc = toeplitz_rawhash_addr(ntohl(iph->ip_src.s_addr),
-					   ntohl(iph->ip_dst.s_addr));
-#endif
 	} else {
 		struct tcphdr *tcph = NULL;
 		struct udphdr *udph = NULL;
@@ -158,31 +157,17 @@ decode_ip_n_hash(struct ip *iph, uint8_t hash_split, uint8_t seed)
 		switch (iph->ip_p) {
 		case IPPROTO_TCP:
 			tcph = (struct tcphdr *)((uint8_t *)iph + (iph->ip_hl<<2));
-#if 1
 			rc = sym_hash_fn(ntohl(iph->ip_src.s_addr), 
 					 ntohl(iph->ip_dst.s_addr), 
 					 ntohs(tcph->th_sport) + seed, 
 					 ntohs(tcph->th_dport) + seed);
-#else
-			rc = toeplitz_rawhash_addrport(ntohl(iph->ip_src.s_addr), 
-						       ntohl(iph->ip_dst.s_addr), 
-						       ntohs(tcph->th_sport) + seed, 
-						       ntohs(tcph->th_dport) + seed);
-#endif
 			break;
 		case IPPROTO_UDP:
 			udph = (struct udphdr *)((uint8_t *)iph + (iph->ip_hl<<2));
-#if 1
 			rc = sym_hash_fn(ntohl(iph->ip_src.s_addr),
 					 ntohl(iph->ip_dst.s_addr),
 					 ntohs(udph->uh_sport) + seed,
 					 ntohs(udph->uh_dport) + seed);
-#else
-			rc = toeplitz_rawhash_addrport(ntohl(iph->ip_src.s_addr),
-						       ntohl(iph->ip_dst.s_addr),
-						       ntohs(udph->uh_sport) + seed,
-						       ntohs(udph->uh_dport) + seed);	
-#endif
 			break;
 		case IPPROTO_IPIP:
 			/* tunneling */
@@ -194,15 +179,10 @@ decode_ip_n_hash(struct ip *iph, uint8_t hash_split, uint8_t seed)
 			 * the hash strength (although weaker but) should still hold 
 			 * even with 2 fields 
 			 */
-#if 1
 			rc = sym_hash_fn(ntohl(iph->ip_src.s_addr),
 					 ntohl(iph->ip_dst.s_addr),
 					 ntohs(0xFFFD) + seed,
 					 ntohs(0xFFFE) + seed);
-#else
-			rc = toeplitz_rawhash_addr(ntohl(iph->ip_src.s_addr),
-						   ntohl(iph->ip_dst.s_addr));
-#endif
 			break;
 		}
 	}
@@ -231,15 +211,10 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h, uint8_t hash_split, uint8_t seed)
 		(ipv6h->ip6_dst.s6_addr[3] << 24);
 	
 	if (hash_split == 2) {
-#if 1
 		rc = sym_hash_fn(ntohl(saddr),
 				 ntohl(daddr),
 				 ntohs(0xFFFD) + seed,
 				 ntohs(0xFFFE) + seed);
-#else
-		rc = toeplitz_rawhash_addr(ntohl(saddr),
-					   ntohl(daddr));
-#endif
 	} else {
 		struct tcphdr *tcph = NULL;
 		struct udphdr *udph = NULL;
@@ -247,31 +222,17 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h, uint8_t hash_split, uint8_t seed)
 		switch(ntohs(ipv6h->ip6_ctlun.ip6_un1.ip6_un1_nxt)) {
 		case IPPROTO_TCP:
 			tcph = (struct tcphdr *)(ipv6h + 1);
-#if 1
 			rc = sym_hash_fn(ntohl(saddr), 
 					 ntohl(daddr), 
 					 ntohs(tcph->th_sport) + seed, 
 					 ntohs(tcph->th_dport) + seed);
-#else
-			rc = toeplitz_rawhash_addrport(ntohl(saddr), 
-						       ntohl(daddr), 
-						       ntohs(tcph->th_sport) + seed, 
-						       ntohs(tcph->th_dport) + seed);
-#endif
 			break;
 		case IPPROTO_UDP:
 			udph = (struct udphdr *)(ipv6h + 1);
-#if 1
 			rc = sym_hash_fn(ntohl(saddr),
 					 ntohl(daddr),
 					 ntohs(udph->uh_sport) + seed,
 					 ntohs(udph->uh_dport) + seed);
-#else
-			rc = toeplitz_rawhash_addrport(ntohl(saddr),
-						       ntohl(daddr),
-						       ntohs(udph->uh_sport) + seed,
-						       ntohs(udph->uh_dport) + seed);
-#endif
 			break;
 		case IPPROTO_IPIP:
 			/* tunneling */
@@ -293,15 +254,10 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h, uint8_t hash_split, uint8_t seed)
 			 * the hash strength (although weaker but) should still hold 
 			 * even with 2 fields 
 			 */
-#if 1
 			rc = sym_hash_fn(ntohl(saddr),
 					 ntohl(daddr),
 					 ntohs(0xFFFD) + seed,
 					 ntohs(0xFFFE) + seed);
-#else
-			rc = toeplitz_rawhash_addr(ntohl(saddr),
-						   ntohl(daddr));			
-#endif
 		}
 	}
 	TRACE_PKTHASH_FUNC_END();
@@ -313,7 +269,7 @@ decode_ipv6_n_hash(struct ip6_hdr *ipv6h, uint8_t hash_split, uint8_t seed)
  * (See decode_vlan_n_hash & pkt_hdr_hash functions).
  */
 static uint32_t
-decode_others_n_hash(struct ether_header *ethh, uint8_t seed __unused)
+decode_others_n_hash(struct ether_header *ethh, uint8_t seed)
 {
 	TRACE_PKTHASH_FUNC_START();
 	uint32_t saddr, daddr, rc;
@@ -327,16 +283,10 @@ decode_others_n_hash(struct ether_header *ethh, uint8_t seed __unused)
 		(ethh->ether_dhost[3] << 16) |
 		(ethh->ether_dhost[2] << 24);
 
-#if 1
 	rc = sym_hash_fn(ntohl(saddr),
 			 ntohl(daddr),
 			 ntohs(0xFFFD) + seed,
 			 ntohs(0xFFFE) + seed);
-#else
-	rc = toeplitz_rawhash_addr(ntohl(saddr),
-				   ntohl(daddr));
-#endif
-
 	TRACE_PKTHASH_FUNC_END();
 	return rc;
 }
@@ -360,13 +310,6 @@ decode_vlan_n_hash(struct ether_header *ethh, uint8_t hash_split, uint8_t seed)
 		rc = decode_ipv6_n_hash((struct ip6_hdr *)(vhdr + 1),
 					hash_split, seed);
 		break;
-	case ETHERTYPE_PPPOEDISC:
-	case ETHERTYPE_PPPOE:
-	case ETHERTYPE_IPX:
-	case ETHERTYPE_LOOPBACK:
-	case ETHERTYPE_MPLS_MCAST:
-	case ETHERTYPE_MPLS:
-	case ETHERTYPE_ARP:
 	default:
 		/* others */
 		rc = decode_others_n_hash(ethh, seed);
@@ -398,13 +341,6 @@ pkt_hdr_hash(const unsigned char *buffer, uint8_t hash_split, uint8_t seed)
 	case ETHERTYPE_VLAN:
 		rc = decode_vlan_n_hash(ethh, hash_split, seed);
 		break;
-	case ETHERTYPE_PPPOEDISC:
-	case ETHERTYPE_PPPOE:
-	case ETHERTYPE_IPX:
-	case ETHERTYPE_LOOPBACK:
-	case ETHERTYPE_MPLS_MCAST:
-	case ETHERTYPE_MPLS:
-	case ETHERTYPE_ARP:
 	default:
 		/* others */
 		rc = decode_others_n_hash(ethh, seed);
