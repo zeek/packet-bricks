@@ -811,10 +811,17 @@ install_filter(req_block *rb, engine *eng)
 		if (!strcmp((char *)cn->nm_ifname, (char *)rb->ifname)) {
 			/* apply the filter */
 			cn->filt = rb->f;
+			TRACE_LOG("Filter (%d) applied for ifname: %s\n",
+				  cn->filt.filter_type_flag, cn->nm_ifname);
+			TRACE_NETMAP_FUNC_END();
 			return 1;
+		} else {
+			TRACE_LOG("ifname: %s does not match\n", cn->nm_ifname);
 		}
 	}
-	
+
+	TRACE_LOG("Filter application failed for ifname: %s\n",
+		  rb->ifname);
 	TRACE_NETMAP_FUNC_END();
 	return -1;
 }

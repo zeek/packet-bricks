@@ -1,5 +1,5 @@
 CC=cc
-CFLAGS=-O0 -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
+CFLAGS=-g -O0 -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 DEBUG_CFLAGS=-g -DDEBUG -Wall -Werror -Wunused-function -Wextra -D_GNU_SOURCE -D__USE_GNU
 INCLUDE=-I./include
 NETMAP_INCLUDE=-I./include/netmap
@@ -9,7 +9,7 @@ LDFLAGS= -lpcap
 BINDIR=bin
 MKDIR=mkdir
 #---------------------------------------------------------------------#
-SRCS = vale-test.c pkt-rx.c pcap-test.c
+SRCS = vale-test.c pkt-rx.c pcap-test.c nw-unit-test.c
 
 all: default
 
@@ -19,6 +19,7 @@ default: tags
 	$(CC) vale-test.o $(LDFLAGS) -o $(BINDIR)/vale-test
 	$(CC) pkt-rx.o $(LDFLAGS) -o $(BINDIR)/pkt-rx
 	$(CC) pcap-test.o $(LDFLAGS) -o $(BINDIR)/pcap-test
+	$(CC) nw-unit-test.o $(LDFLAGS) -o $(BINDIR)/nw-unit-test
 	$(RM) -rf *.o
 #	$(STRIP) $(BIN)
 
@@ -27,7 +28,8 @@ debug: tags
 	$(MKDIR) -p $(BINDIR)
 	$(CC) vale-test.o $(LDFLAGS) -o $(BINDIR)/vale-test
 	$(CC) pkt-rx.o $(LDFLAGS) -o $(BINDIR)/pkt-rx
-	$(CC) pcap-test.o $(LDFLAGS) -o $(BINDIR)/pcap-test	
+	$(CC) pcap-test.o $(LDFLAGS) -o $(BINDIR)/pcap-test
+	$(CC) nw-unit-test.o $(LDFLAGS) -o $(BINDIR)/nw-unit-test
 	$(RM) -rf *.o 
 #---------------------------------------------------------------------#
 tags:

@@ -335,15 +335,17 @@ process_request_backend(int sock, engine *eng)
 	ssize_t read_size;
 	req_block *rb;
 	
-	if ((read_size = read(sock, buf, sizeof(buf))) <=
+	if ((read_size = read(sock, buf, sizeof(buf))) <
 	    (ssize_t)(sizeof(req_block))) {
-		TRACE_LOG("Request block malformed!\n");
+		TRACE_DEBUG_LOG("Request block malformed! (size: %d),"
+			  " request block should be of size: %d\n",
+			  (int)read_size, (int)sizeof(req_block));
 		return -1;
 	} else {
 		rb = (req_block *)buf;
 		TRACE_DEBUG_LOG("Total bytes read from client socket: %d\n", 
-				read_size);
-
+			  (int)read_size);
+		
 		install_filter(rb, eng);
 		/* parse new rule */
 		TRACE_DEBUG_LOG("Got a new rule\n");
