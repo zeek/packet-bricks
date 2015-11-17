@@ -184,7 +184,8 @@ typedef struct req_block {
 	uint32_t len;
 	unsigned char ifname[IFNAMSIZ];
 	Filter f;
-
+	time_t period;
+	
 	unsigned char req_payload[0];
 } req_block __attribute__((aligned(__WORDSIZE)));
 

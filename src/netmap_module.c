@@ -464,7 +464,8 @@ dispatch_pkt(struct netmap_ring *rxring,
 	     engine *eng,
 	     Brick *brick,
 	     uint8_t *buf,
-	     unsigned char level)
+	     unsigned char level,
+	     time_t current_time)
 {
 	TRACE_NETMAP_FUNC_START();
 	CommNode *cn = NULL;
@@ -483,12 +484,13 @@ dispatch_pkt(struct netmap_ring *rxring,
 			if (cn->brick != NULL) {
 				dispatch_pkt(rxring, eng, 
 					     cn->brick, buf, 
-					     lnd->level);
+					     lnd->level,
+					     current_time);
 			} else if (cn->filt.filter_type_flag ==
 				   BRICKS_NO_FILTER) {
 				cn->mark = 1;
 			} else {
-				cn->mark = analyze_packet(buf, cn);
+				cn->mark = analyze_packet(buf, cn, current_time);
 			}
 		}
 		CLR_BIT(b, j);
@@ -509,12 +511,14 @@ netmap_callback(void *engsrcptr)
 	engine *eng;
 	engine_src *engsrc;
 	Brick *brick;
-
+	time_t current_time;
+	
 	engsrc = (engine_src *)engsrcptr;
 	brick = engsrc->brick;
 	eng = (engine *)brick->eng;
 	nmc = (netmap_module_context *)engsrc->private_context;
 	local_nmd = (struct nm_desc *)nmc->local_nmd;
+	current_time = time(NULL);
 
 	if (local_nmd == NULL) {
 		TRACE_LOG("netmap context was not properly initialized\n");
@@ -553,7 +557,7 @@ netmap_callback(void *engsrcptr)
 				__builtin_prefetch(buf);
 				eng->byte_count += slot->len;
 				eng->pkt_count++;
-				dispatch_pkt(rxring, eng, brick, buf, 0);
+				dispatch_pkt(rxring, eng, brick, buf, 0, current_time);
 				rxring->head = rxring->cur = nm_ring_next(rxring, src);
 				update_cnode_ptrs(rxring, brick, eng, src);
 			}
@@ -811,6 +815,8 @@ install_filter(req_block *rb, engine *eng)
 		if (!strcmp((char *)cn->nm_ifname, (char *)rb->ifname)) {
 			/* apply the filter */
 			cn->filt = rb->f;
+			cn->filt_start_time = time(NULL);
+			cn->filt_time_period = rb->period;
 			TRACE_LOG("Filter (%d) applied for ifname: %s\n",
 				  cn->filt.filter_type_flag, cn->nm_ifname);
 			TRACE_NETMAP_FUNC_END();

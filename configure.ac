@@ -125,6 +125,18 @@ if test x"$GUNZIP_CHECK" != x"yes" ; then
    AC_MSG_ERROR([Please install `gunzip'.])
 fi
 
+# Check if bash exists
+AC_CHECK_PROG(BASH_CHECK,bash,yes)
+if test x"$BASH_CHECK" != x"yes" ; then
+   AC_MSG_ERROR([Please install `bash'.])
+fi
+
+# Check if env exists
+AC_CHECK_PROG(ENV_CHECK,env,yes)
+if test x"$ENV_CHECK" != x"yes" ; then
+   AC_MSG_ERROR([Please install `env'.])
+fi
+
 AC_OUTPUT(Makefile)
 AC_OUTPUT(src/Makefile)
 if echo `uname` | grep -q "FreeBSD"
@@ -162,3 +174,5 @@ AC_OUTPUT(scripts/load-balance.lua)
 AC_OUTPUT(scripts/duplicate.lua)
 AC_OUTPUT(scripts/startup-one-thread.lua)
 AC_OUTPUT(scripts/startup-multi-threads.lua)
+
+AC_MSG_NOTICE([Type 'gmake' to compile and 'gmake install' to install the tool. Send feedback to ajamshed@icsi.berkeley.edu.])

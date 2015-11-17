@@ -69,6 +69,7 @@ sendRequest(const char *ifname, struct in_addr addr, uint16_t port)
 
 	strcpy((char *)rb.ifname, (char *)ifname);
 	rb.f.filter_type_flag = BRICKS_UDPPROT_FILTER;
+	rb.period = 20;
 
 	fprintf(stderr, "Sending req block of size: %d\n",
 		(int)sizeof(rb));

@@ -228,7 +228,7 @@ HandleARPFilter(CommNode *cn, struct ether_header *ethh)
 /*---------------------------------------------------------------------*/
 /* Under construction.. */
 int
-analyze_packet(unsigned char *buf, CommNode *cn)
+analyze_packet(unsigned char *buf, CommNode *cn, time_t current_time)
 {	
 	TRACE_FILTER_FUNC_START();
 	struct ether_header *ethh = NULL;
@@ -238,6 +238,14 @@ analyze_packet(unsigned char *buf, CommNode *cn)
 	struct udphdr *udph = NULL;
 	int rc = 1;
 
+	if (unlikely((cn->filt_time_period >= 0) &&
+		     (current_time - cn->filt_start_time >
+		      cn->filt_time_period))) {
+		/* filter has expired. Reset it! */
+		cn->filt.filter_type_flag = BRICKS_NO_FILTER;
+		return 1;
+	}
+	
 	ethh = (struct ether_header *)buf;
 	switch (ntohs(ethh->ether_type)) {
 	case ETHERTYPE_IP:

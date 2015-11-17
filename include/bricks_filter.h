@@ -34,6 +34,6 @@
  * the communication node, if the filter allows...
  */
 int
-analyze_packet(unsigned char *buf, CommNode *cn);
+analyze_packet(unsigned char *buf, CommNode *cn, time_t t);
 /*---------------------------------------------------------------------*/
 #endif /* __BRICKS_FILTER_H__ */

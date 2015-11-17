@@ -86,8 +86,8 @@ $(BINNAME): objs
 	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -d $$""@"> $(BINDIR)/$(BINNAME)-server
 	@printf "#!/usr/bin/env bash\n$(BINDIR)/$(BINNAME) -s $$""@"> $(BINDIR)/$(BINNAME)-shell
 	@printf "#!/usr/bin/env bash\npkill $(BINNAME)"> $(BINDIR)/$(BINNAME)-kill-server
-	@printf "#!/usr/bin/env bash\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/load-balance.lua" > $(BINDIR)/$(BINNAME)-load-balance
-	@printf "#!/usr/bin/env bash\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/duplicate.lua" > $(BINDIR)/$(BINNAME)-duplicate
+	@printf "#!/usr/bin/env bash\n\# check if there is only one additional command-line argument\nif [ \$$\# -ne 2 ]\nthen\n\techo \"Usage:\"\n\techo \"\$$0 <interface_name> <split>\"\n\texit 1\nfi\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/load-balance.lua" > $(BINDIR)/$(BINNAME)-load-balance
+	@printf "#!/usr/bin/env bash\n\# check if there is only one additional command-line argument\nif [ \$$\# -ne 2 ]\nthen\n\techo \"Usage:\"\n\techo \"\$$0 <interface_name> <split>\"\n\texit 1\nfi\necho \"\$$1\" > /tmp/bricks.iface\necho \"\$$2\" > /tmp/bricks.split\n$(sbindir)/$(BINNAME)-server -f $(sysconfdir)/$(BINNAME)-scripts/duplicate.lua" > $(BINDIR)/$(BINNAME)-duplicate
 	chmod a+x $(BINDIR)/$(BINNAME)-server
 	chmod a+x $(BINDIR)/$(BINNAME)-shell
 	chmod a+x $(BINDIR)/$(BINNAME)-kill-server
@@ -123,6 +123,7 @@ clean:
 distclean: clean
 	cd src && $(MAKE) distclean
 	$(RM) -rf Makefile autom4te.cache config.log config.status
+	$(RM) -rf scripts/duplicate.lua scripts/load-balance.lua scripts/startup-multi-threads.lua scripts/startup-one-thread.lua
 	chmod a-x .create_bricks.sh
 
 .PHONY: clean
