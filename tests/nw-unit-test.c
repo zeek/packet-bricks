@@ -59,6 +59,8 @@ sendRequest(const char *ifname, struct in_addr addr, uint16_t port)
 {
 	int sock;
 	req_block rb;
+
+	memset(&rb, 0, sizeof(rb));
 	
 	sock = connectTcp(addr, port);
 	if (sock == -1) {
@@ -69,7 +71,8 @@ sendRequest(const char *ifname, struct in_addr addr, uint16_t port)
 
 	strcpy((char *)rb.ifname, (char *)ifname);
 	rb.f.filter_type_flag = BRICKS_UDPPROT_FILTER;
-	rb.period = 20;
+	rb.f.filt_time_period = 20;
+	rb.f.tgt = WHITELIST;
 
 	fprintf(stderr, "Sending req block of size: %d\n",
 		(int)sizeof(rb));

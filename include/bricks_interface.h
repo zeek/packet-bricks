@@ -33,6 +33,8 @@
 #include <stdint.h>
 /* for IFNAMSIZ */
 #include <net/if.h>
+/* for queue management */
+#include "queue.h"
 /*---------------------------------------------------------------------*/
 #define __FAVOR_BSD		1
 /*---------------------------------------------------------------------*/
@@ -63,7 +65,8 @@ typedef enum {
 	WRITE,
 	LIMIT,
 	PKT_NOTIFY,
-	BYTE_NOTIFY
+	BYTE_NOTIFY,
+	WHITELIST,
 } Target;
 /*---------------------------------------------------------------------*/
 typedef struct {
@@ -173,6 +176,14 @@ typedef struct Filter {
 		Protocol prot;
 		Connection conn;
 	};
+	/* duration of the entire applied filter */
+	time_t filt_time_period;
+	/* when do you want the filter application to start */
+	time_t filt_start_time;
+	/* target */
+	Target tgt;
+
+	TAILQ_ENTRY(Filter) entry;
 } Filter __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/
 /**
@@ -184,8 +195,9 @@ typedef struct req_block {
 	uint32_t len;
 	unsigned char ifname[IFNAMSIZ];
 	Filter f;
+#if 0
 	time_t period;
-	
+#endif	
 	unsigned char req_payload[0];
 } req_block __attribute__((aligned(__WORDSIZE)));
 

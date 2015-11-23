@@ -25,6 +25,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+/*---------------------------------------------------------------------*/
 /* for prints etc */
 #include "bricks_log.h"
 /* for string functions */

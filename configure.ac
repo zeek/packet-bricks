@@ -141,6 +141,12 @@ AC_OUTPUT(Makefile)
 AC_OUTPUT(src/Makefile)
 if echo `uname` | grep -q "FreeBSD"
 then
+	# Check if `gmake' exists
+	AC_CHECK_PROG(GMAKE_CHECK,gmake,yes)
+	if test x"$GMAKE_CHECK" != x"yes" ; then
+	   AC_MSG_ERROR([Please install `gmake'.])
+	fi
+	
 	# Check if `makewhatis' exists
 	AC_CHECK_PROG(MAKEWHATIS_CHECK,makewhatis,yes)
 	if test x"$MAKEWHATIS_CHECK" != x"yes" ; then
@@ -156,6 +162,12 @@ then
 fi
 if echo `uname` | grep -q "Linux"
 then
+	# Check if `make' exists
+	AC_CHECK_PROG(MAKE_CHECK,make,yes)
+	if test x"$MAKE_CHECK" != x"yes" ; then
+	   AC_MSG_ERROR([Please install `make'.])
+	fi
+	
 	# Check if `mandb' exists
 	AC_CHECK_PROG(MANDB_CHECK,mandb,yes)
 	if test x"$MANDB_CHECK" != x"yes" ; then

@@ -486,9 +486,6 @@ dispatch_pkt(struct netmap_ring *rxring,
 					     cn->brick, buf, 
 					     lnd->level,
 					     current_time);
-			} else if (cn->filt.filter_type_flag ==
-				   BRICKS_NO_FILTER) {
-				cn->mark = 1;
 			} else {
 				cn->mark = analyze_packet(buf, cn, current_time);
 			}
@@ -767,6 +764,9 @@ netmap_create_channel(char *in_name, char *out_name,
 
 	cn = (CommNode *)lnd->external_links[lnd->init_cur_idx];
 
+	/* initialize the filter list */
+	TAILQ_INIT(&cn->filter_list);
+
 	if (t == WRITE) {
 		TRACE_LOG("Creating pcap writing element %p to file: %s\n",
 			  brick, out_name);
@@ -814,11 +814,7 @@ install_filter(req_block *rb, engine *eng)
 	TAILQ_FOREACH(cn, &eng->commnode_list, entry) {
 		if (!strcmp((char *)cn->nm_ifname, (char *)rb->ifname)) {
 			/* apply the filter */
-			cn->filt = rb->f;
-			cn->filt_start_time = time(NULL);
-			cn->filt_time_period = rb->period;
-			TRACE_LOG("Filter (%d) applied for ifname: %s\n",
-				  cn->filt.filter_type_flag, cn->nm_ifname);
+			apply_filter(cn, rb);
 			TRACE_NETMAP_FUNC_END();
 			return 1;
 		} else {

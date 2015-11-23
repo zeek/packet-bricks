@@ -40,6 +40,8 @@
 /*---------------------------------------------------------------------*/
 /* Macros related to TXQ entry */
 #define TXQ_MAX				2048
+/* Filter chain declaration */
+typedef TAILQ_HEAD(flist, Filter) flist;
 /*---------------------------------------------------------------------*/
 struct txq_entry {
         void *ring;
@@ -53,9 +55,6 @@ struct CommNode {
 	char nm_ifname[IFNAMSIZ];		/* name of the node */
 	struct txq_entry q[TXQ_MAX];		/* transmission queue used to buffer descs */
 	int32_t cur_txq;			/* current index of the tx entry */
-	Filter filt;				/* applied filter */
-	time_t filt_start_time;			/* filter installtion starting time */
-	time_t filt_time_period;		/* filter time period */
 	uint8_t mark;				/* marking for delivery */
 	struct Brick *brick;			/* ptrs to child bricks */
 
@@ -65,6 +64,9 @@ struct CommNode {
 	 * be used for network communication module
 	 */
 	TAILQ_ENTRY(CommNode) entry;
+
+	/* Filter list */
+	flist filter_list;
 }  __attribute__((aligned(__WORDSIZE)));
 
 /**

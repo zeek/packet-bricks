@@ -619,10 +619,10 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='MAKE_CHECK
-MANDB_CHECK
-GMAKE_CHECK
+ac_subst_vars='MANDB_CHECK
+MAKE_CHECK
 MAKEWHATIS_CHECK
+GMAKE_CHECK
 LTLIBOBJS
 LIBOBJS
 ENV_CHECK
@@ -6105,6 +6105,48 @@ fi
 
 if echo `uname` | grep -q "FreeBSD"
 then
+	# Check if `gmake' exists
+	# Extract the first word of "gmake", so it can be a program name with args.
+set dummy gmake; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_GMAKE_CHECK+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$GMAKE_CHECK"; then
+  ac_cv_prog_GMAKE_CHECK="$GMAKE_CHECK" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_GMAKE_CHECK="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+GMAKE_CHECK=$ac_cv_prog_GMAKE_CHECK
+if test -n "$GMAKE_CHECK"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GMAKE_CHECK" >&5
+$as_echo "$GMAKE_CHECK" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+	if test x"$GMAKE_CHECK" != x"yes" ; then
+	   as_fn_error $? "Please install \`gmake'." "$LINENO" 5
+	fi
+
 	# Check if `makewhatis' exists
 	# Extract the first word of "makewhatis", so it can be a program name with args.
 set dummy makewhatis; ac_word=$2
@@ -7350,6 +7392,48 @@ fi
 fi
 if echo `uname` | grep -q "Linux"
 then
+	# Check if `make' exists
+	# Extract the first word of "make", so it can be a program name with args.
+set dummy make; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_MAKE_CHECK+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$MAKE_CHECK"; then
+  ac_cv_prog_MAKE_CHECK="$MAKE_CHECK" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_MAKE_CHECK="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+MAKE_CHECK=$ac_cv_prog_MAKE_CHECK
+if test -n "$MAKE_CHECK"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MAKE_CHECK" >&5
+$as_echo "$MAKE_CHECK" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+	if test x"$MAKE_CHECK" != x"yes" ; then
+	   as_fn_error $? "Please install \`make'." "$LINENO" 5
+	fi
+
 	# Check if `mandb' exists
 	# Extract the first word of "mandb", so it can be a program name with args.
 set dummy mandb; ac_word=$2
