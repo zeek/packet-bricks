@@ -31,12 +31,6 @@
 #include "brick.h"
 /* for bricks logging */
 #include "bricks_log.h"
-#if 0
-/* for engine declaration */
-#include "pkt_engine.h"
-/* for string functions */
-#include <string.h>
-#endif
 #include "pkt_hash.h"
 /*---------------------------------------------------------------------*/
 typedef struct FilterContext {

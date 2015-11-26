@@ -34,7 +34,7 @@
 /* for IFNAMSIZ */
 #include <net/if.h>
 /* for queue management */
-#include "queue.h"
+#include "mbuf.h"
 /*---------------------------------------------------------------------*/
 #define __FAVOR_BSD		1
 /*---------------------------------------------------------------------*/
@@ -195,9 +195,6 @@ typedef struct req_block {
 	uint32_t len;
 	unsigned char ifname[IFNAMSIZ];
 	Filter f;
-#if 0
-	time_t period;
-#endif	
 	unsigned char req_payload[0];
 } req_block __attribute__((aligned(__WORDSIZE)));
 

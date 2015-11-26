@@ -86,12 +86,5 @@ typedef struct io_module_funcs {
 /*---------------------------------------------------------------------*/
 /* only netmap module is enabled at the moment */
 extern io_module_funcs netmap_module;
-#if 0
-extern io_module_funcs dpdk_module;
-extern io_module_funcs pfring_module;
-extern io_module_funcs psio_module;
-extern io_module_funcs linux_module;
-extern io_module_funcs file_module;
-#endif
 /*---------------------------------------------------------------------*/
 #endif /* !__IO_MODULE_H__ */

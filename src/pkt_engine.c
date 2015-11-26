@@ -52,23 +52,6 @@ load_io_module(engine *e) {
 	case IO_NETMAP:
 		e->iom = netmap_module;
 		break;
-#if 0 /* disabled for the moment */
-	case IO_DPDK:
-		e->iom = dpdk_module;
-		break;
-	case IO_PFRING:
-		e->iom = pfring_module;
-		break;
-	case IO_PSIO:
-		e->iom = psio_module;
-		break;
-	case IO_LINUX:
-		e->iom = linuxio_module;
-		break;
-	case IO_FILE:
-		e->iom = fileio_module;
-		break;
-#endif
 	default:
 		TRACE_ERR("Control can never reach here!\n");
 	}
@@ -197,27 +180,6 @@ pktengine_new(const unsigned char *name,
 		return;
 	}
 
-	/*
-	 * XXX
-	 * for the future: maybe we can support more 
-	 * I/O engine types??? 
-	 * XXX
-	 */
-#if 0	
-	/* selecting pkt engine I/O type */
-	if (!strcmp((char *)type, "netmap"))
-		eng->iot = IO_NETMAP;
-	else if (!strcmp((char *)type, "dpdk"))
-		eng->iot = IO_DPDK;
-	else if (!strcmp((char *)type, "psio"))
-		eng->iot = IO_PSIO;
-	else if (!strcmp((char *)type, "pfring"))
-		eng->iot = IO_PFRING;
-	else if (!strcmp((char *)type, "linux"))
-		eng->iot = IO_LINUX;
-	else if (!strcmp((char *)type, "file"))
-		eng->iot = IO_FILE;
-#endif
 
 	/* default pkt I/O engine is NETMAP for the moment */
 	eng->iot = IO_DEFAULT;
