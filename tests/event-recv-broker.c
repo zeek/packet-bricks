@@ -4,6 +4,87 @@
 #include <stdlib.h>
 #include <unistd.h>
 /*----------------------------------------------------------------*/
+#define COUNTER_IS_MAIN_MSG			2
+#define COUNTER_IS_MSG_TYPE			1
+/*----------------------------------------------------------------*/
+void
+print_record(broker_data *v)
+{
+	broker_record *inner_r = broker_data_as_record(v);
+	broker_record_iterator *inner_it = broker_record_iterator_create(inner_r);
+	while (!broker_record_iterator_at_last(inner_r, inner_it)) {
+		broker_data *inner_d = broker_record_iterator_value(inner_it);
+		if (inner_d != NULL) {
+			broker_data_type bdt = broker_data_which(inner_d);
+			switch (bdt) {
+			case broker_data_type_bool:
+				fprintf(stdout, "Got a bool: %d\n",
+					broker_bool_true(broker_data_as_bool(inner_d)));
+				break;
+			case broker_data_type_count:
+				fprintf(stdout, "Got a count: %lu\n",
+					*broker_data_as_count(inner_d));
+				break;
+			case broker_data_type_integer:
+				fprintf(stdout, "Got an integer: %ld\n",
+					*broker_data_as_integer(inner_d));
+				break;
+			case broker_data_type_real:
+				fprintf(stdout, "Got a real: %f\n",
+					*broker_data_as_real(inner_d));
+				break;
+			case broker_data_type_string:
+				fprintf(stdout, "Got a string: %s\n",
+					broker_string_data(broker_data_as_string(inner_d)));
+				break;
+			case broker_data_type_address:
+				fprintf(stdout, "Got an address: %s\n",
+					broker_string_data(broker_address_to_string(broker_data_as_address(inner_d))));
+				break;
+			case broker_data_type_subnet:
+				fprintf(stdout, "Got a subnet: %s\n",
+					broker_string_data(broker_subnet_to_string(broker_data_as_subnet(inner_d))));
+				break;
+			case broker_data_type_port:
+				fprintf(stdout, "Got a port: %u\n",
+					broker_port_number(broker_data_as_port(inner_d)));
+				break;
+			case broker_data_type_time:
+				fprintf(stdout, "Got time: %f\n",
+					broker_time_point_value(broker_data_as_time(inner_d)));
+				break;
+			case broker_data_type_duration:
+				fprintf(stdout, "Got duration: %f\n",
+					broker_time_duration_value(broker_data_as_duration(inner_d)));
+				break;
+			case broker_data_type_enum_value:
+				fprintf(stdout, "Got enum: %s\n",
+					broker_enum_value_name(broker_data_as_enum(inner_d)));
+				break;
+			case broker_data_type_set:
+				fprintf(stdout, "Got a set\n");
+				break;
+			case broker_data_type_table:
+				fprintf(stdout, "Got a table\n");
+				break;
+			case broker_data_type_vector:
+				fprintf(stdout, "Got a vector\n");
+				break;
+			case broker_data_type_record:
+				fprintf(stdout, "Got a record\n");
+				print_record(inner_d);
+				break;
+			default:
+				break;
+			}
+		}
+		broker_data_delete(inner_d);
+		broker_record_iterator_next(inner_r, inner_it);
+	}
+	broker_record_iterator_delete(inner_it);
+	broker_record_delete(inner_r);	
+}
+/*----------------------------------------------------------------*/
 int
 check_contents_poll(broker_message_queue* q, broker_vector *expected)
 {
@@ -21,13 +102,20 @@ check_contents_poll(broker_message_queue* q, broker_vector *expected)
 	for (i = 0; i < n; ++i) {
 		broker_vector *m = broker_deque_of_message_at(msgs, i);
 		broker_vector_iterator *it = broker_vector_iterator_create(m);
+		int count = 0;
 		while (!broker_vector_iterator_at_last(m, it)) {
 			broker_data *v = broker_vector_iterator_value(it);
-			fprintf(stdout,
-				"Got a message: %s!\n",
-				broker_string_data(broker_data_to_string(v)));
-			broker_data_delete(v);
-			broker_vector_iterator_next(m, it);
+			if (count == COUNTER_IS_MAIN_MSG) {
+				print_record(v);
+			} else {
+				if (v != NULL && broker_data_which(v) != broker_data_type_record)
+					fprintf(stdout,
+						"Got a message: %s!\n",
+						broker_string_data(broker_data_to_string(v)));
+				broker_data_delete(v);
+				broker_vector_iterator_next(m, it);
+			}
+			count++;
 		}
 		broker_vector_iterator_delete(it);
 		broker_vector_delete(m);
