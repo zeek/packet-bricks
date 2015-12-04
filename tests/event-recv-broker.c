@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdbool.h>
 /*----------------------------------------------------------------*/
 #define COUNTER_IS_MAIN_MSG			2
 #define COUNTER_IS_MSG_TYPE			1
@@ -12,6 +13,7 @@ print_record(broker_data *v)
 {
 	broker_record *inner_r = broker_data_as_record(v);
 	broker_record_iterator *inner_it = broker_record_iterator_create(inner_r);
+	fprintf(stdout, "Got a record\n");
 	while (!broker_record_iterator_at_last(inner_r, inner_it)) {
 		broker_data *inner_d = broker_record_iterator_value(inner_it);
 		if (inner_d != NULL) {
@@ -71,7 +73,6 @@ print_record(broker_data *v)
 				fprintf(stdout, "Got a vector\n");
 				break;
 			case broker_data_type_record:
-				fprintf(stdout, "Got a record\n");
 				print_record(inner_d);
 				break;
 			default:
@@ -82,7 +83,8 @@ print_record(broker_data *v)
 		broker_record_iterator_next(inner_r, inner_it);
 	}
 	broker_record_iterator_delete(inner_it);
-	broker_record_delete(inner_r);	
+	broker_record_delete(inner_r);
+	fprintf(stdout, "End of record\n");
 }
 /*----------------------------------------------------------------*/
 int
@@ -99,6 +101,7 @@ check_contents_poll(broker_message_queue* q, broker_vector *expected)
 	int n = broker_deque_of_message_size(msgs);
 	int i;
 
+	/* check vector contents */
 	for (i = 0; i < n; ++i) {
 		broker_vector *m = broker_deque_of_message_at(msgs, i);
 		broker_vector_iterator *it = broker_vector_iterator_create(m);
@@ -108,10 +111,14 @@ check_contents_poll(broker_message_queue* q, broker_vector *expected)
 			if (count == COUNTER_IS_MAIN_MSG) {
 				print_record(v);
 			} else {
-				if (v != NULL && broker_data_which(v) != broker_data_type_record)
-					fprintf(stdout,
-						"Got a message: %s!\n",
-						broker_string_data(broker_data_to_string(v)));
+				if (v != NULL /*&& broker_data_which(v) != broker_data_type_record*/) {
+					if (broker_data_which(v) == broker_data_type_record)
+						print_record(v);
+					else
+						fprintf(stdout,
+							"Got a message: %s!\n",
+							broker_string_data(broker_data_to_string(v)));
+				}
 				broker_data_delete(v);
 				broker_vector_iterator_next(m, it);
 			}
@@ -140,7 +147,7 @@ main()
 		return EXIT_FAILURE;
 	}
 
-	while (1)
+	while (true)
 		check_contents_poll(pq0a, pq0a_expected);
 
 	broker_vector_delete(pq0a_expected);

@@ -18,6 +18,14 @@ then
 	AC_SUBST(USEREADLINE, 1)
 fi
 
+# Check if libbroker exists
+#a=1
+#AC_CHECK_LIB(broker,broker_init,,[a=0],)
+#if test $a == 1
+#then
+#	AC_SUBST(USEBROKER, 1)
+#fi
+
 # Check lua-5.1 path (lib & inc)
 AC_ARG_WITH(stuff, [  --with-lua-lib 	  path to the liblua5.1 install root])
 if test "$with_lua_lib" != ""
@@ -67,6 +75,20 @@ else
 	then
 		AC_SUBST(LUAINCPATH, /usr/include/lua5.1)
 	fi
+fi
+
+AC_ARG_WITH(stuff, [  --with-broker-include	  path to the broker header install root])
+if test "$with_broker_include" != ""
+then
+	AC_SUBST(BROKERINCPATH, $with_broker_include)
+	AC_SUBST(USEBROKER, 1)
+fi
+
+AC_ARG_WITH(stuff, [  --with-broker-lib 	  path to the broker library install root])
+if test "$with_broker_lib" != ""
+then
+	AC_SUBST(BROKERLIBPATH, $with_broker_lib)
+	AC_SUBST(USEBROKER, 1)
 fi
 
 a=1

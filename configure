@@ -634,6 +634,9 @@ INSTALL_PROGRAM
 INSTALL
 INSTALL_CHECK
 JEINCPATH
+BROKERLIBPATH
+USEBROKER
+BROKERINCPATH
 LUAINCPATH
 LIBLUANAME
 LUALIBPATH
@@ -1310,6 +1313,8 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-lua-lib 	  path to the liblua5.1 install root
   --with-lua-include	  path to the lua5.1 header install root
+  --with-broker-include	  path to the broker header install root
+  --with-broker-lib 	  path to the broker library install root
   --with-jemalloc-include	  path to the jemalloc header install root
 
 Some influential environment variables:
@@ -3351,6 +3356,14 @@ then
 
 fi
 
+# Check if libbroker exists
+#a=1
+#AC_CHECK_LIB(broker,broker_init,,[a=0],)
+#if test $a == 1
+#then
+#	AC_SUBST(USEBROKER, 1)
+#fi
+
 # Check lua-5.1 path (lib & inc)
 
 # Check whether --with-stuff was given.
@@ -3510,6 +3523,34 @@ else
 		LUAINCPATH=/usr/include/lua5.1
 
 	fi
+fi
+
+
+# Check whether --with-stuff was given.
+if test "${with_stuff+set}" = set; then :
+  withval=$with_stuff;
+fi
+
+if test "$with_broker_include" != ""
+then
+	BROKERINCPATH=$with_broker_include
+
+	USEBROKER=1
+
+fi
+
+
+# Check whether --with-stuff was given.
+if test "${with_stuff+set}" = set; then :
+  withval=$with_stuff;
+fi
+
+if test "$with_broker_lib" != ""
+then
+	BROKERLIBPATH=$with_broker_lib
+
+	USEBROKER=1
+
 fi
 
 a=1

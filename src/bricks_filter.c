@@ -54,6 +54,9 @@
 #include <netinet/udp.h>
 /* eth hdr */
 #include <net/ethernet.h>
+/* for inet_ntoa() */
+#include <sys/socket.h>
+#include <arpa/inet.h>
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleConnectionFilterIPv4Tcp(Filter *f, struct ip *iph, struct tcphdr *tcph)
@@ -421,6 +424,32 @@ apply_filter(CommNode *cn, req_block *rb)
 	
 	TAILQ_INSERT_TAIL(&cn->filter_list, f, entry);
 	return 1;
+	TRACE_FILTER_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+void
+printFilter(Filter *f)
+{
+	TRACE_FILTER_FUNC_START();
+	struct in_addr addr;
+	
+	TRACE_LOG("Printing current filter...\n");
+	
+	switch (f->filter_type_flag) {
+	case BRICKS_NO_FILTER:
+		TRACE_LOG("No filter!\n");
+		break;
+	case BRICKS_CONNECTION_FILTER:
+		TRACE_LOG("It's a connection filter\n");
+		addr.s_addr = f->conn.sip4addr.addr32;
+		TRACE_LOG("Sip: %s\n", inet_ntoa(addr));
+		addr.s_addr = f->conn.dip4addr.addr32;
+		TRACE_LOG("Dip: %s\n", inet_ntoa(addr));
+		break;
+	default:
+		TRACE_LOG("Filter type is unrecognized!\n");
+		break;
+	}
 	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

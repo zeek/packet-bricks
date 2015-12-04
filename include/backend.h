@@ -55,6 +55,7 @@
 #define PKTENGINE_LISTEN_PORT		1234
 /* listen queue length */
 #define LISTEN_BACKLOG			10
+enum {RULE_ACC=0, RULE_REQUEST=2};
 /*---------------------------------------------------------------------*/
 /**
  * Creates listening socket to serve as a conduit between userland

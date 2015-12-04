@@ -222,5 +222,11 @@ typedef struct resp_block {
  */
 void
 start_listening_reqs();
+
+/**
+ * Prints the Filter block
+ */
+void
+printFilter(Filter *f);
 /*---------------------------------------------------------------------*/
 #endif /* !__BRICKS_INTERFACE_H__ */
