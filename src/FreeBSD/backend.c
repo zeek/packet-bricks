@@ -65,6 +65,8 @@
 #ifdef ENABLE_BROKER
 /* for broker comm. */
 #include <broker/broker.h>
+/* for filter */
+#include "bricks_filter.h"
 #endif
 /*---------------------------------------------------------------------*/
 /**
@@ -256,6 +258,7 @@ start_listening_reqs()
 }
 /*---------------------------------------------------------------------*/
 #ifdef ENABLE_BROKER
+/*---------------------------------------------------------------------*/
 #define parse_request(x, f)		parse_record(x, f)
 void
 parse_record(broker_data *v, Filter *f)
@@ -381,7 +384,7 @@ parse_record(broker_data *v, Filter *f)
 }
 /*---------------------------------------------------------------------*/
 void
-brokerize_request(broker_message_queue *q)
+brokerize_request(engine *eng, broker_message_queue *q)
 {
 	TRACE_BACKEND_FUNC_START();
 	broker_deque_of_message *msgs = broker_message_queue_need_pop(q);
@@ -425,6 +428,8 @@ brokerize_request(broker_message_queue *q)
 	broker_deque_of_message_delete(msgs);	
 
 	printFilter(&f);
+	f.filt_time_period = (time_t)-1;
+	apply_filter(TAILQ_FIRST(&eng->commnode_list), &f);
 	
 	TRACE_BACKEND_FUNC_END();
 }
@@ -653,7 +658,13 @@ initiate_backend(engine *eng)
 					}
 				}
 #endif
-				brokerize_request(pq);
+				if (pollfd[i].fd == broker_message_queue_fd(pq) &&
+				    (!(pollfd[i].revents & (POLLERR |
+							    POLLHUP |
+							    POLLNVAL)) &&
+				     (pollfd[i].revents & POLLIN))) {
+					brokerize_request(eng, pq);
+				}
 #endif /* !ENABLE_BROKER */
 			}
 		}

@@ -91,16 +91,17 @@ HandleConnectionFilterIPv4Udp(Filter *f, struct ip *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
 	return ((f->conn.sip4addr.addr32 == iph->ip_src.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr &&
+		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr /*&&
 		 f->conn.sport == udph->uh_sport &&
-		 f->conn.dport == udph->uh_dport) ||
+		 f->conn.dport == udph->uh_dport*/) ||
 		(f->conn.sip4addr.addr32 == iph->ip_dst.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr &&
+		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr /*&&
 		 f->conn.sport == udph->uh_dport &&
-		 f->conn.dport == udph->uh_sport)		
+		 f->conn.dport == udph->uh_sport*/)		
 		) ? 0 : 1;
 	return 1;
 	TRACE_FILTER_FUNC_END();
+	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
@@ -408,7 +409,7 @@ analyze_packet(unsigned char *buf, CommNode *cn, time_t current_time)
 }
 /*---------------------------------------------------------------------*/
 int
-apply_filter(CommNode *cn, req_block *rb)
+apply_filter(CommNode *cn, Filter *fin)
 {
 	TRACE_FILTER_FUNC_START();
 	Filter *f = (Filter *)calloc(1, sizeof(Filter));
@@ -416,8 +417,8 @@ apply_filter(CommNode *cn, req_block *rb)
 		TRACE_LOG("Could not allocate memory for a new filter!\n");
 		return 0;
 	}
-	memcpy(f, &rb->f, sizeof(Filter));
-	f->filt_start_time = time(NULL) + rb->f.filt_start_time;
+	memcpy(f, fin, sizeof(Filter));
+	f->filt_start_time = time(NULL) + fin->filt_start_time;
 
 	TRACE_LOG("Applying filter with time period: %d, and start_time: %d\n",
 		  (int)f->filt_time_period, (int)f->filt_start_time);

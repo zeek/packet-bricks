@@ -814,7 +814,7 @@ install_filter(req_block *rb, engine *eng)
 	TAILQ_FOREACH(cn, &eng->commnode_list, entry) {
 		if (!strcmp((char *)cn->nm_ifname, (char *)rb->ifname)) {
 			/* apply the filter */
-			apply_filter(cn, rb);
+			apply_filter(cn, &rb->f);
 			TRACE_NETMAP_FUNC_END();
 			return 1;
 		} else {

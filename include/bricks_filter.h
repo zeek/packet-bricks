@@ -40,6 +40,6 @@ analyze_packet(unsigned char *buf, CommNode *cn, time_t t);
  * Add the filter to the selected CommNode
  */
 int
-apply_filter(CommNode *cn, req_block *rb);
+apply_filter(CommNode *cn, Filter *f);
 /*---------------------------------------------------------------------*/
 #endif /* __BRICKS_FILTER_H__ */
