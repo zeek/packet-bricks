@@ -410,6 +410,7 @@ pktengine_dump_stats(const unsigned char *name)
 	fprintf(stdout, "---------- ENGINE (%s) STATS------------\n", name);
 	fprintf(stdout, "Byte count: %llu\n", (long long unsigned int)eng->byte_count);
 	fprintf(stdout, "Packet count: %llu\n", (long long unsigned int)eng->pkt_count);
+	fprintf(stdout, "Packet drop count: %llu\n", (long long unsigned int)eng->pkt_dropped);
 	fprintf(stdout, "----------------------------------------\n\n");
 	TRACE_PKTENGINE_FUNC_END();
 }
@@ -419,26 +420,28 @@ pktengines_list_stats(FILE *f)
 {
 	TRACE_PKTENGINE_FUNC_START();
 	engine *eng;
-	uint64_t total_pkts, total_bytes;
+	uint64_t total_pkts, total_bytes, total_dropped;
 
-	total_pkts = total_bytes = 0;
+	total_pkts = total_bytes = total_dropped = 0;
 	fprintf(f, "----------------------------------------- ENGINE STATISTICS");
 	fprintf(f, " --------------------------------------------\n");
-	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt\n");// \t\t Listen-port\n");
+	fprintf(f, "Engine \t\t Packet Cnt \t\t    Byte Cnt \t\t Packet Drop\n");
 	TAILQ_FOREACH(eng, &engine_list, entry) {
-		fprintf(f, "%s \t\t %10llu \t\t %11llu\n"/* \t\t\t%d\n"*/,
+		fprintf(f, "%s \t\t %10llu \t\t %11llu \t\t %11llu\n",
 			eng->name, 
 			(long long unsigned int)eng->pkt_count, 
-			(long long unsigned int)eng->byte_count/*,
-								 eng->listen_port*/);
+			(long long unsigned int)eng->byte_count,
+			(long long unsigned int)eng->pkt_dropped);
 		total_pkts += eng->pkt_count;
 		total_bytes += eng->byte_count;
+		total_dropped += eng->pkt_dropped;
 	}
 	fprintf(f, "====================================================");
 	fprintf(f, "====================================================\n");
-	fprintf(f, "Total \t\t %10llu \t\t %11llu\n",
+	fprintf(f, "Total \t\t %10llu \t\t %11llu\n"/* \t\t %11llu\n"*/,
 		(long long unsigned int)total_pkts,
-		(long long unsigned int)total_bytes);
+		(long long unsigned int)total_bytes/*,
+		(long long unsigned int)total_dropped*/);
 	fprintf(f, "----------------------------------------------------");
 	fprintf(f, "----------------------------------------------------\n\n\n");
 	

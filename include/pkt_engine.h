@@ -90,6 +90,10 @@ typedef struct engine {
 
 	/* the commnode list that shall be referred to by netmodule */
 	clist commnode_list;
+#ifdef ENABLE_BROKER
+	/* filter communication handle */
+	void *pq_ptr;
+#endif
 	/*
 	 * the linked list ptr that will chain together
 	 * all the engines (for network_interface.c) 

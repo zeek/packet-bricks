@@ -29,6 +29,9 @@
 #ifndef __BRICKS_FILTER_H__
 #define __BRICKS_FILTER_H__
 /*---------------------------------------------------------------------*/
+/* for polling */
+#include <sys/poll.h>
+/*---------------------------------------------------------------------*/
 /**
  * Analyze the packet across the filter. And pass it along
  * the communication node, if the filter allows...
@@ -41,5 +44,23 @@ analyze_packet(unsigned char *buf, CommNode *cn, time_t t);
  */
 int
 apply_filter(CommNode *cn, Filter *f);
+
+/**
+ * 
+ */
+void
+initialize_filt_comm(engine *eng);
+
+/**
+ *
+ */
+int
+fetch_filter_comm_fd(engine *eng);
+
+/**
+ *
+ */
+void
+process_broker_request(engine *eng, struct pollfd *pfd, int i);
 /*---------------------------------------------------------------------*/
 #endif /* __BRICKS_FILTER_H__ */

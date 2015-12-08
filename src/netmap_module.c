@@ -243,6 +243,10 @@ drop_packets(struct netmap_ring *ring, engine *eng, engine_src *esrcptr)
 	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+/**
+ * Writes the batch of packets to the pcap file.
+ * No packets should be dropped.
+ */
 static int32_t
 write_packets(CommNode *cn)
 {
@@ -273,6 +277,10 @@ write_packets(CommNode *cn)
 	return 0;
 }
 /*---------------------------------------------------------------------*/
+/**
+ * Passes a batch of packets to next netmap pipe endpoint.
+ * Returns no. of packets that were dropped due to lack of empty rings.
+ */
 static int32_t
 share_packets(CommNode *cn)
 {
@@ -283,6 +291,7 @@ share_packets(CommNode *cn)
         struct txq_entry *x = cn->q;
         int retry = TX_RETRIES;		/* max retries */
         struct nm_desc *dst = cn->out_nmd;
+	int total_written = 0;
 
 	/* if dst is NULL, then this has to be pcap write request */
 	if (dst == NULL) {
@@ -325,6 +334,7 @@ share_packets(CommNode *cn)
 			src->buf_idx = tmp;
 
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
+			total_written++;
                 }
         }
 
@@ -341,9 +351,13 @@ share_packets(CommNode *cn)
         cn->cur_txq = 0;
 	
 	TRACE_NETMAP_FUNC_END();
-        return 0;
+        return (int)n - total_written;
 }
 /*---------------------------------------------------------------------*/
+/**
+ * Passes a copy of the batch of packets to next netmap pipe endpoint.
+ * Returns no. of packets that were dropped due to lack of empty rings.
+ */
 static int32_t
 copy_packets(CommNode *cn)
 {
@@ -354,6 +368,7 @@ copy_packets(CommNode *cn)
         int retry = TX_RETRIES;		/* max retries */
         struct nm_desc *dst = cn->out_nmd;
         struct txq_entry *x = cn->q;
+	int total_written = 0;
 	
 	/* if dst is NULL, then this has to be pcap write request */
 	if (dst == NULL) {
@@ -395,6 +410,7 @@ copy_packets(CommNode *cn)
 			memcpy(dstbuf, srcbuf, dst->len);
 			
 			ring->head = ring->cur = nm_ring_next(ring, ring->cur);
+			total_written++;
 		}
 	}
 	if (i < MIN(n, TXQ_MAX)) {
@@ -409,7 +425,7 @@ copy_packets(CommNode *cn)
 	cn->cur_txq = 0;
 	
 	TRACE_NETMAP_FUNC_END();
-        return 0;
+        return (int)n - total_written;
 }
 /*------------------------------------------------------------------------*/
 void
@@ -425,7 +441,7 @@ flush_all_cnodes(Brick *brick, engine *eng)
 			flush_all_cnodes(cn->brick, eng);
 		} else { /* cn->brick == NULL */
 			if (cn->cur_txq > 0) {
-				(eng->mark_for_copy == 1) ? 
+				eng->pkt_dropped += (eng->mark_for_copy == 1) ? 
 					copy_packets(cn) :
 					share_packets(cn);
 			}
