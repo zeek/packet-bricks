@@ -360,6 +360,9 @@ initiate_backend(engine *eng)
 			}
 		}
 	}
+#ifdef ENABLE_BROKER
+	terminate_filt_comm(eng);
+#endif
 
 	TRACE_BACKEND_FUNC_END();
 }

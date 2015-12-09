@@ -79,7 +79,7 @@ typedef struct {
 		uint16_t addr16[2];
 		uint32_t addr32;
 	};
-	uint32_t mask;
+	uint8_t mask;
 } IP4Address __attribute__((aligned(__WORDSIZE)));
 
 typedef struct {
@@ -89,7 +89,7 @@ typedef struct {
 		uint32_t addr32[4];
 	};
 	/* XXX This will be revised */
-	/** uint32_t mask; **/
+	/** uint8_t mask; **/
 } IP6Address __attribute__((aligned(__WORDSIZE)));;
 /*---------------------------------------------------------------------*/
 /* XXX: These may be converted into individual structs */
@@ -126,39 +126,38 @@ typedef struct {
  */
 #define BRICKS_NO_FILTER		 0
 #define BRICKS_CONNECTION_FILTER	 1
-#define BRICKS_TCPSPORT_FILTER		 2
-#define BRICKS_TCPPORT_FILTER		 3
-#define BRICKS_TCPDPORT_FILTER		 4
-#define BRICKS_UDPSPORT_FILTER		 5
-#define BRICKS_UDPPORT_FILTER		 6
-#define BRICKS_UDPDPORT_FILTER		 7
-#define BRICKS_TCPPROT_FILTER		 8
-#define BRICKS_UDPPROT_FILTER		 9
-#define BRICKS_SRCIP4ADDR_FILTER	10
-#define BRICKS_IP4ADDR_FILTER	 	11
-#define BRICKS_DSTIP4ADDR_FILTER	12
-#define BRICKS_SRCIP6ADDR_FILTER	13
-#define BRICKS_DSTIP6ADDR_FILTER	14
-#define BRICKS_IPPROT_FILTER		15
-#define BRICKS_ARPPROT_FILTER		16
-#define BRICKS_ICMPPROT_FILTER		17
-#define BRICKS_SRCETH_FILTER		18
-#define BRICKS_ETH_FILTER		19
-#define BRICKS_DSTETH_FILTER		20
-#define BRICKS_TOTAL_FILTERS		BRICKS_DSTETH_FILTER
+#define BRICKS_FLOW_FILTER		 2
+#define BRICKS_IP_FILTER		 3
+#define BRICKS_MAC_FILTER		 4
+#define BRICKS_TOTAL_FILTERS		BRICKS_MAC_FILTER
 /*...*/
-#define BRICKS_UNUSED1_FILTER		21
-#define BRICKS_UNUSED2_FILTER		22
-#define BRICKS_UNUSED3_FILTER		23
-#define BRICKS_UNUSED4_FILTER		24
-#define BRICKS_UNUSED5_FILTER	        25
-#define BRICKS_UNUSED6_FILTER		26
-#define BRICKS_UNUSED7_FILTER		27
-#define BRICKS_UNUSED8_FILTER		28
-#define BRICKS_UNUSED9_FILTER		29
-#define BRICKS_UNUSED10_FILTER		30
-#define BRICKS_UNUSED11_FILTER		31
-#define BRICKS_UNUSED12_FILTER		32
+#define BRICKS_UNUSED1_FILTER		 5
+#define BRICKS_UNUSED2_FILTER		 6
+#define BRICKS_UNUSED3_FILTER		 7
+#define BRICKS_UNUSED4_FILTER		 8
+#define BRICKS_UNUSED5_FILTER	         9
+#define BRICKS_UNUSED6_FILTER		10
+#define BRICKS_UNUSED7_FILTER		11
+#define BRICKS_UNUSED8_FILTER	        12
+#define BRICKS_UNUSED9_FILTER		13
+#define BRICKS_UNUSED10_FILTER		14
+#define BRICKS_UNUSED11_FILTER		15
+#define BRICKS_UNUSED12_FILTER		16
+#define BRICKS_UNUSED13_FILTER		17
+#define BRICKS_UNUSED14_FILTER		18
+#define BRICKS_UNUSED15_FILTER		19
+#define BRICKS_UNUSED16_FILTER		20
+#define BRICKS_UNUSED17_FILTER		21
+#define BRICKS_UNUSED18_FILTER		22
+#define BRICKS_UNUSED19_FILTER		23
+#define BRICKS_UNUSED20_FILTER		24
+#define BRICKS_UNUSED21_FILTER		25
+#define BRICKS_UNUSED22_FILTER		26
+#define BRICKS_UNUSED23_FILTER		27
+#define BRICKS_UNUSED24_FILTER		28
+#define BRICKS_UNUSED25_FILTER		29
+#define BRICKS_UNUSED26_FILTER		31
+#define BRICKS_UNUSED27_FILTER		32
 
 /*---------------------------------------------------------------------*/
 /**
@@ -172,8 +171,6 @@ typedef struct Filter {
 		EthAddress ethaddr;
 		IP4Address ip4addr;
 		IP6Address ip6addr;
-		Port p;
-		Protocol prot;
 		Connection conn;
 	};
 	/* duration of the entire applied filter */

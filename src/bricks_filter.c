@@ -117,116 +117,94 @@ HandleConnectionFilterIPv6Udp(Filter *f, struct ip6_hdr *iph, struct udphdr *udp
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
-HandleTcpFilterSport(Filter *f, struct tcphdr *tcph)
+HandleFlowFilterIPv4Tcp(Filter *f, struct ip *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	return (f->p == tcph->th_sport) ? 0 : 1;
+	return ((f->conn.sip4addr.addr32 == iph->ip_src.s_addr &&
+		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr &&
+		 f->conn.sport == tcph->th_sport &&
+		 f->conn.dport == tcph->th_dport) ||
+		(f->conn.sip4addr.addr32 == iph->ip_dst.s_addr &&
+		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr &&
+		 f->conn.sport == tcph->th_dport &&
+		 f->conn.dport == tcph->th_sport)
+		) ? 0 : 1;
 	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
-HandleTcpFilterDport(Filter *f, struct tcphdr *tcph)
+HandleFlowFilterIPv6Tcp(Filter *f, struct ip6_hdr *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	return (f->p == tcph->th_dport) ? 0 : 1;
+	/* to be filled */
+	return 1;
 	TRACE_FILTER_FUNC_END();
+	UNUSED(f);
+	UNUSED(iph);
+	UNUSED(tcph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
-HandleTcpFilterPort(Filter *f, struct tcphdr *tcph)
+HandleFlowFilterIPv4Udp(Filter *f, struct ip *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	return (f->p == tcph->th_dport ||
-		f->p == tcph->th_sport) ? 0 : 1;
+	return ((f->conn.sip4addr.addr32 == iph->ip_src.s_addr &&
+		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr /*&&
+		 f->conn.sport == udph->uh_sport &&
+		 f->conn.dport == udph->uh_dport*/) ||
+		(f->conn.sip4addr.addr32 == iph->ip_dst.s_addr &&
+		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr /*&&
+		 f->conn.sport == udph->uh_dport &&
+		 f->conn.dport == udph->uh_sport*/)		
+		) ? 0 : 1;
+	return 1;
 	TRACE_FILTER_FUNC_END();
+	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
-HandleUdpFilterSport(Filter *f, struct udphdr *udph)
+HandleFlowFilterIPv6Udp(Filter *f, struct ip6_hdr *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	return (f->p == udph->uh_sport) ? 0 : 1;
+	/* to be filled */
+	return 1;
 	TRACE_FILTER_FUNC_END();
+	UNUSED(f);
+	UNUSED(iph);
+	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
-HandleUdpFilterDport(Filter *f, struct udphdr *udph)
-{
-	TRACE_FILTER_FUNC_START();
-	return (f->p == udph->uh_dport) ? 0 : 1;
-	TRACE_FILTER_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static inline int32_t
-HandleUdpFilterPort(Filter *f, struct udphdr *udph)
-{
-	TRACE_FILTER_FUNC_START();
-	return (f->p == udph->uh_dport ||
-		f->p == udph->uh_sport) ? 0 : 1;
-	TRACE_FILTER_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static inline int32_t
-HandleIPFilterAddressSrc(Filter *f, struct ip *iph)
-{
-	TRACE_FILTER_FUNC_START();
-	return (f->ip4addr.addr32 == iph->ip_src.s_addr) ? 0 : 1;
-	TRACE_FILTER_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static inline int32_t
-HandleIPFilterAddress(Filter *f, struct ip *iph)
+HandleIPv4Filter(Filter *f, struct ip *iph)
 {
 	TRACE_FILTER_FUNC_START();
 	return (f->ip4addr.addr32 == iph->ip_src.s_addr ||
-		f->ip4addr.addr32 == iph->ip_dst.s_addr) ? 0 : 1;
+		f->ip4addr.addr32 == iph->ip_dst.s_addr
+		) ? 0 : 1;	
 	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
-HandleIPFilterAddressDst(Filter *f, struct ip *iph)
+HandleIPv6Filter(Filter *f, struct ip6_hdr *ip6h)
 {
 	TRACE_FILTER_FUNC_START();
-	return (f->ip4addr.addr32 == iph->ip_dst.s_addr) ? 0 : 1;
-	TRACE_FILTER_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static inline int32_t
-HandleEthFilterAddressSrc(Filter *f, struct ether_header *ethh)
-{
-	TRACE_FILTER_FUNC_START();
-	return (!memcmp(f->ethaddr.addr8, ethh->ether_shost,
-			sizeof(ethh->ether_shost))) ? 0 : 1;
-	TRACE_FILTER_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static inline int32_t
-HandleEthFilterAddress(Filter *f, struct ether_header *ethh)
-{
-	TRACE_FILTER_FUNC_START();
-	return (!memcmp(f->ethaddr.addr8, ethh->ether_shost,
-			sizeof(ethh->ether_shost)) ||
-		!memcmp(f->ethaddr.addr8, ethh->ether_dhost,
-			sizeof(ethh->ether_dhost))) ? 0 : 1;
-	TRACE_FILTER_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static inline int32_t
-HandleEthFilterAddressDst(Filter *f, struct ether_header *ethh)
-{
-	TRACE_FILTER_FUNC_START();
-	return (!memcmp(f->ethaddr.addr8, ethh->ether_dhost,
-			sizeof(ethh->ether_dhost))) ? 0 : 1;
-	TRACE_FILTER_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
-static inline int32_t
-HandleARPFilter(Filter *f, struct ether_header *ethh)
-{
-	TRACE_FILTER_FUNC_START();
-	return (ethh->ether_type == ETHERTYPE_ARP) ? 0 : 1;
+	/* to be filled */
+	return 1;
 	TRACE_FILTER_FUNC_END();
 	UNUSED(f);
+	UNUSED(ip6h);
+}
+/*---------------------------------------------------------------------*/
+static inline int32_t
+HandleMACFilter(Filter *f, struct ether_header *ethh)
+{
+	TRACE_FILTER_FUNC_START();
+	return ((!memcmp(f->ethaddr.addr8, ethh->ether_dhost,
+			 sizeof(ethh->ether_dhost))) ||
+		(!memcmp(f->ethaddr.addr8, ethh->ether_shost,
+			 sizeof(ethh->ether_shost)))
+		) ? 0 : 1;
+	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 /* Under construction.. */
@@ -306,92 +284,31 @@ analyze_packet(unsigned char *buf, CommNode *cn, time_t current_time)
 			}
 			TRACE_DEBUG_LOG("Connection filter\n");
 			break;
-		case BRICKS_TCPSPORT_FILTER:
-			if (tcph != NULL)
-				rc = HandleTcpFilterSport(f, tcph);
-			TRACE_DEBUG_LOG("Tcp src port filter\n");
+		case BRICKS_FLOW_FILTER:
+			if (iph != NULL) {
+				if (tcph != NULL)
+					rc = HandleFlowFilterIPv4Tcp(f, iph, tcph);
+				else if (udph != NULL)
+					rc = HandleFlowFilterIPv4Udp(f, iph, udph);
+			} else if (ip6h != NULL) {
+				if (tcph != NULL)
+					rc = HandleFlowFilterIPv6Tcp(f, ip6h, tcph);
+				else if (udph != NULL)
+					rc = HandleFlowFilterIPv6Udp(f, ip6h, udph);
+			}
+			TRACE_DEBUG_LOG("Flow filter\n");
 			break;
-		case BRICKS_TCPPORT_FILTER:
-			if (tcph != NULL)
-				rc = HandleTcpFilterPort(f, tcph);
-			TRACE_DEBUG_LOG("Tcp port filter\n");
-			break;		
-		case BRICKS_TCPDPORT_FILTER:
-			if (tcph != NULL)
-				rc = HandleTcpFilterDport(f, tcph);
-			TRACE_DEBUG_LOG("Tcp dst port filter\n");
-			break;
-		case BRICKS_UDPSPORT_FILTER:
-			if (udph != NULL)
-				rc = HandleUdpFilterSport(f, udph);
-			TRACE_DEBUG_LOG("Udp src port filter\n");
-			break;
-		case BRICKS_UDPPORT_FILTER:
-			if (udph != NULL)
-				rc = HandleUdpFilterPort(f, udph);
-			TRACE_DEBUG_LOG("Udp port filter\n");
-			break;		
-		case BRICKS_UDPDPORT_FILTER:
-			if (udph != NULL)
-				rc = HandleUdpFilterDport(f, udph);
-			TRACE_DEBUG_LOG("Udp dst port filter\n");
-			break;
-		case BRICKS_TCPPROT_FILTER:
-			if (tcph != NULL)
-				rc = 0;
-			TRACE_DEBUG_LOG("Tcp protocol filter\n");
-			break;
-		case BRICKS_UDPPROT_FILTER:
-			if (udph != NULL)
-				rc = 0;
-			TRACE_DEBUG_LOG("Udp protocol filter\n");
-			break;
-		case BRICKS_SRCIP4ADDR_FILTER:
-			if (iph != NULL)
-				rc = HandleIPFilterAddressSrc(f, iph);
-			TRACE_DEBUG_LOG("IP src address filter\n");
-			break;
-		case BRICKS_IP4ADDR_FILTER:
-			if (iph != NULL)
-				rc = HandleIPFilterAddress(f, iph);
-			TRACE_DEBUG_LOG("IP address filter\n");
-			break;		
-		case BRICKS_DSTIP4ADDR_FILTER:
-			if (iph != NULL)
-				rc = HandleIPFilterAddressDst(f, iph);
-			TRACE_DEBUG_LOG("IP dst address filter\n");
-			break;
-		case BRICKS_SRCIP6ADDR_FILTER:
-			/* to be filled later */
-			TRACE_DEBUG_LOG("IP6 src address filter\n");
-			break;
-		case BRICKS_DSTIP6ADDR_FILTER:
-			/* to be filled later */
-			TRACE_DEBUG_LOG("IP6 dst address filter\n");
-			break;
-		case BRICKS_IPPROT_FILTER:
-			if (iph != NULL || ip6h != NULL)
-				rc = 0;
-			TRACE_DEBUG_LOG("IP proto filter\n");
-			break;
-		case BRICKS_ARPPROT_FILTER:
-			rc = HandleARPFilter(f, ethh);
-			TRACE_DEBUG_LOG("ARP proto filter\n");
-			break;
-		case BRICKS_ICMPPROT_FILTER:
-			TRACE_DEBUG_LOG("ICMP filter\n");
-			break;
-		case BRICKS_SRCETH_FILTER:
-			rc = HandleEthFilterAddressSrc(f, ethh);
-			TRACE_DEBUG_LOG("Mac src address filter\n");
-			break;
-		case BRICKS_ETH_FILTER:
-			rc = HandleEthFilterAddress(f, ethh);
-			TRACE_DEBUG_LOG("Mac address filter\n");
-			break;
-		case BRICKS_DSTETH_FILTER:
-			rc = HandleEthFilterAddressDst(f, ethh);
-			TRACE_DEBUG_LOG("Mac dest address filter\n");
+		case BRICKS_IP_FILTER:
+			if (iph != NULL) {
+				rc = HandleIPv4Filter(f, iph);
+			} else if (ip6h != NULL) {
+				rc = HandleIPv6Filter(f, ip6h);
+			}
+			TRACE_DEBUG_LOG("IP filter\n");
+			break;			
+		case BRICKS_MAC_FILTER:
+			rc = HandleMACFilter(f, ethh);
+			TRACE_DEBUG_LOG("MAC filter\n");
 			break;
 		default:
 			break;
@@ -470,9 +387,10 @@ parse_record(broker_data *v, Filter *f)
 	broker_record *inner_r = broker_data_as_record(v);
 	broker_record_iterator *inner_it = broker_record_iterator_create(inner_r);
 	broker_subnet *bsub = NULL;
-	char temp[20];
-	struct in_addr temp_addr;
-	char *needle;
+	char str_addr[INET_ADDR_STR];
+	struct in_addr addr;
+	uint8_t mask = INET_MASK;
+	char *needle = NULL;
 	
 	TRACE_DEBUG_LOG( "Got a record\n");
 	while (!broker_record_iterator_at_last(inner_r, inner_it)) {
@@ -511,25 +429,36 @@ parse_record(broker_data *v, Filter *f)
 						str);
 				needle = strstr(str, "/");
 				if (needle == NULL) {
-					strcpy(temp, str);
+					strcpy(str_addr, str);
 				} else {
-					memcpy(temp, str, needle-str);
-					temp[needle-str] = '\0';
+					memcpy(str_addr, str, needle-str);
+					str_addr[needle-str] = '\0';
+					mask = (uint8_t)atoi(needle + 1);
+					TRACE_DEBUG_LOG("Mask is: %d\n", mask);
 				}
 				
-				inet_aton(temp, &temp_addr);
-				if (f->conn.sip4addr.addr32 != 0) {
-					memcpy(&f->conn.dip4addr.addr32,
-					       &temp_addr,
-					       sizeof(uint32_t));
-					TRACE_DEBUG_LOG("Setting dest ip address: %u\n",
-							f->conn.dip4addr.addr32);
-				} else {
-					memcpy(&f->conn.sip4addr.addr32,
-					       &temp_addr,
-					       sizeof(uint32_t));
-					TRACE_DEBUG_LOG("Setting src ip address: %u\n",
-							f->conn.sip4addr.addr32);
+				if (inet_aton(str_addr, &addr) == 0) {
+					TRACE_DEBUG_LOG("Passed an invalid address!\n");
+					break;
+				}
+				if (f->filter_type_flag == BRICKS_IP_FILTER) {
+					memcpy(&f->ip4addr.addr32, &addr, sizeof(uint32_t));
+				} else {						
+					if (f->conn.sip4addr.addr32 != 0) {
+						memcpy(&f->conn.dip4addr.addr32,
+						       &addr,
+						       sizeof(uint32_t));
+						TRACE_DEBUG_LOG("Setting dest ip address: %u\n",
+								f->conn.dip4addr.addr32);
+						f->conn.dip4addr.mask = mask;
+					} else {
+						memcpy(&f->conn.sip4addr.addr32,
+						       &addr,
+						       sizeof(uint32_t));
+						TRACE_DEBUG_LOG("Setting src ip address: %u\n",
+								f->conn.sip4addr.addr32);
+						f->conn.sip4addr.mask = mask;
+					}
 				}
 				break;
 			case broker_data_type_port:
@@ -553,11 +482,15 @@ parse_record(broker_data *v, Filter *f)
 				if (!strcmp(str, "NetControl::DROP"))
 					f->tgt = DROP;
 				else if (!strcmp(str, "NetControl::WHITELIST"))
-					f->tgt = WHITELIST;				
-				else if (!strcmp(str, "NetControl::FLOW")) {
-					/* process flow record */
+					f->tgt = WHITELIST;
+				else if (!strcmp(str, "NetControl::FLOW"))
+					f->filter_type_flag = BRICKS_FLOW_FILTER;
+				else if (!strcmp(str, "NetControl::CONNECTION"))
 					f->filter_type_flag = BRICKS_CONNECTION_FILTER;
-				}
+				else if (!strcmp(str, "NetControl::ADDRESS"))
+					f->filter_type_flag = BRICKS_IP_FILTER;
+				else if (!strcmp(str, "NetControl::MAC"))
+					f->filter_type_flag = BRICKS_MAC_FILTER;
 				break;
 			case broker_data_type_set:
 				TRACE_DEBUG_LOG( "Got a set\n");
@@ -575,11 +508,9 @@ parse_record(broker_data *v, Filter *f)
 				break;
 			}
 		}
-		broker_data_delete(inner_d);
 		broker_record_iterator_next(inner_r, inner_it);
 	}
 	broker_record_iterator_delete(inner_it);
-	broker_record_delete(inner_r);
 	TRACE_DEBUG_LOG( "End of record\n");
 	TRACE_FILTER_FUNC_END();
 }
@@ -594,6 +525,9 @@ brokerize_request(engine *eng, broker_message_queue *q)
 	Filter f;
 
 	memset(&f, 0, sizeof(f));
+
+	/* reset time period to -1 */
+	f.filt_time_period = (time_t)-1;
 	
 	/* check vector contents */
 	for (i = 0; i < n; ++i) {
@@ -616,20 +550,17 @@ brokerize_request(engine *eng, broker_message_queue *q)
 						TRACE_DEBUG_LOG("Got a message: %s!\n",
 								broker_string_data(broker_data_to_string(v)));
 				}
-				broker_data_delete(v);
-				broker_vector_iterator_next(m, it);
 				break;
 			}
+			broker_vector_iterator_next(m, it);			
 			count++;
 		}
 		broker_vector_iterator_delete(it);
-		broker_vector_delete(m);
 	}
 	
 	broker_deque_of_message_delete(msgs);	
 
 	printFilter(&f);
-	//f.filt_time_period = (time_t)-1;
 
 	/* TODO: XXX - This needs to be set with respect to interface name */
 	apply_filter(TAILQ_FIRST(&eng->commnode_list), &f);
@@ -738,9 +669,6 @@ process_request_backend(int sock, engine *eng)
 		install_filter(rb, eng);
 		/* parse new rule */
 		TRACE_DEBUG_LOG("Got a new rule\n");
-		TRACE_DEBUG_LOG("Target: %d\n", rb->t);
-		TRACE_DEBUG_LOG("TargetArgs.pid: %d\n", rb->targs.pid);
-		TRACE_DEBUG_LOG("TargetArgs.proc_name: %s\n", rb->targs.proc_name);
 		TRACE_FLUSH();
 		
 		return 0;
@@ -765,8 +693,34 @@ initialize_filt_comm(engine *eng)
 		return;
 	}
 
-	/* finally assigned the pq message ptr */
+	/* 
+	 * finally assigned the pq message ptr,
+	 * topic ptr & node ptr respectively 
+	 */
 	eng->pq_ptr = (void *)pq;
+	eng->topic_ptr = (void *)topic;
+	eng->node_ptr = (void *)node0;
+	
+	TRACE_FILTER_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+void
+terminate_filt_comm(engine *eng)
+{
+	TRACE_FILTER_FUNC_START();
+	broker_message_queue *pq = (broker_message_queue *)eng->pq_ptr;
+	broker_string *topic = (broker_string *)eng->topic_ptr;
+	broker_endpoint *node = (broker_endpoint *)eng->node_ptr;
+
+	if (pq != NULL && topic != NULL && node != NULL) {
+		broker_string_delete(topic);
+		/* broker_message_queue_delete(pq); */
+		broker_endpoint_delete(node);
+		eng->pq_ptr = NULL;
+		eng->topic_ptr = NULL;
+		eng->node_ptr = NULL;
+		broker_done();
+	}
 	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

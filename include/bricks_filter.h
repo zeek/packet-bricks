@@ -32,6 +32,9 @@
 /* for polling */
 #include <sys/poll.h>
 /*---------------------------------------------------------------------*/
+#define INET_ADDR_STR			20
+#define INET_MASK			32
+/*---------------------------------------------------------------------*/
 /**
  * Analyze the packet across the filter. And pass it along
  * the communication node, if the filter allows...
@@ -46,19 +49,26 @@ int
 apply_filter(CommNode *cn, Filter *f);
 
 /**
- * 
+ * Initialize the filter communication backend
  */
 void
 initialize_filt_comm(engine *eng);
 
 /**
- *
+ * Terminate the filter communication backend
+ */
+void
+terminate_filt_comm(engine *eng);
+
+/**
+ * Retrieve the socket descriptor of the broker_message_queue
+ * that is present in the engine object
  */
 int
 fetch_filter_comm_fd(engine *eng);
 
 /**
- *
+ * Parse and interpret the incoming filter broker request
  */
 void
 process_broker_request(engine *eng, struct pollfd *pfd, int i);

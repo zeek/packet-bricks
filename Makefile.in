@@ -49,6 +49,7 @@ ifeq ($(USEREADLINE),1)
 endif
 ifeq ($(USEBROKER),1)
 	export CFLAGS += -DENABLE_BROKER -I$(BROKERINCPATH)
+	export DEBUG_CFLAGS += -DENABLE_BROKER -I$(BROKERINCPATH)
 	export LDFLAGS += -L$(BROKERLIBPATH) -lbroker
 endif
 export NETMAP_INCLUDE := -I$(shell pwd)/include/netmap

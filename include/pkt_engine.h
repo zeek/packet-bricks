@@ -93,6 +93,10 @@ typedef struct engine {
 #ifdef ENABLE_BROKER
 	/* filter communication handle */
 	void *pq_ptr;
+	/* filter comm. backend topic */
+	void *topic_ptr;
+	/* filter comm. backend node */
+	void *node_ptr;
 #endif
 	/*
 	 * the linked list ptr that will chain together
