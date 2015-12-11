@@ -56,18 +56,26 @@
 #include <net/ethernet.h>
 /* for inet_ntoa() */
 #include <sys/socket.h>
+/* for inet_ntoa() */
 #include <arpa/inet.h>
+/*---------------------------------------------------------------------*/
+#define CONN_SUBNET_CHECK(faddr, a)			\
+	((a.s_addr & faddr.ip_mask) == faddr.ip_masked)
+#define FLOW_SUBNET_CHECK(faddr, a)					\
+	(faddr.addr32 == 0 || (a.s_addr & faddr.ip_mask) == faddr.ip_masked)
+#define FLOW_PORT_CHECK(p_a, p_b)		\
+	(p_a == 0 || (p_a == p_b))
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleConnectionFilterIPv4Tcp(Filter *f, struct ip *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((f->conn.sip4addr.addr32 == iph->ip_src.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr &&
+	return ((CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&
 		 f->conn.sport == tcph->th_sport &&
 		 f->conn.dport == tcph->th_dport) ||
-		(f->conn.sip4addr.addr32 == iph->ip_dst.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr &&
+		(CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
+		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
 		 f->conn.sport == tcph->th_dport &&
 		 f->conn.dport == tcph->th_sport)
 		) ? 0 : 1;
@@ -90,14 +98,14 @@ static inline int32_t
 HandleConnectionFilterIPv4Udp(Filter *f, struct ip *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((f->conn.sip4addr.addr32 == iph->ip_src.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr /*&&
+	return ((CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&
 		 f->conn.sport == udph->uh_sport &&
-		 f->conn.dport == udph->uh_dport*/) ||
-		(f->conn.sip4addr.addr32 == iph->ip_dst.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr /*&&
+		 f->conn.dport == udph->uh_dport) ||
+		(CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
+		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
 		 f->conn.sport == udph->uh_dport &&
-		 f->conn.dport == udph->uh_sport*/)		
+		 f->conn.dport == udph->uh_sport)		
 		) ? 0 : 1;
 	return 1;
 	TRACE_FILTER_FUNC_END();
@@ -120,14 +128,18 @@ static inline int32_t
 HandleFlowFilterIPv4Tcp(Filter *f, struct ip *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((f->conn.sip4addr.addr32 == iph->ip_src.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr &&
+	return ((FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&
+		 FLOW_PORT_CHECK(f->conn.sport, tcph->th_sport) &&
+		 FLOW_PORT_CHECK(f->conn.dport, tcph->th_dport))
+		 /*
 		 f->conn.sport == tcph->th_sport &&
-		 f->conn.dport == tcph->th_dport) ||
-		(f->conn.sip4addr.addr32 == iph->ip_dst.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr &&
-		 f->conn.sport == tcph->th_dport &&
-		 f->conn.dport == tcph->th_sport)
+		 f->conn.dport == tcph->th_dport)
+		 */||
+		(FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
+		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
+		 /*f->conn.sport == tcph->th_dport*/ FLOW_PORT_CHECK(f->conn.sport, tcph->th_dport) &&
+		 FLOW_PORT_CHECK(f->conn.dport, tcph->th_sport)/*f->conn.dport == tcph->th_sport*/)
 		) ? 0 : 1;
 	TRACE_FILTER_FUNC_END();
 }
@@ -148,14 +160,19 @@ static inline int32_t
 HandleFlowFilterIPv4Udp(Filter *f, struct ip *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((f->conn.sip4addr.addr32 == iph->ip_src.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_dst.s_addr /*&&
+	return ((FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&/*
 		 f->conn.sport == udph->uh_sport &&
-		 f->conn.dport == udph->uh_dport*/) ||
-		(f->conn.sip4addr.addr32 == iph->ip_dst.s_addr &&
-		 f->conn.dip4addr.addr32 == iph->ip_src.s_addr /*&&
+		 f->conn.dport == udph->uh_dport*/
+		 FLOW_PORT_CHECK(f->conn.sport, udph->uh_sport) &&
+		 FLOW_PORT_CHECK(f->conn.dport, udph->uh_dport)) ||
+		(FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
+		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
+		 FLOW_PORT_CHECK(f->conn.sport, udph->uh_dport) &&
+		 FLOW_PORT_CHECK(f->conn.dport, udph->uh_sport)
+		 /*
 		 f->conn.sport == udph->uh_dport &&
-		 f->conn.dport == udph->uh_sport*/)		
+		   f->conn.dport == udph->uh_sport*/)		
 		) ? 0 : 1;
 	return 1;
 	TRACE_FILTER_FUNC_END();
@@ -325,6 +342,46 @@ analyze_packet(unsigned char *buf, CommNode *cn, time_t current_time)
 	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
+static inline uint32_t
+MaskFromPrefix(int prefix)
+{
+	TRACE_FILTER_FUNC_START();
+	uint32_t mask = 0;
+	uint8_t *mask_t = (uint8_t *)&mask;
+	int i, j;
+
+	for (i = 0; i <= prefix / 8 && i < 4; i++) {
+		for (j = 0; j < (prefix - i * 8) && j < 8; j++) {
+			mask_t[i] |= (1 << (7 - j));
+		}
+	}
+	
+	return mask;
+	TRACE_FILTER_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
+static inline void
+adjustMasks(Filter *f)
+{
+	TRACE_FILTER_FUNC_START();
+	switch (f->filter_type_flag) {
+	case BRICKS_CONNECTION_FILTER:
+	case BRICKS_FLOW_FILTER:
+		f->conn.sip4addr.ip_mask = MaskFromPrefix(f->conn.sip4addr.mask);
+		f->conn.dip4addr.ip_mask = MaskFromPrefix(f->conn.dip4addr.mask);
+		f->conn.sip4addr.ip_masked = f->conn.sip4addr.addr32 & f->conn.sip4addr.ip_mask;
+		f->conn.dip4addr.ip_masked = f->conn.dip4addr.addr32 & f->conn.dip4addr.ip_mask;		
+		break;
+	case BRICKS_IP_FILTER:
+		f->ip4addr.ip_mask = MaskFromPrefix(f->ip4addr.mask);
+		break;
+	default:
+		/* do nothing */
+		break;
+	}
+	TRACE_FILTER_FUNC_END();
+}
+/*---------------------------------------------------------------------*/
 int
 apply_filter(CommNode *cn, Filter *fin)
 {
@@ -335,7 +392,10 @@ apply_filter(CommNode *cn, Filter *fin)
 		return 0;
 	}
 	memcpy(f, fin, sizeof(Filter));
+	/* set the filter duration */
 	f->filt_start_time = time(NULL) + fin->filt_start_time;
+	/* set mask settings */
+	adjustMasks(f);
 
 	TRACE_LOG("Applying filter with time period: %d, and start_time: %d\n",
 		  (int)f->filt_time_period, (int)f->filt_start_time);
@@ -364,6 +424,15 @@ printFilter(Filter *f)
 		addr.s_addr = f->conn.dip4addr.addr32;
 		TRACE_LOG("Dip: %s\n", inet_ntoa(addr));
 		break;
+	case BRICKS_FLOW_FILTER:
+		TRACE_LOG("It's a flow filter\n");
+		addr.s_addr = f->conn.sip4addr.addr32;
+		TRACE_LOG("Sip: %s\n", inet_ntoa(addr));
+		TRACE_LOG("Mask: %d\n", f->conn.sip4addr.mask);
+		addr.s_addr = f->conn.dip4addr.addr32;
+		TRACE_LOG("Dip: %s\n", inet_ntoa(addr));
+		TRACE_LOG("Mask: %d\n", f->conn.dip4addr.mask);
+		break;		
 	default:
 		TRACE_LOG("Filter type is unrecognized!\n");
 		break;
@@ -560,10 +629,10 @@ brokerize_request(engine *eng, broker_message_queue *q)
 	
 	broker_deque_of_message_delete(msgs);	
 
-	printFilter(&f);
-
 	/* TODO: XXX - This needs to be set with respect to interface name */
 	apply_filter(TAILQ_FIRST(&eng->commnode_list), &f);
+
+	printFilter(&f);
 	
 	TRACE_FILTER_FUNC_END();
 }
@@ -682,13 +751,13 @@ initialize_filt_comm(engine *eng)
 {
 	TRACE_FILTER_FUNC_START();
 	broker_init(0);
-	broker_endpoint *node0 = broker_endpoint_create("node0");
-	broker_string *topic = broker_string_create("bro/event");
-	broker_message_queue *pq = broker_message_queue_create(topic, node0);
+	broker_endpoint *node = broker_endpoint_create(BROKER_NODE);
+	broker_string *topic = broker_string_create(BROKER_TOPIC);
+	broker_message_queue *pq = broker_message_queue_create(topic, node);
 
 	/* only works for a single-threaded process */
-	if (!broker_endpoint_listen(node0, 9999, "127.0.0.1", 1)) {
-		TRACE_ERR("%s\n", broker_endpoint_last_error(node0));
+	if (!broker_endpoint_listen(node, BROKER_PORT, BROKER_HOST, 1)) {
+		TRACE_ERR("%s\n", broker_endpoint_last_error(node));
 		TRACE_FILTER_FUNC_END();
 		return;
 	}
@@ -699,7 +768,7 @@ initialize_filt_comm(engine *eng)
 	 */
 	eng->pq_ptr = (void *)pq;
 	eng->topic_ptr = (void *)topic;
-	eng->node_ptr = (void *)node0;
+	eng->node_ptr = (void *)node;
 	
 	TRACE_FILTER_FUNC_END();
 }

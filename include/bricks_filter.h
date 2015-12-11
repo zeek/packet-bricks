@@ -34,6 +34,12 @@
 /*---------------------------------------------------------------------*/
 #define INET_ADDR_STR			20
 #define INET_MASK			32
+#ifdef ENABLE_BROKER
+#define BROKER_NODE			"node0"
+#define BROKER_TOPIC			"bro/event"
+#define BROKER_HOST			"127.0.0.1"
+#define BROKER_PORT			9999
+#endif
 /*---------------------------------------------------------------------*/
 /**
  * Analyze the packet across the filter. And pass it along

@@ -80,6 +80,8 @@ typedef struct {
 		uint32_t addr32;
 	};
 	uint8_t mask;
+	uint32_t ip_mask;
+	uint32_t ip_masked;
 } IP4Address __attribute__((aligned(__WORDSIZE)));
 
 typedef struct {
