@@ -90,8 +90,6 @@ typedef struct {
 		uint16_t addr16[8];
 		uint32_t addr32[4];
 	};
-	/* XXX This will be revised */
-	/** uint8_t mask; **/
 } IP6Address __attribute__((aligned(__WORDSIZE)));;
 /*---------------------------------------------------------------------*/
 /* XXX: These may be converted into individual structs */
@@ -175,6 +173,10 @@ typedef struct Filter {
 		IP6Address ip6addr;
 		Connection conn;
 	};
+
+	/* Internet protocol number */
+	uint8_t proto;
+	
 	/* duration of the entire applied filter */
 	time_t filt_time_period;
 	/* when do you want the filter application to start */

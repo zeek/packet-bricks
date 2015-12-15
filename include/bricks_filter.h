@@ -32,7 +32,6 @@
 /* for polling */
 #include <sys/poll.h>
 /*---------------------------------------------------------------------*/
-#define INET_ADDR_STR			20
 #define INET_MASK			32
 #ifdef ENABLE_BROKER
 #define BROKER_NODE			"node0"

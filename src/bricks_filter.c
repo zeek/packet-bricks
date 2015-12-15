@@ -58,9 +58,15 @@
 #include <sys/socket.h>
 /* for inet_ntoa() */
 #include <arpa/inet.h>
+#ifdef ENABLE_BROKER
+/* for broker comm. */
+#include <broker/broker.h>
+#endif
 /*---------------------------------------------------------------------*/
 #define CONN_SUBNET_CHECK(faddr, a)			\
 	((a.s_addr & faddr.ip_mask) == faddr.ip_masked)
+#define CONN_SUBNET6_CHECK(faddr, a)			\
+	(!memcmp(a.s6_addr, faddr.addr32, 16))
 #define FLOW_SUBNET_CHECK(faddr, a)					\
 	(faddr.addr32 == 0 || (a.s_addr & faddr.ip_mask) == faddr.ip_masked)
 #define FLOW_PORT_CHECK(p_a, p_b)		\
@@ -70,14 +76,15 @@ static inline int32_t
 HandleConnectionFilterIPv4Tcp(Filter *f, struct ip *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+	return (f->proto == IPVERSION &&
+		((CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
 		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&
 		 f->conn.sport == tcph->th_sport &&
 		 f->conn.dport == tcph->th_dport) ||
 		(CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
 		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
 		 f->conn.sport == tcph->th_dport &&
-		 f->conn.dport == tcph->th_sport)
+		 f->conn.dport == tcph->th_sport))
 		) ? 0 : 1;
 	TRACE_FILTER_FUNC_END();
 }
@@ -86,60 +93,68 @@ static inline int32_t
 HandleConnectionFilterIPv6Tcp(Filter *f, struct ip6_hdr *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	/* to be filled */
-	return 1;
+	return (f->proto == IPV6_VERSION &&
+		((CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_src) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_dst) &&
+		 f->conn.sport == tcph->th_sport &&
+		 f->conn.dport == tcph->th_dport) ||
+		(CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_dst) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_src) &&
+		 f->conn.sport == tcph->th_dport &&
+		 f->conn.dport == tcph->th_sport))
+		) ? 0 : 1;
 	TRACE_FILTER_FUNC_END();
-	UNUSED(f);
-	UNUSED(iph);
-	UNUSED(tcph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleConnectionFilterIPv4Udp(Filter *f, struct ip *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+	return (f->proto == IPVERSION &&
+		((CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
 		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&
 		 f->conn.sport == udph->uh_sport &&
 		 f->conn.dport == udph->uh_dport) ||
 		(CONN_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
 		 CONN_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
 		 f->conn.sport == udph->uh_dport &&
-		 f->conn.dport == udph->uh_sport)		
+		 f->conn.dport == udph->uh_sport))
 		) ? 0 : 1;
 	return 1;
 	TRACE_FILTER_FUNC_END();
-	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleConnectionFilterIPv6Udp(Filter *f, struct ip6_hdr *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	/* to be filled */
-	return 1;
+	return (f->proto == IPV6_VERSION &&
+		((CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_src) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_dst) &&
+		 f->conn.sport == udph->uh_sport &&
+		 f->conn.dport == udph->uh_dport) ||
+		(CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_dst) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_src) &&
+		 f->conn.sport == udph->uh_dport &&
+		 f->conn.dport == udph->uh_sport))
+		) ? 0 : 1;
 	TRACE_FILTER_FUNC_END();
-	UNUSED(f);
-	UNUSED(iph);
-	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleFlowFilterIPv4Tcp(Filter *f, struct ip *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+	return (f->proto == IPVERSION &&
+		((FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
 		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&
 		 FLOW_PORT_CHECK(f->conn.sport, tcph->th_sport) &&
 		 FLOW_PORT_CHECK(f->conn.dport, tcph->th_dport))
-		 /*
-		 f->conn.sport == tcph->th_sport &&
-		 f->conn.dport == tcph->th_dport)
-		 */||
+		||
 		(FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
 		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
-		 /*f->conn.sport == tcph->th_dport*/ FLOW_PORT_CHECK(f->conn.sport, tcph->th_dport) &&
-		 FLOW_PORT_CHECK(f->conn.dport, tcph->th_sport)/*f->conn.dport == tcph->th_sport*/)
+		 FLOW_PORT_CHECK(f->conn.sport, tcph->th_dport) &&
+		 FLOW_PORT_CHECK(f->conn.dport, tcph->th_sport)))
 		) ? 0 : 1;
 	TRACE_FILTER_FUNC_END();
 }
@@ -148,55 +163,62 @@ static inline int32_t
 HandleFlowFilterIPv6Tcp(Filter *f, struct ip6_hdr *iph, struct tcphdr *tcph)
 {
 	TRACE_FILTER_FUNC_START();
-	/* to be filled */
-	return 1;
+	return (f->proto == IPV6_VERSION &&
+		((CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_src) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_dst) &&
+		 f->conn.sport == tcph->th_sport &&
+		 f->conn.dport == tcph->th_dport) ||
+		(CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_dst) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_src) &&
+		 f->conn.sport == tcph->th_dport &&
+		 f->conn.dport == tcph->th_sport))
+		) ? 0 : 1;	
 	TRACE_FILTER_FUNC_END();
-	UNUSED(f);
-	UNUSED(iph);
-	UNUSED(tcph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleFlowFilterIPv4Udp(Filter *f, struct ip *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	return ((FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
-		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&/*
-		 f->conn.sport == udph->uh_sport &&
-		 f->conn.dport == udph->uh_dport*/
+	return (f->proto == IPVERSION &&
+		((FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_src) &&
+		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_dst) &&
 		 FLOW_PORT_CHECK(f->conn.sport, udph->uh_sport) &&
-		 FLOW_PORT_CHECK(f->conn.dport, udph->uh_dport)) ||
+		 FLOW_PORT_CHECK(f->conn.dport, udph->uh_dport))
+		||
 		(FLOW_SUBNET_CHECK(f->conn.sip4addr, iph->ip_dst) &&
 		 FLOW_SUBNET_CHECK(f->conn.dip4addr, iph->ip_src) &&
 		 FLOW_PORT_CHECK(f->conn.sport, udph->uh_dport) &&
-		 FLOW_PORT_CHECK(f->conn.dport, udph->uh_sport)
-		 /*
-		 f->conn.sport == udph->uh_dport &&
-		   f->conn.dport == udph->uh_sport*/)		
+		 FLOW_PORT_CHECK(f->conn.dport, udph->uh_sport)))
 		) ? 0 : 1;
 	return 1;
 	TRACE_FILTER_FUNC_END();
-	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleFlowFilterIPv6Udp(Filter *f, struct ip6_hdr *iph, struct udphdr *udph)
 {
 	TRACE_FILTER_FUNC_START();
-	/* to be filled */
-	return 1;
+	return (f->proto == IPV6_VERSION &&
+		((CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_src) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_dst) &&
+		 f->conn.sport == udph->uh_sport &&
+		 f->conn.dport == udph->uh_dport) ||
+		(CONN_SUBNET6_CHECK(f->conn.sip6addr, iph->ip6_dst) &&
+		 CONN_SUBNET6_CHECK(f->conn.dip6addr, iph->ip6_src) &&
+		 f->conn.sport == udph->uh_dport &&
+		 f->conn.dport == udph->uh_sport))
+		) ? 0 : 1;
 	TRACE_FILTER_FUNC_END();
-	UNUSED(f);
-	UNUSED(iph);
-	UNUSED(udph);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
 HandleIPv4Filter(Filter *f, struct ip *iph)
 {
 	TRACE_FILTER_FUNC_START();
-	return (f->ip4addr.addr32 == iph->ip_src.s_addr ||
-		f->ip4addr.addr32 == iph->ip_dst.s_addr
+	return (f->proto == IPVERSION &&
+		(f->ip4addr.addr32 == iph->ip_src.s_addr ||
+		 f->ip4addr.addr32 == iph->ip_dst.s_addr)
 		) ? 0 : 1;	
 	TRACE_FILTER_FUNC_END();
 }
@@ -205,11 +227,11 @@ static inline int32_t
 HandleIPv6Filter(Filter *f, struct ip6_hdr *ip6h)
 {
 	TRACE_FILTER_FUNC_START();
-	/* to be filled */
-	return 1;
+	return (f->proto == IPV6_VERSION &&
+		(!memcmp(f->ip6addr.addr32, ip6h->ip6_src.s6_addr, 16) ||
+		 !memcmp(f->ip6addr.addr32, ip6h->ip6_dst.s6_addr, 16)))
+		? 0 : 1;
 	TRACE_FILTER_FUNC_END();
-	UNUSED(f);
-	UNUSED(ip6h);
 }
 /*---------------------------------------------------------------------*/
 static inline int32_t
@@ -253,7 +275,8 @@ analyze_packet(unsigned char *buf, CommNode *cn, time_t current_time)
 		TRACE_DEBUG_LOG("Failed to recognize L3 protocol\n");
 		return 1;
 	}
-	
+
+ locate_l4:
 	if (iph != NULL) {
 		switch (iph->ip_p) {
 		case IPPROTO_TCP:
@@ -264,13 +287,37 @@ analyze_packet(unsigned char *buf, CommNode *cn, time_t current_time)
 			break;
 		case IPPROTO_IPIP:
 			/* tunneling case to be filled */
+			iph = ((struct ip *)((uint8_t *)iph + (iph->ip_hl<<2)));
+			ip6h = NULL;
+			goto locate_l4;
 		default:
 			TRACE_FILTER_FUNC_END();
 			TRACE_DEBUG_LOG("Failed to recognize L4 protocol\n");
 			return 1;
 		}
 	}
-	
+
+ locate_l46:
+	if (ip6h != NULL) {
+		switch (ntohs(ip6h->ip6_ctlun.ip6_un1.ip6_un1_nxt)) {
+		case IPPROTO_TCP:
+			tcph = (struct tcphdr *)(ip6h + 1);
+			break;
+		case IPPROTO_UDP:
+			udph = (struct udphdr *)(ip6h + 1);
+			break;
+		case IPPROTO_IPIP:
+			iph = (struct ip *)(ip6h + 1);
+			ip6h = NULL;
+			goto locate_l4;
+			break;
+		case IPPROTO_IPV6:
+			ip6h = (struct ip6_hdr *)(ip6h + 1);
+			iph = NULL;
+			goto locate_l46;
+			break;
+		}
+	}
 	TAILQ_FOREACH_SAFE(f, &cn->filter_list, entry, f_prev) {
 		if (unlikely((f->filt_time_period >= 0) &&
 			     (current_time - f->filt_start_time >
@@ -374,6 +421,7 @@ adjustMasks(Filter *f)
 		break;
 	case BRICKS_IP_FILTER:
 		f->ip4addr.ip_mask = MaskFromPrefix(f->ip4addr.mask);
+		f->ip4addr.ip_masked = f->ip4addr.addr32 & f->ip4addr.ip_mask;
 		break;
 	default:
 		/* do nothing */
@@ -405,11 +453,14 @@ apply_filter(CommNode *cn, Filter *fin)
 	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
+#ifdef DEBUG
 void
 printFilter(Filter *f)
 {
 	TRACE_FILTER_FUNC_START();
 	struct in_addr addr;
+	struct in6_addr addr6;
+	char str_addr[INET6_ADDRSTRLEN];       
 	
 	TRACE_LOG("Printing current filter...\n");
 	
@@ -419,19 +470,37 @@ printFilter(Filter *f)
 		break;
 	case BRICKS_CONNECTION_FILTER:
 		TRACE_LOG("It's a connection filter\n");
-		addr.s_addr = f->conn.sip4addr.addr32;
-		TRACE_LOG("Sip: %s\n", inet_ntoa(addr));
-		addr.s_addr = f->conn.dip4addr.addr32;
-		TRACE_LOG("Dip: %s\n", inet_ntoa(addr));
+		if (f->proto == IPVERSION) {		
+			addr.s_addr = f->conn.sip4addr.addr32;
+			TRACE_LOG("Sip: %s\n", inet_ntoa(addr));
+			addr.s_addr = f->conn.dip4addr.addr32;
+			TRACE_LOG("Dip: %s\n", inet_ntoa(addr));
+		} else /* f->proto == IPV6_VERSION */ {
+			memcpy(addr6.s6_addr, f->conn.sip6addr.addr32, 16);
+			inet_ntop(AF_INET6, &addr6, str_addr, 16);
+			TRACE_LOG("Sip: %s\n", str_addr);
+			memcpy(addr6.s6_addr, f->conn.dip6addr.addr32, 16);
+			inet_ntop(AF_INET6, &addr6, str_addr, 16);
+			TRACE_LOG("Dip: %s\n", str_addr);			
+		}
 		break;
 	case BRICKS_FLOW_FILTER:
 		TRACE_LOG("It's a flow filter\n");
-		addr.s_addr = f->conn.sip4addr.addr32;
-		TRACE_LOG("Sip: %s\n", inet_ntoa(addr));
-		TRACE_LOG("Mask: %d\n", f->conn.sip4addr.mask);
-		addr.s_addr = f->conn.dip4addr.addr32;
-		TRACE_LOG("Dip: %s\n", inet_ntoa(addr));
-		TRACE_LOG("Mask: %d\n", f->conn.dip4addr.mask);
+		if (f->proto == IPVERSION) {
+			addr.s_addr = f->conn.sip4addr.addr32;
+			TRACE_LOG("Sip: %s\n", inet_ntoa(addr));
+			TRACE_LOG("Mask: %d\n", f->conn.sip4addr.mask);
+			addr.s_addr = f->conn.dip4addr.addr32;
+			TRACE_LOG("Dip: %s\n", inet_ntoa(addr));
+			TRACE_LOG("Mask: %d\n", f->conn.dip4addr.mask);
+		} else /* f->proto == IPV6_VERSION */ {
+			memcpy(addr6.s6_addr, f->conn.sip6addr.addr32, 16);
+			inet_ntop(AF_INET6, &addr6, str_addr, 16);
+			TRACE_LOG("Sip: %s\n", str_addr);
+			memcpy(addr6.s6_addr, f->conn.dip6addr.addr32, 16);
+			inet_ntop(AF_INET6, &addr6, str_addr, 16);
+			TRACE_LOG("Dip: %s\n", str_addr);			
+		}
 		break;		
 	default:
 		TRACE_LOG("Filter type is unrecognized!\n");
@@ -439,25 +508,24 @@ printFilter(Filter *f)
 	}
 	TRACE_FILTER_FUNC_END();
 }
+#endif /* !DEBUG */
 /*---------------------------------------------------------------------*/
 #ifdef ENABLE_BROKER
-/* for broker comm. */
-#include <broker/broker.h>
-/*---------------------------------------------------------------------*/
 #define parse_request(x, f)		parse_record(x, f)
 void
 parse_record(broker_data *v, Filter *f)
 {
 	TRACE_FILTER_FUNC_START();
-
+	
 	char *str = NULL;
 	float duration = 0;
-	
 	broker_record *inner_r = broker_data_as_record(v);
 	broker_record_iterator *inner_it = broker_record_iterator_create(inner_r);
 	broker_subnet *bsub = NULL;
-	char str_addr[INET_ADDR_STR];
+	broker_address *baddr = NULL;
+	char str_addr[INET6_ADDRSTRLEN];
 	struct in_addr addr;
+	struct in6_addr addr6;
 	uint8_t mask = INET_MASK;
 	char *needle = NULL;
 	
@@ -488,8 +556,44 @@ parse_record(broker_data *v, Filter *f)
 						 broker_string_data(broker_data_as_string(inner_d)));
 				break;
 			case broker_data_type_address:
+				baddr = broker_data_as_address(inner_d);
 				TRACE_DEBUG_LOG( "Got an address: %s\n",
-						 broker_string_data(broker_address_to_string(broker_data_as_address(inner_d))));
+						 broker_string_data(broker_address_to_string(baddr)));
+				if (f->filter_type_flag == BRICKS_IP_FILTER) {
+					if (broker_address_is_v4(baddr)) {
+						memcpy(&f->ip4addr.addr32,
+						       broker_address_bytes(baddr),
+						       sizeof(uint32_t));
+						f->proto = IPVERSION;
+					} else if (broker_address_is_v6(baddr)) {
+						memcpy(f->ip6addr.addr32,
+						       broker_address_bytes(baddr),
+						       sizeof(uint32_t)*4);
+						f->proto = IPV6_VERSION;
+					}
+				} else {
+					if (broker_address_is_v4(baddr)) {
+						if (f->conn.sip4addr.addr32 != 0)
+							memcpy(&f->conn.dip4addr.addr32,
+							       broker_address_bytes(baddr),
+							       sizeof(uint32_t));
+						else
+							memcpy(&f->conn.sip4addr.addr32,
+							       broker_address_bytes(baddr),
+							       sizeof(uint32_t));
+						f->proto = IPVERSION;
+					} else if (broker_address_is_v6(baddr)) {
+						if (f->conn.sip6addr.addr32[0] != 0)
+							memcpy(f->conn.dip6addr.addr32,
+							       broker_address_bytes(baddr),
+							       sizeof(uint32_t)*4);
+						else
+							memcpy(f->conn.sip6addr.addr32,
+							       broker_address_bytes(baddr),
+							       sizeof(uint32_t)*4);
+						f->proto = IPV6_VERSION;
+					}
+				}
 				break;
 			case broker_data_type_subnet:
 				bsub = broker_data_as_subnet(inner_d);
@@ -501,32 +605,67 @@ parse_record(broker_data *v, Filter *f)
 					strcpy(str_addr, str);
 				} else {
 					memcpy(str_addr, str, needle-str);
-					str_addr[needle-str] = '\0';
+					str_addr[needle-str] = (char)0;
 					mask = (uint8_t)atoi(needle + 1);
 					TRACE_DEBUG_LOG("Mask is: %d\n", mask);
 				}
 				
-				if (inet_aton(str_addr, &addr) == 0) {
-					TRACE_DEBUG_LOG("Passed an invalid address!\n");
-					break;
+				if (f->proto == IPVERSION) {
+					if (inet_pton(AF_INET, str_addr, &addr) == 0) {
+						TRACE_DEBUG_LOG("Passed an invalid address!\n");
+						break;
+					}
+				} else /* f->proto == IPV6_VERSION */ {
+					if (inet_pton(AF_INET6, str_addr, &addr6) == 0) {
+						TRACE_DEBUG_LOG("Passed an invalid address!\n");
+						break;
+					}
 				}
+				
 				if (f->filter_type_flag == BRICKS_IP_FILTER) {
-					memcpy(&f->ip4addr.addr32, &addr, sizeof(uint32_t));
-				} else {						
-					if (f->conn.sip4addr.addr32 != 0) {
-						memcpy(&f->conn.dip4addr.addr32,
-						       &addr,
-						       sizeof(uint32_t));
-						TRACE_DEBUG_LOG("Setting dest ip address: %u\n",
-								f->conn.dip4addr.addr32);
-						f->conn.dip4addr.mask = mask;
-					} else {
-						memcpy(&f->conn.sip4addr.addr32,
-						       &addr,
-						       sizeof(uint32_t));
-						TRACE_DEBUG_LOG("Setting src ip address: %u\n",
-								f->conn.sip4addr.addr32);
-						f->conn.sip4addr.mask = mask;
+					if (f->proto == IPVERSION)
+						memcpy(&f->ip4addr.addr32,
+						       &addr, sizeof(uint32_t));
+					else /* IPV6_VERSION */
+						memcpy(f->ip6addr.addr32,
+						       &addr6, sizeof(uint32_t)*4);
+				} else {
+					if (f->proto == IPVERSION) {
+						if (f->conn.sip4addr.addr32 != 0) {
+							memcpy(&f->conn.dip4addr.addr32,
+							       &addr,
+							       sizeof(uint32_t));
+							TRACE_DEBUG_LOG("Setting dest ip address: %u\n",
+									f->conn.dip4addr.addr32);
+							f->conn.dip4addr.mask = mask;
+						} else {
+							memcpy(&f->conn.sip4addr.addr32,
+							       &addr,
+							       sizeof(uint32_t));
+							TRACE_DEBUG_LOG("Setting src ip address: %u\n",
+									f->conn.sip4addr.addr32);
+							f->conn.sip4addr.mask = mask;
+						}
+					} else /* IPV6_VERSION */ {
+						if (f->conn.sip6addr.addr32[0] != 0) {
+							memcpy(f->conn.dip6addr.addr32,
+							       &addr6,
+							       sizeof(uint32_t) * 4);
+							TRACE_DEBUG_LOG("Setting dest ip address: %u %u %u %u\n",
+									f->conn.dip6addr.addr32[0],
+									f->conn.dip6addr.addr32[1],
+									f->conn.dip6addr.addr32[2],
+									f->conn.dip6addr.addr32[3]);
+						} else {
+							memcpy(f->conn.sip6addr.addr32,
+							       &addr6,
+							       sizeof(uint32_t) * 4);
+							TRACE_DEBUG_LOG("Setting src ip address: %u %u %u %u\n",
+									f->conn.sip6addr.addr32[0],
+									f->conn.sip6addr.addr32[1],
+									f->conn.sip6addr.addr32[2],
+									f->conn.sip6addr.addr32[3]);
+						}
 					}
 				}
 				break;
@@ -597,6 +736,9 @@ brokerize_request(engine *eng, broker_message_queue *q)
 
 	/* reset time period to -1 */
 	f.filt_time_period = (time_t)-1;
+
+	/* reseting the protocol */
+	f.proto = IPVERSION;
 	
 	/* check vector contents */
 	for (i = 0; i < n; ++i) {
@@ -632,8 +774,9 @@ brokerize_request(engine *eng, broker_message_queue *q)
 	/* TODO: XXX - This needs to be set with respect to interface name */
 	apply_filter(TAILQ_FIRST(&eng->commnode_list), &f);
 
+#ifdef DEBUG
 	printFilter(&f);
-	
+#endif
 	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
