@@ -48,6 +48,11 @@
 #include <netinet/ip.h>
 /* ipv6hdr */
 #include <netinet/ip6.h>
+
+#if linux
+#define IPV6_VERSION 0x60
+#endif
+
 /* tcphdr */
 #include <netinet/tcp.h>
 /* udphdr */
