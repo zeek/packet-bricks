@@ -31,6 +31,8 @@
 /*---------------------------------------------------------------------*/
 /* for polling */
 #include <sys/poll.h>
+/* for flist */
+#include "netmap_module.h"
 /*---------------------------------------------------------------------*/
 #define INET_MASK			32
 #ifdef ENABLE_BROKER
@@ -40,18 +42,41 @@
 #define BROKER_PORT			9999
 #endif
 /*---------------------------------------------------------------------*/
+struct FilterContext {
+	/* name of output node */
+	char name[IFNAMSIZ];
+	/* 
+	 * the linked list ptr that will chain together
+	 * all filter bricks (for bricks_filter.c). this
+	 * will be used for network communication module
+	 */
+	TAILQ_ENTRY(FilterContext) entry;
+
+	/* Filter list */
+	flist filter_list;
+	
+} __attribute__((aligned(__WORDSIZE)));
+/*---------------------------------------------------------------------*/
 /**
  * Analyze the packet across the filter. And pass it along
  * the communication node, if the filter allows...
  */
 int
+#if 1
 analyze_packet(unsigned char *buf, CommNode *cn, time_t t);
+#else
+analyze_packet(unsigned char *buf, FilterContext *cn, time_t t);
+#endif
 
 /**
  * Add the filter to the selected CommNode
  */
 int
+#if 1
 apply_filter(CommNode *cn, Filter *f);
+#else
+apply_filter(FilterContext *cn, Filter *f);
+#endif
 
 /**
  * Initialize the filter communication backend

@@ -503,7 +503,11 @@ dispatch_pkt(struct netmap_ring *rxring,
 					     lnd->level,
 					     current_time);
 			} else {
+#if 1
 				cn->mark = analyze_packet(buf, cn, current_time);
+#else
+				cn->mark = 1;
+#endif
 			}
 		}
 		CLR_BIT(b, j);
@@ -830,7 +834,9 @@ install_filter(req_block *rb, engine *eng)
 	TAILQ_FOREACH(cn, &eng->commnode_list, entry) {
 		if (!strcmp((char *)cn->nm_ifname, (char *)rb->ifname)) {
 			/* apply the filter */
+#if 0
 			apply_filter(cn, &rb->f);
+#endif
 			TRACE_NETMAP_FUNC_END();
 			return 1;
 		} else {

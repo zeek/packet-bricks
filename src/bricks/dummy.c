@@ -29,10 +29,6 @@
 #include "brick.h"
 /* for bricks logging */
 #include "bricks_log.h"
-/* for engine declaration */
-#include "pkt_engine.h"
-/* for strcmp */
-#include <string.h>
 /*---------------------------------------------------------------------*/
 int32_t
 dummy_init(Brick *brick, Linker_Intf *li)

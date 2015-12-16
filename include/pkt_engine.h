@@ -59,6 +59,11 @@ struct engine_src;
 typedef struct CommNode CommNode;
 /* CommNode list declaration */
 typedef TAILQ_HEAD(clist, CommNode) clist;
+
+/* Declaring FilterContext struct */
+typedef struct FilterContext FilterContext;
+/* FilterContext list declaration */
+typedef TAILQ_HEAD(fclist, FilterContext) fclist;
 /*---------------------------------------------------------------------*/
 /**
  *
@@ -90,6 +95,9 @@ typedef struct engine {
 
 	/* the commnode list that shall be referred to by netmodule */
 	clist commnode_list;
+	/* the filter brick list that shalle be referred to by netmodule */
+	fclist filter_list;
+	
 #ifdef ENABLE_BROKER
 	/* filter communication handle */
 	void *pq_ptr;

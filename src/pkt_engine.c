@@ -199,6 +199,9 @@ pktengine_new(const unsigned char *name,
 	/* creating the commnode list */
 	TAILQ_INIT(&eng->commnode_list);
 
+	/* creating the filter list */
+	TAILQ_INIT(&eng->filter_list);	
+
 	TRACE_PKTENGINE_FUNC_END();
 }
 /*---------------------------------------------------------------------*/

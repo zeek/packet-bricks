@@ -31,25 +31,54 @@
 #include "brick.h"
 /* for bricks logging */
 #include "bricks_log.h"
-#include "pkt_hash.h"
+/* for pkt engine */
+#include "pkt_engine.h"
+/* for strcpy */
+#include <string.h>
+/* for linked list queue */
+#include "queue.h"
+/* for filter context */
+#include "bricks_filter.h"
 /*---------------------------------------------------------------------*/
-typedef struct FilterContext {
-	/* nothing here so far... */
-} FilterContext __attribute__((aligned(__WORDSIZE)));
+#if 0
+struct FilterContext {
+	/* name of output node */
+	char name[IFNAMSIZ];
+	/* 
+	 * the linked list ptr that will chain together
+	 * all filter bricks (for bricks_filter.c). this
+	 * will be used for network communication module
+	 */
+	TAILQ_ENTRY(FilterContext) entry;
+
+	/* Filter list */
+	flist filter_list;
+	
+} __attribute__((aligned(__WORDSIZE)));
+#endif
 /*---------------------------------------------------------------------*/
 int32_t
 filter_init(Brick *brick, Linker_Intf *li)
 {
 	TRACE_BRICK_FUNC_START();
-	brick->private_data = calloc(1, sizeof(FilterContext));
-	if (brick->private_data == NULL) {
-		TRACE_LOG("Can't create private context "
-			  "for filter\n");
+	FilterContext *fc = calloc(1, sizeof(FilterContext));
+	if (fc == NULL) {
+		TRACE_LOG("Can't allocate memory for private FilterContext!\n");
 		TRACE_BRICK_FUNC_END();
 		return -1;
 	}
+	brick->private_data = fc;
 	li->type = SHARE;
+#if 1
+#else
+	strcpy(fc->name, li->output_link[0]);
+	TRACE_LOG("Adding brick with output link named: %s for engine %s\n",
+		  li->output_link[0], brick->eng->name);
+	/* Adding filter brick to the engine's filter list */
+	TAILQ_INSERT_TAIL(&brick->eng->filter_list, fc, entry);
+#endif
 	TRACE_BRICK_FUNC_END();
+
 	return 1;
 }
 /*---------------------------------------------------------------------*/
@@ -61,16 +90,20 @@ static BITMAP
 filter_dummy(Brick *brick, unsigned char *buf)
 {
 	TRACE_BRICK_FUNC_START();
-	linkdata *lnd = (linkdata *)(&brick->lnd);
 	BITMAP b;
 
 	INIT_BITMAP(b);
-	uint key = pkt_hdr_hash(buf, 4, lnd->level) 
-		% lnd->count;
-	SET_BIT(b, key);
-	
-	TRACE_BRICK_FUNC_END();
+	SET_BIT(b, 0);
+#if 1
+	UNUSED(brick);
+	UNUSED(buf);
+#else
+	FilterContext *fc;
 
+	fc = (FilterContext *)brick->private_data;
+	if (analyze_packet(buf, fc, time(NULL)))
+#endif
+	TRACE_BRICK_FUNC_END();
 	return b;
 }
 /*---------------------------------------------------------------------*/
@@ -78,10 +111,7 @@ void
 filter_deinit(Brick *brick)
 {
 	TRACE_BRICK_FUNC_START();
-	if (brick->private_data != NULL) {
-		free(brick->private_data);
-		brick->private_data = NULL;
-	}
+	free(brick->private_data);
 	free(brick);
 	TRACE_BRICK_FUNC_END();
 }

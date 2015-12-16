@@ -184,6 +184,9 @@ typedef struct Filter {
 	/* target */
 	Target tgt;
 
+	/* comm node name */
+	char node_name[IFNAMSIZ];
+	
 	TAILQ_ENTRY(Filter) entry;
 } Filter __attribute__((aligned(__WORDSIZE)));
 /*---------------------------------------------------------------------*/

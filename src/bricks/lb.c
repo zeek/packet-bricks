@@ -63,6 +63,7 @@ lb_init(Brick *brick, Linker_Intf *li)
 	else
 		lbc->hash_split = li->hash_split;
 	li->type = SHARE;
+	TRACE_LOG("Adding brick %s to the engine\n", li->output_link[0]);
 	TRACE_BRICK_FUNC_END();
 
 	return 1;
