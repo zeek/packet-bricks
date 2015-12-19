@@ -49,7 +49,7 @@ function init()
 
 	 -- setup simple loadbalancer (setup to debug FreeBSD version)
 	 -- (see configs/single-threaded-setups.lua file)
-	 sampleSetup:simple_lbconfig(pe, "ix0")
+	 sampleSetup:simple_lbconfig(pe, "ix1")
 
 	 -- setup loadbalancer config
 	 -- (see configs/single-threaded-setups.lua file)
@@ -57,15 +57,15 @@ function init()
 
 	 -- setup dup/lb config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:duplb_config(pe, "ix0")
+	 --sampleSetup:duplb_config(pe, "ix1")
 
 	 -- setup dup config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:dup_config(pe, "eth3")
+	 --sampleSetup:dup_config(pe, "ix1")
 
 	 -- setup pcapwrtr config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:pcapw_config(pe, "ix0")
+	 --sampleSetup:pcapw_config(pe, "ix1")
 
 	 -- setup lb/mrg config
 	 -- (see configs/single-threaded-setups.lua file)
@@ -77,20 +77,19 @@ function init()
 
 	 -- setup pcaprdr config
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:pcapr_config(pe, "ix0")
+	 --sampleSetup:pcapr_config(pe, "ix1")
 
 	 -- setup dummy config (for performance testing)
 	 -- (see config/single-threaded-setups.lua file)
-	 --sampleSetup:dummy_config(pe, "ix0")
+	 --sampleSetup:dummy_config(pe, "ix1")
 
 	 -- setup merge config (with multiple sources)
 	 -- (see config/single-threaded-setups.lua file)
 	 --sampleSetup:mrg_config(pe, "ix0", "ix1")
 
 	 -- setup lbfilt config
-	 -- don't enable this... this is still under construction
 	 -- (see configs/single-threaded-setups.lua file)
-	 --sampleSetup:lbfilt_config(pe)
+	 --sampleSetup:lbfilt_config(pe, "ix1")
 	 
 end
 -----------------------------------------------------------------------

@@ -40,6 +40,7 @@ merge_init(Brick *brick, Linker_Intf *li)
 	TRACE_BRICK_FUNC_START();
 	brick->private_data = NULL;
 	li->type = SHARE;
+	TRACE_LOG("Adding brick merge to the engine\n");
 	TRACE_BRICK_FUNC_END();
 	return 1;
 }

@@ -503,11 +503,7 @@ dispatch_pkt(struct netmap_ring *rxring,
 					     lnd->level,
 					     current_time);
 			} else {
-#if 1
-				cn->mark = analyze_packet(buf, cn, current_time);
-#else
 				cn->mark = 1;
-#endif
 			}
 		}
 		CLR_BIT(b, j);
@@ -663,7 +659,7 @@ strcpy_with_reverse_pipe(char *to, char *from)
  * task correctly.
  */
 static Brick *
-enable_pipeline(Brick *brick, const char *ifname, Target t)
+enable_pipeline(Brick *brick, const char *ifname, Target t, const char *out_name)
 {
 	TRACE_NETMAP_FUNC_START();
 	uint32_t i;
@@ -686,6 +682,12 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 				Linker_Intf li;
 				/* XXX - Fix it! */
 				li.hash_split = 4;
+				/* adding a test link for filter's sake */
+				li.output_link[0] = out_name;
+				cn->brick->eng = brick->eng;
+
+				TRACE_LOG("lnd->ifname: %s\n", lnd->ifname);
+				
 				if (cn->brick->elib->init(cn->brick, &li) == -1) {
 					TRACE_LOG("Can't allocate mem to add new "
 						  "brick's private context\n");
@@ -696,7 +698,6 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 				brick->eng->mark_for_copy = 
 					(brick->eng->mark_for_copy == 0 && 
 					 li.type == COPY) ? 1 : 0;
-				cn->brick->eng = brick->eng;
 				linkdata *lnd = &cn->brick->lnd;
 				strcpy((char *)lnd->ifname, (char *)ifname);
 				lnd->count++;
@@ -728,7 +729,7 @@ enable_pipeline(Brick *brick, const char *ifname, Target t)
 			}
 		}
 		if (cn->brick != NULL) {
-			Brick *rc = enable_pipeline(cn->brick, ifname, t);
+			Brick *rc = enable_pipeline(cn->brick, ifname, t, out_name);
 			if (rc != NULL) return rc;
 		}
 	}
@@ -760,7 +761,7 @@ netmap_create_channel(char *in_name, char *out_name,
 	lnd = (linkdata *)(&brick->lnd);
 	/* first locate the in_nmd */
 	if (strcmp((char *)lnd->ifname, in_name) != 0) {
-		brick = enable_pipeline(brick, in_name, t);
+		brick = enable_pipeline(brick, in_name, t, out_name);
 		if (brick == NULL) {
 			TRACE_LOG("Pipelining failed!! Could not find an appropriate "
 				  "source (%s) for engine %s!\n", in_name, eng->name);

@@ -253,11 +253,7 @@ HandleMACFilter(Filter *f, struct ether_header *ethh)
 /*---------------------------------------------------------------------*/
 /* Under construction.. */
 int
-#if 1
-analyze_packet(unsigned char *buf, CommNode *cn, time_t current_time)
-#else
 analyze_packet(unsigned char *buf, FilterContext *cn, time_t current_time)	
-#endif
 {	
 	TRACE_FILTER_FUNC_START();
 	struct ether_header *ethh = NULL;
@@ -440,11 +436,7 @@ adjustMasks(Filter *f)
 }
 /*---------------------------------------------------------------------*/
 int
-#if 1
-apply_filter(CommNode *cn, Filter *fin)
-#else
 apply_filter(FilterContext *cn, Filter *fin)
-#endif
 {
 	TRACE_FILTER_FUNC_START();
 	Filter *f = (Filter *)calloc(1, sizeof(Filter));
@@ -466,8 +458,7 @@ apply_filter(FilterContext *cn, Filter *fin)
 	TRACE_FILTER_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
-//#ifdef DEBUG
-#if 1
+#ifdef DEBUG
 void
 printFilter(Filter *f)
 {
@@ -757,11 +748,7 @@ brokerize_request(engine *eng, broker_message_queue *q)
 	int n = broker_deque_of_message_size(msgs);
 	int i;
 	Filter f;
-#if 1
-	CommNode *cn = NULL;
-#else
 	FilterContext *cn = NULL;
-#endif
 
 	memset(&f, 0, sizeof(f));
 
@@ -804,20 +791,6 @@ brokerize_request(engine *eng, broker_message_queue *q)
 
 	/* TODO: XXX - This needs to be set with respect to interface name */
 	//apply_filter(TAILQ_FIRST(&eng->commnode_list), &f);
-#if 1
-	if (f.node_name != NULL) {
-		/* first locate the right commnode entry */
-		TAILQ_FOREACH(cn, &eng->commnode_list, entry) {
-			if (!strcmp((char *)cn->nm_ifname, (char *)f.node_name)) {
-				/* apply the filter */
-				apply_filter(cn, &f);
-				break;
-			} else {
-				TRACE_LOG("ifname: %s does not match\n", cn->nm_ifname);
-			}
-		}
-	}
-#else
 	if (f.node_name != NULL) {
 		/* first locate the right commnode entry */
 		TAILQ_FOREACH(cn, &eng->filter_list, entry) {
@@ -830,9 +803,7 @@ brokerize_request(engine *eng, broker_message_queue *q)
 			}
 		}
 	}	
-#endif
-	//#ifdef DEBUG
-#if 1
+#ifdef DEBUG
 	printFilter(&f);
 #endif
 	TRACE_FILTER_FUNC_END();

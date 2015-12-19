@@ -40,22 +40,27 @@
 /* for filter context */
 #include "bricks_filter.h"
 /*---------------------------------------------------------------------*/
-#if 0
-struct FilterContext {
-	/* name of output node */
-	char name[IFNAMSIZ];
-	/* 
-	 * the linked list ptr that will chain together
-	 * all filter bricks (for bricks_filter.c). this
-	 * will be used for network communication module
-	 */
-	TAILQ_ENTRY(FilterContext) entry;
-
-	/* Filter list */
-	flist filter_list;
-	
-} __attribute__((aligned(__WORDSIZE)));
-#endif
+static void
+strcpy_with_reverse_pipe(char *to, const char *from)
+{
+	TRACE_NETMAP_FUNC_START();
+	register int i = 0;
+	do {
+		switch (from[i]) {
+		case '}':
+			to[i] = '{';
+			break;
+		case '{':
+			to[i] = '}';
+			break;
+		default:
+			to[i] = from[i];
+			break;
+		}
+		i++;
+	} while (from[i] != '\0');
+	TRACE_NETMAP_FUNC_END();
+}
 /*---------------------------------------------------------------------*/
 int32_t
 filter_init(Brick *brick, Linker_Intf *li)
@@ -69,14 +74,14 @@ filter_init(Brick *brick, Linker_Intf *li)
 	}
 	brick->private_data = fc;
 	li->type = SHARE;
-#if 1
-#else
-	strcpy(fc->name, li->output_link[0]);
-	TRACE_LOG("Adding brick with output link named: %s for engine %s\n",
-		  li->output_link[0], brick->eng->name);
+	strcpy_with_reverse_pipe(fc->name, li->output_link[0]);
+	TRACE_LOG("Adding brick filter named %s to the engine\n",
+		  li->output_link[0]);
 	/* Adding filter brick to the engine's filter list */
 	TAILQ_INSERT_TAIL(&brick->eng->filter_list, fc, entry);
-#endif
+
+	/* initialize filter list */
+	TAILQ_INIT(&fc->filter_list);
 	TRACE_BRICK_FUNC_END();
 
 	return 1;
@@ -91,18 +96,12 @@ filter_dummy(Brick *brick, unsigned char *buf)
 {
 	TRACE_BRICK_FUNC_START();
 	BITMAP b;
-
-	INIT_BITMAP(b);
-	SET_BIT(b, 0);
-#if 1
-	UNUSED(brick);
-	UNUSED(buf);
-#else
 	FilterContext *fc;
 
+	INIT_BITMAP(b);
 	fc = (FilterContext *)brick->private_data;
 	if (analyze_packet(buf, fc, time(NULL)))
-#endif
+		SET_BIT(b, 0);
 	TRACE_BRICK_FUNC_END();
 	return b;
 }

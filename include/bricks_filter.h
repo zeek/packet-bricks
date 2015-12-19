@@ -62,21 +62,13 @@ struct FilterContext {
  * the communication node, if the filter allows...
  */
 int
-#if 1
-analyze_packet(unsigned char *buf, CommNode *cn, time_t t);
-#else
 analyze_packet(unsigned char *buf, FilterContext *cn, time_t t);
-#endif
 
 /**
  * Add the filter to the selected CommNode
  */
 int
-#if 1
-apply_filter(CommNode *cn, Filter *f);
-#else
 apply_filter(FilterContext *cn, Filter *f);
-#endif
 
 /**
  * Initialize the filter communication backend

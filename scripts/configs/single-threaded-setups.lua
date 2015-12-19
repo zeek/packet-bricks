@@ -103,16 +103,16 @@ end
 
 
 --lbfilt_config	 __sets up a configuration of filter brick__
---		 __The engine reads from netmap-enabled eth3__
+--		 __The engine reads from netmap-enabled intf__
 --		 __and then splits traffic based on the filtering__
 --		 __decisions between the output links.		__
-function C:lbfilt_config(pe)
+function C:lbfilt_config(pe, intf)
 	 local lb = Brick.new("LoadBalancer", 4)
-         lb:connect_input("eth3") 
-         lb:connect_output("eth3{0", "eth3{1")
+         lb:connect_input(intf) 
+         lb:connect_output(intf .. "{0", intf .. "{1", intf .. "{2", intf .. "{3")
 	 f = Brick.new("Filter")
-	 f:connect_input("eth3}0")
-	 f:connect_output("eth3{2", "eth3{3");
+	 f:connect_input(intf .. "}0")
+	 f:connect_output(intf .. "{4");
 	 lb:link(f)
 	 -- now link it!
 	 pe:link(lb)

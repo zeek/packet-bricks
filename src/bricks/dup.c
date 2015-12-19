@@ -40,6 +40,7 @@ dup_init(Brick *brick, Linker_Intf *li)
 	TRACE_BRICK_FUNC_START();
 	brick->private_data = NULL;
 	li->type = COPY;
+	TRACE_LOG("Adding brick duplicator to the engine\n");	
 	TRACE_BRICK_FUNC_END();
 	return 1;
 }
