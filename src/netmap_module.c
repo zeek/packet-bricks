@@ -625,33 +625,6 @@ netmap_delete_all_channels(Brick *brick)
 
 	brick->elib->deinit(brick);
 	TRACE_NETMAP_FUNC_END();
-	/* not used for the moment */
-}
-/*---------------------------------------------------------------------*/
-/**
- * XXX - A rather inefficient version of reversing pipe name strings...
- * Will further improve later...
- */
-static void
-strcpy_with_reverse_pipe(char *to, char *from)
-{
-	TRACE_NETMAP_FUNC_START();
-	register int i = 0;
-	do {
-		switch (from[i]) {
-		case '}':
-			to[i] = '{';
-			break;
-		case '{':
-			to[i] = '}';
-			break;
-		default:
-			to[i] = from[i];
-			break;
-		}
-		i++;
-	} while (from[i] != '\0');
-	TRACE_NETMAP_FUNC_END();
 }
 /*---------------------------------------------------------------------*/
 /**
@@ -686,8 +659,6 @@ enable_pipeline(Brick *brick, const char *ifname, Target t, const char *out_name
 				li.output_link[0] = out_name;
 				cn->brick->eng = brick->eng;
 
-				TRACE_LOG("lnd->ifname: %s\n", lnd->ifname);
-				
 				if (cn->brick->elib->init(cn->brick, &li) == -1) {
 					TRACE_LOG("Can't allocate mem to add new "
 						  "brick's private context\n");

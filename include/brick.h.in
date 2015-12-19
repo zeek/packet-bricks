@@ -132,6 +132,13 @@ void initBricks();
  */
 void brick_link(struct Brick *from, PktEngine_Intf *pe, Linker_Intf *linker);
 
+/**
+ * XXX - A rather inefficient version of reversing pipe name strings...
+ * Will further improve later...
+ */
+void
+strcpy_with_reverse_pipe(char *to, const char *from);
+
 /*---------------------------------------------------------------------*/
 /**
  * BITMAP-related routines..

@@ -40,28 +40,6 @@
 /* for filter context */
 #include "bricks_filter.h"
 /*---------------------------------------------------------------------*/
-static void
-strcpy_with_reverse_pipe(char *to, const char *from)
-{
-	TRACE_NETMAP_FUNC_START();
-	register int i = 0;
-	do {
-		switch (from[i]) {
-		case '}':
-			to[i] = '{';
-			break;
-		case '{':
-			to[i] = '}';
-			break;
-		default:
-			to[i] = from[i];
-			break;
-		}
-		i++;
-	} while (from[i] != '\0');
-	TRACE_NETMAP_FUNC_END();
-}
-/*---------------------------------------------------------------------*/
 int32_t
 filter_init(Brick *brick, Linker_Intf *li)
 {
