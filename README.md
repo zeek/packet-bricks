@@ -218,7 +218,7 @@ heavily documented. The scripts directory also contains code for
 running a 4-threaded version of the pkteng (see 
 /usr/local/etc/bricks-scripts/startup-multi-threads.lua).
 
-### NEW
+### New
 We have created 2 new tools that can quickly set up (i) load-balancer,
 and (ii) duplicator.
 
@@ -245,7 +245,7 @@ tasks by issuing requests to specific Filter bricks. Packet bricks uses
 NetControl protocol for this purpose. A user can refer to each Filter
 via the output netmap pipe name of the brick.
 
-## TROUBLESHOOTING
+## Troubleshooting
 
 Packet bricks is still in development stages. While we welcome 
 feedback, we suggest that you refer to the following pointers before
