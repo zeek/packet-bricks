@@ -756,9 +756,6 @@ netmap_create_channel(char *in_name, char *out_name,
 
 	cn = (CommNode *)lnd->external_links[lnd->init_cur_idx];
 
-	/* initialize the filter list */
-	TAILQ_INIT(&cn->filter_list);
-
 	if (t == WRITE) {
 		TRACE_LOG("Creating pcap writing element %p to file: %s\n",
 			  brick, out_name);
@@ -776,11 +773,6 @@ netmap_create_channel(char *in_name, char *out_name,
 		}
 		strcpy_with_reverse_pipe(cn->nm_ifname, out_name);
 
-		/* Adding comm node to the engine's commnode list */
-		TRACE_LOG("Adding CommNode named %s to the commlist for engine %s\n",
-			  cn->nm_ifname, eng->name);
-		TAILQ_INSERT_TAIL(&eng->commnode_list, cn, entry);
-		
 		TRACE_LOG("zerocopy for %s --> %s (index: %d) %s", 
 			  lnd->ifname, 
 			  out_name, 
@@ -795,31 +787,6 @@ netmap_create_channel(char *in_name, char *out_name,
 
 	TRACE_NETMAP_FUNC_END();
 	return fd;
-}
-/*---------------------------------------------------------------------*/
-int32_t
-install_filter(req_block *rb, engine *eng)
-{
-	TRACE_NETMAP_FUNC_START();
-	CommNode *cn;
-	/* first locate the right commnode entry */
-	TAILQ_FOREACH(cn, &eng->commnode_list, entry) {
-		if (!strcmp((char *)cn->nm_ifname, (char *)rb->ifname)) {
-			/* apply the filter */
-#if 0
-			apply_filter(cn, &rb->f);
-#endif
-			TRACE_NETMAP_FUNC_END();
-			return 1;
-		} else {
-			TRACE_LOG("ifname: %s does not match\n", cn->nm_ifname);
-		}
-	}
-
-	TRACE_LOG("Filter application failed for ifname: %s\n",
-		  rb->ifname);
-	TRACE_NETMAP_FUNC_END();
-	return -1;
 }
 /*---------------------------------------------------------------------*/
 int32_t

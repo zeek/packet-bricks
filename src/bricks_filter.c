@@ -789,8 +789,6 @@ brokerize_request(engine *eng, broker_message_queue *q)
 	
 	broker_deque_of_message_delete(msgs);	
 
-	/* TODO: XXX - This needs to be set with respect to interface name */
-	//apply_filter(TAILQ_FIRST(&eng->commnode_list), &f);
 	if (f.node_name != NULL) {
 		/* first locate the right commnode entry */
 		TAILQ_FOREACH(cn, &eng->filter_list, entry) {

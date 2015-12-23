@@ -58,15 +58,6 @@ struct CommNode {
 	uint8_t mark;				/* marking for delivery */
 	struct Brick *brick;			/* ptrs to child bricks */
 
-	/*
-	 * the linked list ptr that will chain together
-	 * all commnodes (for netmap_module.c). this will
-	 * be used for network communication module
-	 */
-	TAILQ_ENTRY(CommNode) entry;
-
-	/* Filter list */
-	flist filter_list;
 }  __attribute__((aligned(__WORDSIZE)));
 
 /**

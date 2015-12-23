@@ -25,7 +25,7 @@ Fedora packages:
 6- gzip			(Fedora Package)
 
 This program would work better if jemalloc library is installed.
-5- libjemalloc		(Ubuntu Debian Package), OR
+5- libjemalloc-dev	(Ubuntu Debian Package), OR
 5- jemalloc-devel	(Fedora Package)
 
 FreeBSD users: please install the following packages
@@ -50,6 +50,11 @@ are not provided:
     
     - For FreeBSD, it will try to pick the header files from
     /usr/local/include/lua51/ and libraries from /usr/local/lua51    
+
+To compile packet bricks with broker plugin, run the configure
+script as following:
+$ ./configure --with-broker-include=<$PATH_TO_BROKER_INC> \
+--with-broker-lib=<$PATH_TO_BROKER_LIB>
 
 #2. Run make
 $ make
