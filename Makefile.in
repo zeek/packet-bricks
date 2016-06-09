@@ -157,6 +157,7 @@ endif
 
 install: install-man
 	@echo -e "\e[1;34mPlacing the binaries in the $(sbindir)/ directory $<\e[0m"
+	mkdir -p $(sbindir)
 	$(INSTALL_PROGRAM) $(BIN) $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-server $(sbindir)/
 	$(INSTALL_PROGRAM) $(BIN)-shell $(sbindir)/
